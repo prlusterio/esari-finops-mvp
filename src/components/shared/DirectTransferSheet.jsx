@@ -61,6 +61,7 @@ export function DirectTransferSheet({
   recipients = [],
   recipientLabel = 'Recipient Franchisee',
   availableBalance = 0,
+  initialRecipientId = '',
   onConfirmIntent,
 }) {
   const fileInputRef = useRef(null)
@@ -83,7 +84,12 @@ export function DirectTransferSheet({
 
   useEffect(() => {
     if (!open) return
-    setRecipientId('')
+    const preset =
+      initialRecipientId &&
+      recipients.some((item) => item.id === initialRecipientId)
+        ? initialRecipientId
+        : ''
+    setRecipientId(preset)
     setAmount('')
     setNotes('')
     setProofFile(null)
@@ -91,7 +97,7 @@ export function DirectTransferSheet({
     setError('')
     setSubmitting(false)
     setDragActive(false)
-  }, [open])
+  }, [open, initialRecipientId, recipients])
 
   useEffect(() => {
     return () => {

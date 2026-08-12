@@ -52,6 +52,12 @@ export const NAV_ITEMS = [
     roles: [ROLES.ADMIN],
   },
   {
+    title: 'Wallets',
+    path: '/wallet-management',
+    icon: Wallet,
+    roles: [ROLES.SUBFRANCHISEE],
+  },
+  {
     title: 'Wallet',
     path: '/wallet',
     icon: Wallet,

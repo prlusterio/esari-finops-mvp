@@ -11,6 +11,7 @@ import LoginPage from '@/pages/auth/LoginPage'
 import DashboardPage from '@/pages/dashboard/DashboardPage'
 import OrganizationsPage from '@/pages/organizations/OrganizationsPage'
 import WalletsPage from '@/pages/wallets/WalletsPage'
+import WalletManagementPage from '@/pages/wallets/WalletManagementPage'
 import WalletPage from '@/pages/wallet/WalletPage'
 import FundingPage from '@/pages/funding/FundingPage'
 import RequestFundingPage from '@/pages/request-funding/RequestFundingPage'
@@ -67,6 +68,20 @@ export default function AppRoutes() {
 
           <Route element={<RoleRoute roles={[ROLES.ADMIN]} path="/wallets" />}>
             <Route path="/wallets" element={<WalletsPage />} />
+          </Route>
+
+          <Route
+            element={
+              <RoleRoute
+                roles={[ROLES.SUBFRANCHISEE]}
+                path="/wallet-management"
+              />
+            }
+          >
+            <Route
+              path="/wallet-management"
+              element={<WalletManagementPage />}
+            />
           </Route>
 
           <Route

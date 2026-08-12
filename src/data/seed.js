@@ -251,7 +251,7 @@ export function getSeedWallets() {
       organizationId: ORG_IDS.PLATFORM,
       walletType: 'master',
       availableBalance: 500000,
-      minimumBalance: 0,
+      minimumBalance: 100000,
       status: 'active',
       createdAt: now,
       updatedAt: now,
@@ -261,7 +261,7 @@ export function getSeedWallets() {
       organizationId: ORG_IDS.SUB_001,
       walletType: 'operating',
       availableBalance: 135000,
-      minimumBalance: 0,
+      minimumBalance: 50000,
       status: 'active',
       createdAt: now,
       updatedAt: now,
@@ -271,7 +271,7 @@ export function getSeedWallets() {
       organizationId: ORG_IDS.FRANCHISE_001,
       walletType: 'operating',
       availableBalance: 30000,
-      minimumBalance: 0,
+      minimumBalance: 25000,
       status: 'active',
       createdAt: now,
       updatedAt: now,
@@ -281,7 +281,7 @@ export function getSeedWallets() {
       organizationId: ORG_IDS.FRANCHISE_002,
       walletType: 'operating',
       availableBalance: 105000,
-      minimumBalance: 0,
+      minimumBalance: 25000,
       status: 'active',
       createdAt: now,
       updatedAt: now,
@@ -291,7 +291,7 @@ export function getSeedWallets() {
       organizationId: ORG_IDS.FRANCHISE_003,
       walletType: 'operating',
       availableBalance: 18000,
-      minimumBalance: 0,
+      minimumBalance: 25000,
       status: 'active',
       createdAt: now,
       updatedAt: now,
@@ -301,7 +301,7 @@ export function getSeedWallets() {
       organizationId: ORG_IDS.FRANCHISE_004,
       walletType: 'operating',
       availableBalance: 32000,
-      minimumBalance: 0,
+      minimumBalance: 25000,
       status: 'active',
       createdAt: now,
       updatedAt: now,
@@ -311,7 +311,7 @@ export function getSeedWallets() {
       organizationId: ORG_IDS.RETAILER_001,
       walletType: 'operating',
       availableBalance: 15000,
-      minimumBalance: 0,
+      minimumBalance: 8000,
       status: 'active',
       createdAt: now,
       updatedAt: now,
@@ -321,7 +321,7 @@ export function getSeedWallets() {
       organizationId: ORG_IDS.RETAILER_002,
       walletType: 'operating',
       availableBalance: 5000,
-      minimumBalance: 0,
+      minimumBalance: 8000,
       status: 'active',
       createdAt: now,
       updatedAt: now,
@@ -331,7 +331,7 @@ export function getSeedWallets() {
       organizationId: ORG_IDS.RETAILER_003,
       walletType: 'operating',
       availableBalance: 7500,
-      minimumBalance: 0,
+      minimumBalance: 8000,
       status: 'active',
       createdAt: now,
       updatedAt: now,
@@ -341,7 +341,7 @@ export function getSeedWallets() {
       organizationId: ORG_IDS.RETAILER_004,
       walletType: 'operating',
       availableBalance: 6200,
-      minimumBalance: 0,
+      minimumBalance: 8000,
       status: 'active',
       createdAt: now,
       updatedAt: now,
@@ -351,7 +351,7 @@ export function getSeedWallets() {
       organizationId: ORG_IDS.RETAILER_005,
       walletType: 'operating',
       availableBalance: 9100,
-      minimumBalance: 0,
+      minimumBalance: 8000,
       status: 'active',
       createdAt: now,
       updatedAt: now,
@@ -1051,6 +1051,18 @@ export function initializeMockData() {
           ...current,
           ...seedWallet,
           availableBalance: seedWallet.availableBalance,
+        })
+        return
+      }
+      // Keep live balances, but adopt seeded minimum thresholds when missing.
+      if (
+        seedWallet.walletType !== 'revenue' &&
+        !(Number(current.minimumBalance) > 0) &&
+        Number(seedWallet.minimumBalance) > 0
+      ) {
+        byId.set(seedWallet.id, {
+          ...current,
+          minimumBalance: seedWallet.minimumBalance,
         })
       }
     })
