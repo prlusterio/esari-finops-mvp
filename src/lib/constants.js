@@ -19,6 +19,7 @@ export const STORAGE_KEYS = {
   FUNDING_REQUESTS: 'esarisari_funding_requests',
   FUNDING_TRANSFERS: 'esarisari_funding_transfers',
   REVENUE_SHARING: 'esarisari_revenue_sharing',
+  COMMISSION_SETTINGS: 'esarisari_commission_settings',
   TRANSACTIONS: 'esarisari_transactions',
   SETTLEMENTS: 'esarisari_settlements',
   SESSION: 'esarisari_session',

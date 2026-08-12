@@ -17,6 +17,7 @@ import FundingPage from '@/pages/funding/FundingPage'
 import RequestFundingPage from '@/pages/request-funding/RequestFundingPage'
 import RevenueSharingPage from '@/pages/revenue-sharing/RevenueSharingPage'
 import RevenuePage from '@/pages/revenue/RevenuePage'
+import CommissionSettingsPage from '@/pages/commission-settings/CommissionSettingsPage'
 import TransactionsPage from '@/pages/transactions/TransactionsPage'
 import SettlementsPage from '@/pages/settlements/SettlementsPage'
 import ReportsPage from '@/pages/reports/ReportsPage'
@@ -127,6 +128,20 @@ export default function AppRoutes() {
 
           <Route element={<RoleRoute roles={[ROLES.SUBFRANCHISEE]} path="/revenue" />}>
             <Route path="/revenue" element={<RevenuePage />} />
+          </Route>
+
+          <Route
+            element={
+              <RoleRoute
+                roles={[ROLES.SUBFRANCHISEE]}
+                path="/commission-settings"
+              />
+            }
+          >
+            <Route
+              path="/commission-settings"
+              element={<CommissionSettingsPage />}
+            />
           </Route>
 
           <Route element={<RoleRoute roles={[ROLES.ADMIN]} path="/settlements" />}>

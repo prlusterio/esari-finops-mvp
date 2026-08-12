@@ -86,10 +86,10 @@ function getActiveConfig() {
 
 export default function RevenueSharingPage() {
   const { dataVersion, bumpDataVersion } = useAuth()
-  const [retailer, setRetailer] = useState('40')
+  const [retailer, setRetailer] = useState('30')
   const [franchisee, setFranchisee] = useState('20')
   const [subfranchisee, setSubfranchisee] = useState('10')
-  const [company, setCompany] = useState('30')
+  const [company, setCompany] = useState('40')
   const [samplePayment, setSamplePayment] = useState('100.00')
   const [sampleDeduction, setSampleDeduction] = useState('97.00')
   const [message, setMessage] = useState('')
@@ -98,10 +98,10 @@ export default function RevenueSharingPage() {
   useEffect(() => {
     const active = getActiveConfig()
     if (!active) return
-    setRetailer(String(active.retailerPercentage ?? 40))
+    setRetailer(String(active.retailerPercentage ?? 30))
     setFranchisee(String(active.franchiseePercentage ?? 20))
     setSubfranchisee(String(active.subfranchiseePercentage ?? 10))
-    setCompany(String(active.companyPercentage ?? 30))
+    setCompany(String(active.companyPercentage ?? 40))
   }, [dataVersion])
 
   const percentages = useMemo(

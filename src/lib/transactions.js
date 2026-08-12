@@ -2,10 +2,10 @@ import { ROLES, TRANSACTION_STATUS } from '@/lib/constants'
 import { filterItemsByDateRange } from '@/lib/date'
 
 export const DEFAULT_SHARE_PERCENTAGES = {
-  retailer: 40,
+  retailer: 30,
   franchisee: 20,
   subfranchisee: 10,
-  company: 30,
+  company: 40,
 }
 
 function roundMoney(value) {

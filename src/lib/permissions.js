@@ -94,6 +94,12 @@ export const NAV_ITEMS = [
     roles: [ROLES.SUBFRANCHISEE],
   },
   {
+    title: 'Commission Settings',
+    path: '/commission-settings',
+    icon: PieChart,
+    roles: [ROLES.SUBFRANCHISEE],
+  },
+  {
     title: 'Settlements',
     path: '/settlements',
     icon: Scale,

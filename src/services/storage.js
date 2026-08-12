@@ -82,6 +82,8 @@ const revenueSharing = {
   },
 }
 
+const commissionSettings = createCollectionHelpers(STORAGE_KEYS.COMMISSION_SETTINGS)
+
 export function getUsers() {
   return users.get()
 }
@@ -130,6 +132,14 @@ export function saveRevenueSharing(data) {
   revenueSharing.save(data)
 }
 
+export function getCommissionSettings() {
+  return commissionSettings.get()
+}
+
+export function saveCommissionSettings(data) {
+  commissionSettings.save(data)
+}
+
 export function getTransactions() {
   return transactions.get()
 }
@@ -170,6 +180,7 @@ export const BUSINESS_COLLECTIONS = {
   fundingRequests,
   fundingTransfers,
   revenueSharing,
+  commissionSettings,
   transactions,
   settlements,
 }

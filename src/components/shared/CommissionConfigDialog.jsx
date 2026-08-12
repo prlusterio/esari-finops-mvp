@@ -1,0 +1,384 @@
+import { useEffect, useMemo, useState } from 'react'
+import { CheckCircle2, Info } from 'lucide-react'
+import { formatCurrency } from '@/lib/currency'
+import {
+  buildCommissionPreview,
+  COMMISSION_STATUS,
+  DEFAULT_COMMISSION_SHARES,
+  DEFAULT_PLATFORM_FEE_PERCENTAGE,
+  isCommissionSplitValid,
+  normalizeCommissionShares,
+  parsePercentInput,
+  sumCommissionPercentages,
+} from '@/lib/commission'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { cn } from '@/lib/utils'
+
+function PercentField({ id, label, value, onChange, disabled, hint }) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id} className="text-sm text-slate-600">
+        {label}
+      </Label>
+      <div className="relative">
+        <Input
+          id={id}
+          inputMode="decimal"
+          value={value}
+          disabled={disabled}
+          onChange={(event) => {
+            const raw = event.target.value.replace(/[^\d.]/g, '')
+            const parts = raw.split('.')
+            const normalized =
+              parts.length > 1
+                ? `${parts[0]}.${parts.slice(1).join('').slice(0, 2)}`
+                : parts[0]
+            onChange(normalized)
+          }}
+          className={cn('pr-8', disabled && 'bg-slate-50 text-slate-500')}
+        />
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">
+          %
+        </span>
+      </div>
+      {hint ? <p className="text-xs text-slate-400">{hint}</p> : null}
+    </div>
+  )
+}
+
+export function CommissionConfigDialog({
+  open,
+  onOpenChange,
+  retailers = [],
+  orgById = {},
+  initial = null,
+  onSave,
+}) {
+  const isEdit = Boolean(initial?.id)
+  const [retailerId, setRetailerId] = useState('')
+  const [effectiveDate, setEffectiveDate] = useState('')
+  const [retailerPct, setRetailerPct] = useState(
+    String(DEFAULT_COMMISSION_SHARES.retailerPercentage),
+  )
+  const [franchiseePct, setFranchiseePct] = useState(
+    String(DEFAULT_COMMISSION_SHARES.franchiseePercentage),
+  )
+  const [status, setStatus] = useState(COMMISSION_STATUS.ACTIVE)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!open) return
+    if (initial) {
+      const normalized = normalizeCommissionShares({
+        retailerPercentage: initial.retailerPercentage,
+        franchiseePercentage: initial.franchiseePercentage,
+        companyPercentage: DEFAULT_PLATFORM_FEE_PERCENTAGE,
+      })
+      setRetailerId(initial.retailerOrganizationId || '')
+      setEffectiveDate(initial.effectiveDate || '')
+      setRetailerPct(String(normalized.retailerPercentage))
+      setFranchiseePct(String(normalized.franchiseePercentage))
+      setStatus(initial.status || COMMISSION_STATUS.ACTIVE)
+    } else {
+      setRetailerId('')
+      setEffectiveDate(new Date().toISOString().slice(0, 10))
+      setRetailerPct(String(DEFAULT_COMMISSION_SHARES.retailerPercentage))
+      setFranchiseePct(String(DEFAULT_COMMISSION_SHARES.franchiseePercentage))
+      setStatus(COMMISSION_STATUS.ACTIVE)
+    }
+    setError('')
+  }, [open, initial])
+
+  const shares = useMemo(
+    () =>
+      normalizeCommissionShares({
+        retailerPercentage: parsePercentInput(retailerPct),
+        franchiseePercentage: parsePercentInput(franchiseePct),
+        companyPercentage: DEFAULT_PLATFORM_FEE_PERCENTAGE,
+      }),
+    [retailerPct, franchiseePct],
+  )
+
+  const total = sumCommissionPercentages(shares)
+  const valid = isCommissionSplitValid(shares)
+  const preview = buildCommissionPreview(shares)
+  const downlineTotal =
+    Math.round(
+      (shares.retailerPercentage + shares.franchiseePercentage + Number.EPSILON) *
+        100,
+    ) / 100
+
+  const selectedRetailer = orgById[retailerId] || null
+  const franchisee = selectedRetailer?.parentId
+    ? orgById[selectedRetailer.parentId]
+    : null
+
+  const handleSave = () => {
+    setError('')
+    if (!retailerId) {
+      setError('Select a retailer.')
+      return
+    }
+    if (!effectiveDate) {
+      setError('Choose an effective date.')
+      return
+    }
+    if (!valid) {
+      setError(
+        'Retailer + Franchisee shares cannot exceed the remaining allocation after the platform fee.',
+      )
+      return
+    }
+
+    onSave?.({
+      id: initial?.id,
+      retailerOrganizationId: retailerId,
+      franchiseeOrganizationId: selectedRetailer?.parentId || '',
+      retailerPercentage: shares.retailerPercentage,
+      franchiseePercentage: shares.franchiseePercentage,
+      subfranchiseePercentage: shares.subfranchiseePercentage,
+      companyPercentage: DEFAULT_PLATFORM_FEE_PERCENTAGE,
+      effectiveDate,
+      status,
+    })
+    onOpenChange?.(false)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto sm:rounded-xl">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-semibold text-slate-900">
+            {isEdit ? 'Edit Commission Settings' : 'Commission Settings'}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-5">
+          <div className="flex gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3.5 py-3 text-sm text-slate-600">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+            <p>
+              Configure commission for your franchisee and retailer downlines.
+              Your share is calculated automatically from what remains after the
+              platform fee and downline shares.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2 sm:col-span-2">
+              <Label className="text-sm text-slate-600">Retailer</Label>
+              <Select
+                value={retailerId}
+                onValueChange={setRetailerId}
+                disabled={isEdit}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a retailer..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {retailers.map((retailer) => (
+                    <SelectItem key={retailer.id} value={retailer.id}>
+                      {retailer.name}
+                      {retailer.code ? ` (${retailer.code})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {franchisee ? (
+                <p className="text-xs text-slate-400">
+                  Franchisee: {franchisee.name}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="commission-effective-date" className="text-sm text-slate-600">
+                Effective Date
+              </Label>
+              <Input
+                id="commission-effective-date"
+                type="date"
+                value={effectiveDate}
+                onChange={(event) => setEffectiveDate(event.target.value)}
+              />
+            </div>
+
+            <PercentField
+              id="commission-retailer"
+              label="Retailer Share %"
+              value={retailerPct}
+              onChange={setRetailerPct}
+            />
+            <PercentField
+              id="commission-franchisee"
+              label="Franchisee Share %"
+              value={franchiseePct}
+              onChange={setFranchiseePct}
+            />
+            <PercentField
+              id="commission-your-share"
+              label="Your Share %"
+              value={String(shares.subfranchiseePercentage)}
+              onChange={() => {}}
+              disabled
+              hint="Auto-calculated remainder for your sub-franchisee share."
+            />
+            <PercentField
+              id="commission-platform"
+              label="Platform Fee %"
+              value={String(DEFAULT_PLATFORM_FEE_PERCENTAGE)}
+              onChange={() => {}}
+              disabled
+              hint="This is configurable on CWPC Admin."
+            />
+          </div>
+
+          <div
+            className={cn(
+              'rounded-xl border px-4 py-3',
+              valid
+                ? 'border-emerald-200 bg-emerald-50'
+                : 'border-amber-200 bg-amber-50',
+            )}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-semibold uppercase tracking-wide text-slate-700">
+                Total Allocation
+              </span>
+              <span className="text-sm font-bold text-slate-900">{total}%</span>
+            </div>
+            <p className="mt-1 text-xs text-slate-500">
+              Downlines {downlineTotal}% · Your share {shares.subfranchiseePercentage}%
+              · Platform fee {shares.companyPercentage}%
+            </p>
+            <p
+              className={cn(
+                'mt-1 text-xs',
+                valid ? 'text-emerald-700' : 'text-amber-700',
+              )}
+            >
+              {valid
+                ? 'Commission split validated: Total equals 100%'
+                : 'Reduce retailer/franchisee shares so the total can equal 100%'}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm text-slate-600">Status</Label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="radio"
+                  name="commission-status"
+                  checked={status === COMMISSION_STATUS.ACTIVE}
+                  onChange={() => setStatus(COMMISSION_STATUS.ACTIVE)}
+                />
+                Active
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="radio"
+                  name="commission-status"
+                  checked={status === COMMISSION_STATUS.INACTIVE}
+                  onChange={() => setStatus(COMMISSION_STATUS.INACTIVE)}
+                />
+                Inactive
+              </label>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-blue-100 bg-blue-50/70 px-4 py-4">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Transaction Calculation Preview
+              </p>
+              <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-semibold uppercase text-white">
+                Sample Case
+              </span>
+            </div>
+            <div className="space-y-1.5 text-sm">
+              <div className="flex justify-between gap-3">
+                <span className="text-slate-500">Sample Payment</span>
+                <span className="font-medium text-slate-900">
+                  {formatCurrency(preview.payment)}
+                </span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-slate-500">Wallet Deduction</span>
+                <span className="font-medium text-red-600">
+                  -{formatCurrency(preview.deduction)}
+                </span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-slate-500">Distributable Revenue</span>
+                <span className="font-semibold text-blue-700">
+                  {formatCurrency(preview.distributable)}
+                </span>
+              </div>
+            </div>
+            <div className="my-3 border-t border-blue-100" />
+            <div className="space-y-1.5 text-sm">
+              <div className="flex justify-between gap-3">
+                <span className="text-slate-500">Retailer Share</span>
+                <span>{formatCurrency(preview.retailerAmount)}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-slate-500">Franchisee Share</span>
+                <span>{formatCurrency(preview.franchiseeAmount)}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-slate-500">Your Share</span>
+                <span>{formatCurrency(preview.subfranchiseeAmount)}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-slate-500">Platform Fee</span>
+                <span>{formatCurrency(preview.companyAmount)}</span>
+              </div>
+            </div>
+            <div className="mt-3 flex items-center justify-between border-t border-blue-100 pt-3 text-sm font-semibold">
+              <span>Total Allocated</span>
+              <span className="inline-flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                {formatCurrency(preview.totalAllocated)}
+              </span>
+            </div>
+          </div>
+
+          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+        </div>
+
+        <DialogFooter className="gap-2 sm:gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange?.(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            className="bg-blue-600 text-white hover:bg-blue-700"
+            onClick={handleSave}
+          >
+            Save Configuration
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}

@@ -7,14 +7,18 @@ import {
   WALLET_LEDGER_VERSION,
 } from '@/lib/constants'
 import { sumCreditedShareForOrg } from '@/lib/revenue'
-import { matchProductServiceToPayment } from '@/lib/transactions'
+import { DEFAULT_COMMISSION_SHARES } from '@/lib/commission'
+import { DEFAULT_SHARE_PERCENTAGES, matchProductServiceToPayment } from '@/lib/transactions'
 import {
   collectionNeedsSeed,
+  getCommissionSettings,
   getFundingRequests,
   getFundingTransfers,
   getOrganizations,
+  getRevenueSharing,
   getTransactions,
   getWallets,
+  saveCommissionSettings,
   saveFundingRequests,
   saveFundingTransfers,
   saveOrganizations,
@@ -446,15 +450,40 @@ export function getSeedRevenueSharing() {
   return [
     {
       id: 'revshare-default',
-      retailerPercentage: 40,
-      franchiseePercentage: 20,
-      subfranchiseePercentage: 10,
-      companyPercentage: 30,
+      retailerPercentage: DEFAULT_SHARE_PERCENTAGES.retailer,
+      franchiseePercentage: DEFAULT_SHARE_PERCENTAGES.franchisee,
+      subfranchiseePercentage: DEFAULT_SHARE_PERCENTAGES.subfranchisee,
+      companyPercentage: DEFAULT_SHARE_PERCENTAGES.company,
       status: 'active',
       createdAt: now,
       updatedAt: now,
     },
   ]
+}
+
+export function getSeedCommissionSettings() {
+  const orgs = getSeedOrganizations()
+  const retailers = orgs.filter((org) => org.type === 'retailer')
+  const statusCycle = ['active', 'active', 'inactive', 'active', 'active']
+
+  return retailers.map((retailer, index) => {
+    const daysAgo = 5 + index * 8
+    const effective = daysAgoAt(daysAgo, 10, 0)
+    return {
+      id: `comm-${retailer.id}`,
+      retailerOrganizationId: retailer.id,
+      franchiseeOrganizationId: retailer.parentId,
+      subfranchiseeOrganizationId: ORG_IDS.SUB_001,
+      retailerPercentage: DEFAULT_COMMISSION_SHARES.retailerPercentage,
+      franchiseePercentage: DEFAULT_COMMISSION_SHARES.franchiseePercentage,
+      subfranchiseePercentage: DEFAULT_COMMISSION_SHARES.subfranchiseePercentage,
+      companyPercentage: DEFAULT_COMMISSION_SHARES.companyPercentage,
+      effectiveDate: effective.slice(0, 10),
+      status: statusCycle[index % statusCycle.length],
+      createdAt: effective,
+      updatedAt: effective,
+    }
+  })
 }
 
 const DEFAULT_PROOF = {
@@ -870,7 +899,9 @@ function buildTransaction({
 
 export function getSeedTransactions() {
   const shareConfig = getSeedRevenueSharing()[0]
-  const retailerPct = Number(shareConfig?.retailerPercentage ?? 40)
+  const retailerPct = Number(
+    shareConfig?.retailerPercentage ?? DEFAULT_SHARE_PERCENTAGES.retailer,
+  )
   const productCatalog = [
     'Mobile Load - Globe',
     'Mobile Load - Smart',
@@ -1145,6 +1176,65 @@ export function initializeMockData() {
   }
   if (collectionNeedsSeed('revenueSharing')) {
     saveRevenueSharing(getSeedRevenueSharing())
+  } else {
+    const existing = getRevenueSharing()
+    const seed = getSeedRevenueSharing()[0]
+    const list = Array.isArray(existing) ? existing : []
+    if (list.length === 0) {
+      saveRevenueSharing(getSeedRevenueSharing())
+    } else {
+      const next = list.map((entry, index) => {
+        if (index !== 0 && entry.id !== 'revshare-default') return entry
+        return {
+          ...entry,
+          retailerPercentage: seed.retailerPercentage,
+          franchiseePercentage: seed.franchiseePercentage,
+          subfranchiseePercentage: seed.subfranchiseePercentage,
+          companyPercentage: seed.companyPercentage,
+          updatedAt: new Date().toISOString(),
+        }
+      })
+      const hasDefault = next.some((entry) => entry.id === 'revshare-default')
+      saveRevenueSharing(hasDefault ? next : [seed, ...next])
+    }
+  }
+  if (collectionNeedsSeed('commissionSettings')) {
+    saveCommissionSettings(getSeedCommissionSettings())
+  } else {
+    const existing = getCommissionSettings()
+    const seed = getSeedCommissionSettings()
+    const byId = new Map(existing.map((entry) => [entry.id, entry]))
+    let changed = false
+
+    seed.forEach((seedEntry) => {
+      if (!byId.has(seedEntry.id)) {
+        byId.set(seedEntry.id, seedEntry)
+        changed = true
+        return
+      }
+      const current = byId.get(seedEntry.id)
+      const aligned = {
+        ...current,
+        retailerPercentage: DEFAULT_COMMISSION_SHARES.retailerPercentage,
+        franchiseePercentage: DEFAULT_COMMISSION_SHARES.franchiseePercentage,
+        subfranchiseePercentage: DEFAULT_COMMISSION_SHARES.subfranchiseePercentage,
+        companyPercentage: DEFAULT_COMMISSION_SHARES.companyPercentage,
+      }
+      if (
+        Number(current.retailerPercentage) !== aligned.retailerPercentage ||
+        Number(current.franchiseePercentage) !== aligned.franchiseePercentage ||
+        Number(current.subfranchiseePercentage) !==
+          aligned.subfranchiseePercentage ||
+        Number(current.companyPercentage) !== aligned.companyPercentage
+      ) {
+        byId.set(seedEntry.id, aligned)
+        changed = true
+      }
+    })
+
+    if (changed) {
+      saveCommissionSettings(Array.from(byId.values()))
+    }
   }
   if (collectionNeedsSeed('transactions') || isEmptyCollection('transactions')) {
     saveTransactions(getSeedTransactions())
@@ -1155,7 +1245,14 @@ export function initializeMockData() {
     let changed = false
 
     // Demo surfaces completed transactions only — normalize legacy pending rows.
-    // Also align totalDistributed with distributable (full 4-tier share total).
+    // Align totalDistributed + retailerShare with active share set (platform fee 40%).
+    const shareConfig = getRevenueSharing().find(
+      (entry) => entry.status === 'active',
+    ) || getSeedRevenueSharing()[0]
+    const retailerPct = Number(
+      shareConfig?.retailerPercentage ?? DEFAULT_SHARE_PERCENTAGES.retailer,
+    )
+
     byId.forEach((tx, id) => {
       let next = tx
       if (tx.status === TRANSACTION_STATUS.PENDING) {
@@ -1169,6 +1266,15 @@ export function initializeMockData() {
       ) {
         next = { ...next, totalDistributed: distributable }
         changed = true
+      }
+      if (Number.isFinite(distributable)) {
+        const alignedRetailerShare = roundMoney(
+          (distributable * retailerPct) / 100,
+        )
+        if (Number(next.retailerShare) !== alignedRetailerShare) {
+          next = { ...next, retailerShare: alignedRetailerShare }
+          changed = true
+        }
       }
       if (next !== tx) byId.set(id, next)
     })
@@ -1221,6 +1327,7 @@ export function resetDemoData() {
   saveFundingRequests(getSeedFundingRequests())
   saveFundingTransfers(getSeedFundingTransfers())
   saveRevenueSharing(getSeedRevenueSharing())
+  saveCommissionSettings(getSeedCommissionSettings())
   saveTransactions(getSeedTransactions())
   saveSettlements([])
   localStorage.setItem(STORAGE_KEYS.WALLET_LEDGER_VERSION, WALLET_LEDGER_VERSION)
