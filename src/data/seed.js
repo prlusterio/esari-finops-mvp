@@ -7,6 +7,7 @@ import {
   WALLET_LEDGER_VERSION,
 } from '@/lib/constants'
 import { sumCreditedShareForOrg } from '@/lib/revenue'
+import { matchProductServiceToPayment } from '@/lib/transactions'
 import {
   collectionNeedsSeed,
   getFundingRequests,
@@ -821,6 +822,8 @@ function buildTransaction({
   walletDeduction,
   retailerShare,
   status,
+  productService,
+  customerReference,
 }) {
   const resolvedBaseCost =
     baseCost != null
@@ -856,6 +859,11 @@ function buildTransaction({
     distributableRevenue,
     retailerShare,
     totalDistributed,
+    productService: matchProductServiceToPayment(
+      productService || 'Mobile Load - Globe',
+      customerPayment,
+    ),
+    customerReference: customerReference || '0917-000-0000',
     status,
   }
 }
@@ -863,6 +871,16 @@ function buildTransaction({
 export function getSeedTransactions() {
   const shareConfig = getSeedRevenueSharing()[0]
   const retailerPct = Number(shareConfig?.retailerPercentage ?? 40)
+  const productCatalog = [
+    'Mobile Load - Globe',
+    'Mobile Load - Smart',
+    'Mobile Load - TNT',
+    'Bills Payment - Meralco',
+    'Bills Payment - Maynilad',
+    'E-Wallet Cash-in - GCash',
+    'E-Wallet Cash-in - Maya',
+    'Gaming Credits - Steam',
+  ]
 
   const featured = [
     buildTransaction({
@@ -877,6 +895,8 @@ export function getSeedTransactions() {
       platformProcessingFee: 30,
       walletDeduction: 1455,
       retailerShare: roundMoney((45 * retailerPct) / 100),
+      productService: 'Mobile Load - Globe',
+      customerReference: '0917-123-4567',
       status: TRANSACTION_STATUS.COMPLETED,
     }),
     buildTransaction({
@@ -891,6 +911,8 @@ export function getSeedTransactions() {
       platformProcessingFee: 17,
       walletDeduction: 824.5,
       retailerShare: roundMoney((25.5 * retailerPct) / 100),
+      productService: 'Bills Payment - Meralco',
+      customerReference: '0918-555-0192',
       status: TRANSACTION_STATUS.COMPLETED,
     }),
     buildTransaction({
@@ -905,6 +927,8 @@ export function getSeedTransactions() {
       platformProcessingFee: 44,
       walletDeduction: 2134,
       retailerShare: roundMoney((66 * retailerPct) / 100),
+      productService: 'E-Wallet Cash-in - GCash',
+      customerReference: '0920-771-3344',
       status: TRANSACTION_STATUS.COMPLETED,
     }),
     buildTransaction({
@@ -919,6 +943,8 @@ export function getSeedTransactions() {
       platformProcessingFee: 20,
       walletDeduction: 970,
       retailerShare: roundMoney((30 * retailerPct) / 100),
+      productService: 'Mobile Load - Smart',
+      customerReference: '0917-882-1001',
       status: TRANSACTION_STATUS.COMPLETED,
     }),
   ]
@@ -968,6 +994,8 @@ export function getSeedTransactions() {
     const walletDeduction = roundMoney(baseCost + platformProcessingFee)
     const distributable = roundMoney(payment - walletDeduction)
     const retailerShare = roundMoney((distributable * retailerPct) / 100)
+    const productService = productCatalog[index % productCatalog.length]
+    const customerReference = `09${17 + (index % 10)}-${String(100 + (index % 90)).padStart(3, '0')}-${String(1000 + index).slice(-4)}`
 
     generated.push(
       buildTransaction({
@@ -982,6 +1010,8 @@ export function getSeedTransactions() {
         platformProcessingFee,
         walletDeduction,
         retailerShare,
+        productService,
+        customerReference,
         status: TRANSACTION_STATUS.COMPLETED,
       }),
     )
@@ -1146,6 +1176,26 @@ export function initializeMockData() {
     seedTransactions.forEach((seedTx) => {
       if (!byId.has(seedTx.id)) {
         byId.set(seedTx.id, seedTx)
+        changed = true
+        return
+      }
+      const current = byId.get(seedTx.id)
+      const matchedProduct = matchProductServiceToPayment(
+        current.productService || seedTx.productService,
+        current.customerPayment ?? seedTx.customerPayment,
+      )
+      const nextProduct = matchedProduct
+      const nextCustomerRef =
+        current.customerReference || seedTx.customerReference
+      if (
+        current.productService !== nextProduct ||
+        current.customerReference !== nextCustomerRef
+      ) {
+        byId.set(seedTx.id, {
+          ...current,
+          productService: nextProduct,
+          customerReference: nextCustomerRef,
+        })
         changed = true
       }
     })

@@ -12,6 +12,27 @@ function roundMoney(value) {
   return Math.round((Number(value) + Number.EPSILON) * 100) / 100
 }
 
+function formatPaymentLabel(amount) {
+  const value = Number(amount) || 0
+  return `₱${value.toLocaleString('en-PH', {
+    minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
+    maximumFractionDigits: 2,
+  })}`
+}
+
+/**
+ * Keeps product/service labels aligned with the customer payment amount.
+ * e.g. "Mobile Load - Smart ₱50" + payment 1000 → "Mobile Load - Smart ₱1,000"
+ */
+export function matchProductServiceToPayment(productService, customerPayment) {
+  const amountLabel = formatPaymentLabel(customerPayment)
+  const base = String(productService || 'Mobile Load - Globe').trim()
+  if (/₱[\d,]+(?:\.\d+)?/.test(base)) {
+    return base.replace(/₱[\d,]+(?:\.\d+)?/, amountLabel)
+  }
+  return `${base} ${amountLabel}`
+}
+
 export function resolveSharePercentages(activeConfig) {
   if (!activeConfig) return { ...DEFAULT_SHARE_PERCENTAGES }
 

@@ -1,7 +1,7 @@
-import { Download, Wallet } from 'lucide-react'
+import { Download, Info, RadioTower, Wallet } from 'lucide-react'
 import { formatCurrency, formatSignedCurrency } from '@/lib/currency'
-import { formatDateTimeStacked } from '@/lib/date'
-import { buildTransactionDistribution } from '@/lib/transactions'
+import { formatDateTimeShort, formatDateTimeStacked } from '@/lib/date'
+import { buildTransactionDistribution, matchProductServiceToPayment } from '@/lib/transactions'
 import { getRevenueSharing } from '@/services/storage'
 import { SignedAmount } from '@/components/shared/SignedAmount'
 import { Badge } from '@/components/ui/badge'
@@ -16,18 +16,34 @@ import {
 } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 
-function downloadReceipt(tx, distribution) {
+function SummaryField({ label, value }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+        {label}
+      </p>
+      <p className="mt-1 truncate text-sm font-semibold text-slate-900">
+        {value || '—'}
+      </p>
+    </div>
+  )
+}
+
+function downloadReceipt(tx, distribution, summary) {
   const { costs } = distribution
   const lines = [
     'eSariSari Transaction Receipt',
-    `Reference: ${tx.reference || tx.id}`,
+    `Reference: ${summary.reference}`,
     `Date: ${formatDateTimeStacked(tx.createdAt)}`,
+    `Retailer: ${summary.retailerName}`,
+    `Franchisee: ${summary.franchiseeName}`,
+    `Sub-Franchisee: ${summary.subfranchiseeName}`,
+    `Customer Reference: ${summary.customerReference}`,
+    `Product/Service: ${summary.productService}`,
     '',
     `Total Customer Payment: ${formatCurrency(costs.customerPayment)}`,
-    `Base Cost (Inventory): ${formatSignedCurrency(costs.baseCost, 'debit')}`,
-    `Platform Processing Fee: ${formatSignedCurrency(costs.platformProcessingFee, 'debit')}`,
-    `Net Wallet Deduction: ${formatSignedCurrency(costs.netWalletDeduction, 'debit')}`,
-    `Total Distributable Revenue: ${formatSignedCurrency(costs.distributable, 'credit')}`,
+    `Retailer Wallet Deduction: ${formatSignedCurrency(costs.netWalletDeduction, 'debit')}`,
+    `Total Distributable Revenue: ${formatCurrency(costs.distributable)}`,
     '',
     'Distribution Breakdown',
     ...distribution.tiers.map(
@@ -95,12 +111,38 @@ function DistributionTier({ tier, isLast }) {
           <SignedAmount
             amount={tier.amount}
             direction="credit"
+            showSign={false}
             className="shrink-0 text-sm"
           />
         </div>
       </div>
     </div>
   )
+}
+
+function resolveTransactionSummary(tx, organizations = []) {
+  const orgById = Object.fromEntries(organizations.map((org) => [org.id, org]))
+  const retailer = orgById[tx?.retailerOrganizationId] || null
+  const franchisee =
+    orgById[tx?.franchiseeOrganizationId] ||
+    (retailer?.parentId ? orgById[retailer.parentId] : null) ||
+    null
+  const subfranchisee =
+    orgById[tx?.subfranchiseeOrganizationId] ||
+    (franchisee?.parentId ? orgById[franchisee.parentId] : null) ||
+    null
+
+  return {
+    reference: tx?.reference || tx?.id || '—',
+    retailerName: tx?.retailerName || retailer?.name || '—',
+    franchiseeName: franchisee?.name || '—',
+    subfranchiseeName: subfranchisee?.name || '—',
+    customerReference: tx?.customerReference || '—',
+    productService: matchProductServiceToPayment(
+      tx?.productService,
+      tx?.customerPayment,
+    ),
+  }
 }
 
 export function TransactionDetailsDialog({
@@ -118,6 +160,7 @@ export function TransactionDetailsDialog({
     revenueSharing: getRevenueSharing(),
   })
   const { costs, viewerTier } = distribution
+  const summary = resolveTransactionSummary(transaction, organizations)
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -130,11 +173,53 @@ export function TransactionDetailsDialog({
             Transaction Details
           </SheetTitle>
           <SheetDescription className="text-sm text-slate-400">
-            {transaction.reference || transaction.id}
+            {summary.reference}
           </SheetDescription>
         </SheetHeader>
 
         <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+          <div className="rounded-xl border border-slate-200 bg-white px-4 py-4">
+            <div className="mb-4 flex items-center gap-2">
+              <Info className="h-4 w-4 text-blue-600" />
+              <h3 className="text-sm font-semibold text-slate-900">
+                Transaction Summary
+              </h3>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <SummaryField
+                label="Transaction Reference"
+                value={summary.reference}
+              />
+              <SummaryField
+                label="Date and Time"
+                value={formatDateTimeShort(transaction.createdAt)}
+              />
+              <SummaryField label="Retailer" value={summary.retailerName} />
+              <SummaryField label="Franchisee" value={summary.franchiseeName} />
+              <SummaryField
+                label="Sub-Franchisee"
+                value={summary.subfranchiseeName}
+              />
+              <SummaryField
+                label="Customer Reference"
+                value={summary.customerReference}
+              />
+            </div>
+
+            <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-blue-100 bg-blue-50 px-3.5 py-3">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                  Product/Service
+                </p>
+                <p className="mt-1 truncate text-sm font-semibold text-blue-700">
+                  {summary.productService}
+                </p>
+              </div>
+              <RadioTower className="h-5 w-5 shrink-0 text-slate-400" />
+            </div>
+          </div>
+
           <div className="rounded-xl border border-slate-200 bg-white px-4 py-4">
             <div className="flex items-start justify-between gap-3">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
@@ -145,43 +230,26 @@ export function TransactionDetailsDialog({
               </p>
             </div>
 
-            <div className="mt-3 space-y-2 text-sm">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-slate-500">Base Cost (Inventory)</span>
-                <SignedAmount amount={costs.baseCost} direction="debit" />
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-slate-500">Platform Processing Fee</span>
-                <SignedAmount
-                  amount={costs.platformProcessingFee}
-                  direction="debit"
-                />
-              </div>
+            <div className="mt-3 flex items-center justify-between gap-3 text-sm">
+              <span className="text-slate-500">Retailer Wallet Deduction</span>
+              <SignedAmount
+                amount={costs.netWalletDeduction}
+                direction="debit"
+              />
             </div>
 
             <div className="my-3 border-t border-dashed border-slate-200" />
 
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center justify-between gap-3">
-                <span className="font-medium text-slate-700">
-                  Net Wallet Deduction
-                </span>
-                <SignedAmount
-                  amount={costs.netWalletDeduction}
-                  direction="debit"
-                  className="font-bold"
-                />
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="font-medium text-slate-700">
-                  Total Distributable Revenue
-                </span>
-                <SignedAmount
-                  amount={costs.distributable}
-                  direction="credit"
-                  className="font-bold"
-                />
-              </div>
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <span className="font-medium text-slate-700">
+                Total Distributable Revenue
+              </span>
+              <SignedAmount
+                amount={costs.distributable}
+                direction="credit"
+                showSign={false}
+                className="font-bold"
+              />
             </div>
           </div>
 
@@ -210,6 +278,7 @@ export function TransactionDetailsDialog({
                   <SignedAmount
                     amount={viewerTier.amount}
                     direction="credit"
+                    showSign={false}
                     className="font-semibold"
                   />{' '}
                   credited to your revenue wallet
@@ -231,9 +300,9 @@ export function TransactionDetailsDialog({
                 This revenue is calculated as {viewerTier.percentage}% of the
                 Distributable Revenue ({formatCurrency(costs.distributable)})
                 generated from this transaction. The Distributable Revenue is the
-                remaining amount after the Base Cost and Platform Fees are
-                deducted from the Customer Payment. Your share is credited to
-                your revenue wallet immediately on completion.
+                remaining amount after the Retailer Wallet Deduction is taken
+                from the Customer Payment. Your share is credited to your revenue
+                wallet immediately on completion.
               </p>
             </div>
           ) : null}
@@ -251,7 +320,9 @@ export function TransactionDetailsDialog({
           <Button
             type="button"
             className="bg-blue-600 text-white hover:bg-blue-700"
-            onClick={() => downloadReceipt(transaction, distribution)}
+            onClick={() =>
+              downloadReceipt(transaction, distribution, summary)
+            }
           >
             <Download className="h-4 w-4" />
             Download Receipt

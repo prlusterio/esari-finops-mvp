@@ -389,12 +389,14 @@ export default function TransactionsPage() {
                             <SignedAmount
                               amount={tx.distributableRevenue}
                               direction="credit"
+                              showSign={false}
                             />
                           </TableCell>
                           <TableCell className="whitespace-nowrap">
                             <SignedAmount
                               amount={tx.retailerShare}
                               direction="credit"
+                              showSign={false}
                             />
                           </TableCell>
                           <TableCell className="whitespace-nowrap">
@@ -403,6 +405,7 @@ export default function TransactionsPage() {
                                 getTransactionCostBreakdown(tx).distributable
                               }
                               direction="credit"
+                              showSign={false}
                             />
                           </TableCell>
                           <TableCell>
