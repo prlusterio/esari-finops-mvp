@@ -6,11 +6,16 @@ import {
 } from '@/lib/funding'
 import {
   buildRevenueEntries,
+  getViewerShareAmount,
+  REVENUE_ENTRY_STATUS,
   sumRevenueByStatus,
+  toRevenueEntryStatus,
 } from '@/lib/revenue'
 import {
   filterTransactionsForRole,
+  getActiveSharePercentages,
   getTransactionCostBreakdown,
+  sortTransactionsNewest,
   transactionsToCsv,
 } from '@/lib/transactions'
 
@@ -30,6 +35,8 @@ export function getReportsPageConfig(role) {
       showNetworkFilters: false,
       showRetailerFilter: false,
       showCustomDateRange: true,
+      showFranchiseeRevenueTable: false,
+      showRetailerRevenueTable: false,
     }
   }
 
@@ -42,6 +49,8 @@ export function getReportsPageConfig(role) {
       showNetworkFilters: true,
       showRetailerFilter: false,
       showCustomDateRange: true,
+      showFranchiseeRevenueTable: true,
+      showRetailerRevenueTable: true,
     }
   }
 
@@ -54,6 +63,8 @@ export function getReportsPageConfig(role) {
       showNetworkFilters: false,
       showRetailerFilter: true,
       showCustomDateRange: true,
+      showFranchiseeRevenueTable: false,
+      showRetailerRevenueTable: true,
     }
   }
 
@@ -65,6 +76,8 @@ export function getReportsPageConfig(role) {
     showNetworkFilters: false,
     showRetailerFilter: false,
     showCustomDateRange: true,
+    showFranchiseeRevenueTable: false,
+    showRetailerRevenueTable: false,
   }
 }
 
@@ -114,6 +127,176 @@ export function getNetworkFilterOptions(organizations, organizationId) {
     nestedRetailers.length > 0 ? nestedRetailers : directRetailers
 
   return { franchisees, retailersByFranchisee, allRetailers }
+}
+
+/**
+ * Resolves which franchisee / retailer orgs appear in network revenue tables
+ * for the current role and active filters.
+ */
+export function getNetworkRevenueParties({
+  role,
+  organizationId,
+  organizations = [],
+  franchiseeId = 'all',
+  retailerId = 'all',
+} = {}) {
+  const { franchisees, retailersByFranchisee, allRetailers } =
+    getNetworkFilterOptions(organizations, organizationId)
+
+  if (role === ROLES.SUBFRANCHISEE) {
+    let franchiseeList =
+      franchiseeId && franchiseeId !== 'all'
+        ? franchisees.filter((org) => org.id === franchiseeId)
+        : franchisees
+
+    let retailerList = []
+    if (retailerId && retailerId !== 'all') {
+      retailerList = allRetailers.filter((org) => org.id === retailerId)
+      const parentId = retailerList[0]?.parentId
+      if (parentId) {
+        franchiseeList = franchisees.filter((org) => org.id === parentId)
+      }
+    } else if (franchiseeId && franchiseeId !== 'all') {
+      retailerList = retailersByFranchisee[franchiseeId] || []
+    } else {
+      retailerList = allRetailers
+    }
+
+    return { franchisees: franchiseeList, retailers: retailerList }
+  }
+
+  if (role === ROLES.FRANCHISEE) {
+    const retailerList =
+      retailerId && retailerId !== 'all'
+        ? allRetailers.filter((org) => org.id === retailerId)
+        : allRetailers
+    return { franchisees: [], retailers: retailerList }
+  }
+
+  return { franchisees: [], retailers: [] }
+}
+
+/**
+ * Aggregates each party's earned commission share for scoped transactions.
+ */
+export function buildPartyRevenueRows({
+  parties = [],
+  transactions = [],
+  revenueSharing = [],
+  partyRole,
+  matchTransaction,
+  parentNameById = {},
+} = {}) {
+  const percentages = getActiveSharePercentages(revenueSharing)
+
+  return parties
+    .map((party) => {
+      const partyTxs = transactions.filter((tx) => matchTransaction(tx, party))
+      let customerPayment = 0
+      let distributable = 0
+      let creditedRevenue = 0
+      let pendingRevenue = 0
+
+      partyTxs.forEach((tx) => {
+        const costs = getTransactionCostBreakdown(tx)
+        customerPayment = roundMoney(
+          customerPayment + (Number(tx.customerPayment) || 0),
+        )
+        distributable = roundMoney(distributable + costs.distributable)
+
+        const share = getViewerShareAmount(tx, percentages, partyRole)
+        if (toRevenueEntryStatus(tx.status) === REVENUE_ENTRY_STATUS.CREDITED) {
+          creditedRevenue = roundMoney(creditedRevenue + share)
+        } else {
+          pendingRevenue = roundMoney(pendingRevenue + share)
+        }
+      })
+
+      return {
+        organizationId: party.id,
+        name: party.name,
+        code: party.code || '',
+        parentName: parentNameById[party.parentId] || '',
+        transactionCount: partyTxs.length,
+        customerPayment,
+        distributable,
+        creditedRevenue,
+        pendingRevenue,
+        totalRevenue: roundMoney(creditedRevenue + pendingRevenue),
+      }
+    })
+    .sort((a, b) => {
+      if (b.creditedRevenue !== a.creditedRevenue) {
+        return b.creditedRevenue - a.creditedRevenue
+      }
+      return a.name.localeCompare(b.name)
+    })
+}
+
+/**
+ * Per-transaction revenue rows for a single franchisee or retailer party.
+ */
+export function buildPartyRevenueDetailEntries({
+  transactions = [],
+  revenueSharing = [],
+  partyRole,
+  organizationId,
+  partyType = 'retailer',
+} = {}) {
+  const percentages = getActiveSharePercentages(revenueSharing)
+
+  return sortTransactionsNewest(
+    transactions.filter((tx) => {
+      if (partyType === 'franchisee') {
+        return tx.franchiseeOrganizationId === organizationId
+      }
+      return tx.retailerOrganizationId === organizationId
+    }),
+  ).map((tx) => {
+    const costs = getTransactionCostBreakdown(tx)
+    const partyRevenue = getViewerShareAmount(tx, percentages, partyRole)
+    const status = toRevenueEntryStatus(tx.status)
+
+    return {
+      id: tx.id,
+      reference: tx.reference || tx.id,
+      createdAt: tx.createdAt,
+      transactionStatus: tx.status,
+      status,
+      retailerName: tx.retailerName || '',
+      retailerCode: tx.retailerCode || '',
+      customerPayment: Number(tx.customerPayment) || 0,
+      distributableRevenue: costs.distributable,
+      partyRevenue,
+      walletDeduction: costs.netWalletDeduction,
+    }
+  })
+}
+
+export function partyRevenueDetailEntriesToCsv(entries = [], { partyLabel = 'Party' } = {}) {
+  const headers = [
+    'Reference',
+    'Date',
+    'Retailer',
+    'Retailer Code',
+    'Customer Payment',
+    'Distributable Revenue',
+    `${partyLabel} Revenue`,
+    'Status',
+  ]
+
+  const rows = entries.map((entry) => [
+    entry.reference,
+    entry.createdAt,
+    entry.retailerName,
+    entry.retailerCode,
+    entry.customerPayment,
+    entry.distributableRevenue,
+    entry.partyRevenue,
+    entry.status,
+  ])
+
+  return rowsToCsv(headers, rows)
 }
 
 function rowsToCsv(headers, rows) {
@@ -362,31 +545,35 @@ export function buildReportSnapshot({
             entry.walletType !== 'revenue',
         )
 
-  const retailerBreakdown = Object.values(
-    scopedTransactions.reduce((acc, tx) => {
-      const key = tx.retailerOrganizationId || 'unknown'
-      if (!acc[key]) {
-        acc[key] = {
-          retailerOrganizationId: key,
-          retailerName: tx.retailerName || orgById[key]?.name || 'Unknown',
-          retailerCode: tx.retailerCode || orgById[key]?.code || '',
-          count: 0,
-          customerPayment: 0,
-          distributable: 0,
-        }
-      }
-      acc[key].count += 1
-      acc[key].customerPayment = roundMoney(
-        acc[key].customerPayment + (Number(tx.customerPayment) || 0),
-      )
-      acc[key].distributable = roundMoney(
-        acc[key].distributable + getTransactionCostBreakdown(tx).distributable,
-      )
-      return acc
-    }, {}),
+  const parties = getNetworkRevenueParties({
+    role,
+    organizationId,
+    organizations,
+    franchiseeId,
+    retailerId,
+  })
+
+  const parentNameById = Object.fromEntries(
+    organizations.map((org) => [org.id, org.name]),
   )
-    .sort((a, b) => b.customerPayment - a.customerPayment)
-    .slice(0, 5)
+
+  const franchiseeRevenueRows = buildPartyRevenueRows({
+    parties: parties.franchisees,
+    transactions: scopedTransactions,
+    revenueSharing,
+    partyRole: ROLES.FRANCHISEE,
+    matchTransaction: (tx, party) => tx.franchiseeOrganizationId === party.id,
+    parentNameById,
+  })
+
+  const retailerRevenueRows = buildPartyRevenueRows({
+    parties: parties.retailers,
+    transactions: scopedTransactions,
+    revenueSharing,
+    partyRole: ROLES.RETAILER,
+    matchTransaction: (tx, party) => tx.retailerOrganizationId === party.id,
+    parentNameById,
+  })
 
   return {
     orgById,
@@ -411,7 +598,8 @@ export function buildReportSnapshot({
       transfers: scopedTransfers,
       revenueEntries,
     },
-    retailerBreakdown,
+    franchiseeRevenueRows,
+    retailerRevenueRows,
   }
 }
 

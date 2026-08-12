@@ -5,7 +5,6 @@ import {
   ArrowLeftRight,
   PieChart,
   Receipt,
-  Scale,
   FileBarChart,
   Store,
   CircleDollarSign,
@@ -24,13 +23,19 @@ export const NAV_ITEMS = [
     path: '/dashboard',
     icon: LayoutDashboard,
     roles: [ROLES.ADMIN, ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE, ROLES.RETAILER],
-    disabledRoles: [ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE, ROLES.RETAILER],
+    disabledRoles: [
+      ROLES.ADMIN,
+      ROLES.SUBFRANCHISEE,
+      ROLES.FRANCHISEE,
+      ROLES.RETAILER,
+    ],
   },
   {
     title: 'Organizations',
     path: '/organizations',
     icon: Building2,
     roles: [ROLES.ADMIN],
+    disabled: true,
   },
   {
     title: 'Franchisees',
@@ -77,8 +82,8 @@ export const NAV_ITEMS = [
     roles: [ROLES.RETAILER],
   },
   {
-    title: 'Revenue Sharing',
-    path: '/revenue-sharing',
+    title: 'Commission Settings',
+    path: '/commission-settings',
     icon: PieChart,
     roles: [ROLES.ADMIN],
   },
@@ -99,12 +104,6 @@ export const NAV_ITEMS = [
     path: '/commission-settings',
     icon: PieChart,
     roles: [ROLES.SUBFRANCHISEE],
-  },
-  {
-    title: 'Settlements',
-    path: '/settlements',
-    icon: Scale,
-    roles: [ROLES.ADMIN],
   },
   {
     title: 'Reports',
@@ -143,9 +142,10 @@ export function canAccessRoute(role, path) {
     return true
   }
 
-  const item = NAV_ITEMS.find((nav) => nav.path === path)
+  const item = NAV_ITEMS.find(
+    (nav) => nav.path === path && nav.roles.includes(role),
+  )
   if (!item) return false
-  if (!item.roles.includes(role)) return false
   if (isNavItemDisabled(item, role)) return false
   return true
 }

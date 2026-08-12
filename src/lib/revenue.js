@@ -36,25 +36,24 @@ export function getViewerSharePercentage(percentages, role) {
 export function getViewerShareAmount(tx, percentages, role) {
   const key = getViewerShareKey(role)
   if (!key) return 0
+  return getTransactionShareAmounts(tx, percentages)[key] || 0
+}
 
+/**
+ * Commission amounts for each hierarchy tier on a transaction.
+ */
+export function getTransactionShareAmounts(tx, percentages) {
   const distributable = getTransactionCostBreakdown(tx).distributable
-  const retailerAmount = roundMoney((distributable * percentages.retailer) / 100)
-  const franchiseeAmount = roundMoney((distributable * percentages.franchisee) / 100)
-  const subfranchiseeAmount = roundMoney(
+  const retailer = roundMoney((distributable * percentages.retailer) / 100)
+  const franchisee = roundMoney((distributable * percentages.franchisee) / 100)
+  const subfranchisee = roundMoney(
     (distributable * percentages.subfranchisee) / 100,
   )
-  const companyAmount = roundMoney(
-    distributable - retailerAmount - franchiseeAmount - subfranchiseeAmount,
+  const company = roundMoney(
+    distributable - retailer - franchisee - subfranchisee,
   )
 
-  const amounts = {
-    retailer: retailerAmount,
-    franchisee: franchiseeAmount,
-    subfranchisee: subfranchiseeAmount,
-    company: companyAmount,
-  }
-
-  return amounts[key] || 0
+  return { retailer, franchisee, subfranchisee, company, distributable }
 }
 
 export function toRevenueEntryStatus(transactionStatus) {

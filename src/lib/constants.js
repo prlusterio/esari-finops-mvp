@@ -77,6 +77,7 @@ export const DEMO_ACCOUNTS = [
   {
     label: 'Admin',
     email: 'admin@esarisari.local',
+    restricted: true,
   },
   {
     label: 'Sub-Franchisee',
@@ -92,4 +93,8 @@ export const DEMO_ACCOUNTS = [
   },
 ]
 
+/** Shared password for non-admin demo accounts. */
 export const DEMO_PASSWORD = 'password123'
+
+/** Restricted password for the platform admin demo account. */
+export const ADMIN_DEMO_PASSWORD = 'abc12345678'

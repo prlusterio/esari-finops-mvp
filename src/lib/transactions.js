@@ -345,8 +345,9 @@ export function transactionsToCsv(
     'Customer Payment',
     'Wallet Deduction',
     'Distributable Revenue',
-    'Retailer Share',
-    'Total Distributed',
+    'Retailer',
+    'Franchisee',
+    'Sub-Franchisee',
     'Status',
   ]
 
@@ -361,6 +362,12 @@ export function transactionsToCsv(
         ? Number(tx.retailerShare)
         : (costs.distributable * percentages.retailer) / 100,
     )
+    const franchiseeShare = roundMoney(
+      (costs.distributable * percentages.franchisee) / 100,
+    )
+    const subfranchiseeShare = roundMoney(
+      (costs.distributable * percentages.subfranchisee) / 100,
+    )
     return [
       tx.reference || tx.id,
       tx.createdAt,
@@ -370,7 +377,8 @@ export function transactionsToCsv(
       costs.netWalletDeduction,
       costs.distributable,
       retailerShare,
-      costs.distributable,
+      franchiseeShare,
+      subfranchiseeShare,
       TRANSACTION_STATUS[tx.status?.toUpperCase()] ? tx.status : tx.status,
     ]
   })

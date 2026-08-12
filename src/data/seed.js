@@ -6,6 +6,8 @@ import {
   TRANSACTION_STATUS,
   TRANSACTIONS_SEED_VERSION,
   WALLET_LEDGER_VERSION,
+  ADMIN_DEMO_PASSWORD,
+  DEMO_PASSWORD,
 } from '@/lib/constants'
 import { sumCreditedShareForOrg } from '@/lib/revenue'
 import { DEFAULT_COMMISSION_SHARES } from '@/lib/commission'
@@ -18,6 +20,7 @@ import {
   getOrganizations,
   getRevenueSharing,
   getTransactions,
+  getUsers,
   getWallets,
   saveCommissionSettings,
   saveFundingRequests,
@@ -63,7 +66,7 @@ export function getSeedUsers() {
       id: 'user-admin',
       name: 'eSariSari Admin',
       email: 'admin@esarisari.local',
-      password: 'password123',
+      password: ADMIN_DEMO_PASSWORD,
       role: ROLES.ADMIN,
       organizationId: ORG_IDS.PLATFORM,
       status: 'active',
@@ -74,7 +77,7 @@ export function getSeedUsers() {
       id: 'user-subfranchisee',
       name: 'Northern Mindanao Sub-Franchisee',
       email: 'subfranchisee@esarisari.local',
-      password: 'password123',
+      password: DEMO_PASSWORD,
       role: ROLES.SUBFRANCHISEE,
       organizationId: ORG_IDS.SUB_001,
       status: 'active',
@@ -85,7 +88,7 @@ export function getSeedUsers() {
       id: 'user-franchisee',
       name: 'CDO Franchisee',
       email: 'franchisee@esarisari.local',
-      password: 'password123',
+      password: DEMO_PASSWORD,
       role: ROLES.FRANCHISEE,
       organizationId: ORG_IDS.FRANCHISE_001,
       status: 'active',
@@ -96,7 +99,7 @@ export function getSeedUsers() {
       id: 'user-retailer',
       name: 'Retailer A',
       email: 'retailer@esarisari.local',
-      password: 'password123',
+      password: DEMO_PASSWORD,
       role: ROLES.RETAILER,
       organizationId: ORG_IDS.RETAILER_001,
       status: 'active',
@@ -1100,6 +1103,19 @@ export function getSeedTransactions() {
 export function initializeMockData() {
   if (collectionNeedsSeed('users')) {
     saveUsers(getSeedUsers())
+  } else {
+    // Keep demo admin credentials aligned without wiping other user accounts.
+    const existing = getUsers()
+    const admin = existing.find((user) => user.email === 'admin@esarisari.local')
+    if (admin && admin.password !== ADMIN_DEMO_PASSWORD) {
+      saveUsers(
+        existing.map((user) =>
+          user.email === 'admin@esarisari.local'
+            ? { ...user, password: ADMIN_DEMO_PASSWORD }
+            : user,
+        ),
+      )
+    }
   }
   if (collectionNeedsSeed('organizations')) {
     saveOrganizations(getSeedOrganizations())

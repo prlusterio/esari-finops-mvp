@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, Calculator, CheckCircle2, Save } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { formatCurrency } from '@/lib/currency'
+import { getHomePathForRole } from '@/lib/permissions'
 import { getRevenueSharing, saveRevenueSharing } from '@/services/storage'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Badge } from '@/components/ui/badge'
@@ -85,7 +86,7 @@ function getActiveConfig() {
 }
 
 export default function RevenueSharingPage() {
-  const { dataVersion, bumpDataVersion } = useAuth()
+  const { user, dataVersion, bumpDataVersion } = useAuth()
   const [retailer, setRetailer] = useState('30')
   const [franchisee, setFranchisee] = useState('20')
   const [subfranchisee, setSubfranchisee] = useState('10')
@@ -94,6 +95,7 @@ export default function RevenueSharingPage() {
   const [sampleDeduction, setSampleDeduction] = useState('97.00')
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const homePath = getHomePathForRole(user?.role)
 
   useEffect(() => {
     const active = getActiveConfig()
@@ -187,17 +189,17 @@ export default function RevenueSharingPage() {
 
     saveRevenueSharing(nextList)
     bumpDataVersion()
-    setMessage('Revenue sharing configuration saved successfully.')
+    setMessage('Commission settings saved successfully.')
   }
 
   return (
     <div>
       <PageHeader
-        title="Revenue Sharing Configuration"
-        description="Manage distribution percentages across the retail hierarchy."
+        title="Commission Settings"
+        description="Configure default commission and platform fee percentages for new transactions."
         breadcrumbs={[
-          { label: 'Home', href: '/dashboard' },
-          { label: 'Revenue Sharing' },
+          { label: 'Home', href: homePath },
+          { label: 'Commission Settings' },
         ]}
       />
 
@@ -254,7 +256,7 @@ export default function RevenueSharingPage() {
               />
               <PercentField
                 id="company-share"
-                label="Company Share %"
+                label="Platform Fee %"
                 value={company}
                 onChange={setCompany}
               />
@@ -350,7 +352,7 @@ export default function RevenueSharingPage() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-slate-700">
-                  <span>Company ({percentages.company}%)</span>
+                  <span>Platform Fee ({percentages.company}%)</span>
                   <span className="font-medium">
                     {formatCurrency(preview.companyAmount)}
                   </span>

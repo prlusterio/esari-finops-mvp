@@ -19,7 +19,6 @@ import RevenueSharingPage from '@/pages/revenue-sharing/RevenueSharingPage'
 import RevenuePage from '@/pages/revenue/RevenuePage'
 import CommissionSettingsPage from '@/pages/commission-settings/CommissionSettingsPage'
 import TransactionsPage from '@/pages/transactions/TransactionsPage'
-import SettlementsPage from '@/pages/settlements/SettlementsPage'
 import ReportsPage from '@/pages/reports/ReportsPage'
 import RetailersPage from '@/pages/retailers/RetailersPage'
 import ProfilePage from '@/pages/profile/ProfilePage'
@@ -32,6 +31,14 @@ function PublicOnly({ children }) {
     return <Navigate to={getHomePathForRole(user?.role)} replace />
   }
   return children
+}
+
+function CommissionSettingsGateway() {
+  const { user } = useAuth()
+  if (user?.role === ROLES.ADMIN) {
+    return <RevenueSharingPage />
+  }
+  return <CommissionSettingsPage />
 }
 
 export default function AppRoutes() {
@@ -105,9 +112,7 @@ export default function AppRoutes() {
             <Route path="/request-funding" element={<RequestFundingPage />} />
           </Route>
 
-          <Route element={<RoleRoute roles={[ROLES.ADMIN]} path="/revenue-sharing" />}>
-            <Route path="/revenue-sharing" element={<RevenueSharingPage />} />
-          </Route>
+          <Route path="/revenue-sharing" element={<Navigate to="/commission-settings" replace />} />
 
           <Route
             element={
@@ -134,19 +139,15 @@ export default function AppRoutes() {
           <Route
             element={
               <RoleRoute
-                roles={[ROLES.SUBFRANCHISEE]}
+                roles={[ROLES.ADMIN, ROLES.SUBFRANCHISEE]}
                 path="/commission-settings"
               />
             }
           >
             <Route
               path="/commission-settings"
-              element={<CommissionSettingsPage />}
+              element={<CommissionSettingsGateway />}
             />
-          </Route>
-
-          <Route element={<RoleRoute roles={[ROLES.ADMIN]} path="/settlements" />}>
-            <Route path="/settlements" element={<SettlementsPage />} />
           </Route>
 
           <Route

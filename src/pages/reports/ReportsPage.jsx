@@ -5,10 +5,9 @@ import {
   Filter,
   Receipt,
   Banknote,
-  Wallet,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { TRANSACTION_STATUS, TRANSACTION_STATUS_LABELS } from '@/lib/constants'
+import { ROLES, TRANSACTION_STATUS, TRANSACTION_STATUS_LABELS } from '@/lib/constants'
 import { formatCurrency } from '@/lib/currency'
 import { formatReportPeriodLabel } from '@/lib/date'
 import { DEFAULT_PAGE_SIZE, paginateItems } from '@/lib/pagination'
@@ -17,14 +16,17 @@ import { SignedAmount } from '@/components/shared/SignedAmount'
 import { TablePagination } from '@/components/shared/TablePagination'
 import { getHomePathForRole } from '@/lib/permissions'
 import {
+  buildPartyRevenueDetailEntries,
   buildReportSnapshot,
   exportTransactionsCsv,
   getNetworkFilterOptions,
   getReportsPageConfig,
+  partyRevenueDetailEntriesToCsv,
   revenueEntriesToCsv,
 } from '@/lib/reports'
+import { getTransactionShareAmounts } from '@/lib/revenue'
 import {
-  getTransactionCostBreakdown,
+  getActiveSharePercentages,
   getTransactionsPageConfig,
   sortTransactionsNewest,
 } from '@/lib/transactions'
@@ -34,7 +36,6 @@ import {
   getOrganizations,
   getRevenueSharing,
   getTransactions,
-  getWallets,
 } from '@/services/storage'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { StatCard } from '@/components/shared/StatCard'
@@ -42,6 +43,14 @@ import { TransactionDetailsDialog } from '@/components/shared/TransactionDetails
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -118,6 +127,247 @@ function ExportCard({ title, description, count, onExport, disabled }) {
   )
 }
 
+function NetworkRevenueTable({
+  title,
+  description,
+  rows,
+  emptyLabel,
+  showParentColumn = false,
+  entityLabel = 'Organization',
+  onView,
+  onExport,
+}) {
+  return (
+    <Card className="overflow-hidden shadow-sm">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-border px-4 py-3">
+        <div>
+          <CardTitle className="text-base font-semibold">{title}</CardTitle>
+          {description ? (
+            <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+          ) : null}
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {rows.length} {rows.length === 1 ? 'party' : 'parties'}
+        </p>
+      </CardHeader>
+      <CardContent className="p-0">
+        {rows.length === 0 ? (
+          <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+            {emptyLabel}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead>{entityLabel}</TableHead>
+                  {showParentColumn ? <TableHead>Franchisee</TableHead> : null}
+                  <TableHead className="text-right">Transactions</TableHead>
+                  <TableHead className="text-right">Customer Payments</TableHead>
+                  <TableHead className="text-right">Distributable</TableHead>
+                  <TableHead className="text-right">Credited Revenue</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((row) => (
+                  <TableRow key={row.organizationId}>
+                    <TableCell>
+                      <div className="font-semibold text-slate-900">
+                        {row.name}
+                      </div>
+                      {row.code ? (
+                        <div className="text-xs text-slate-400">{row.code}</div>
+                      ) : null}
+                    </TableCell>
+                    {showParentColumn ? (
+                      <TableCell className="text-slate-600">
+                        {row.parentName || '—'}
+                      </TableCell>
+                    ) : null}
+                    <TableCell className="text-right tabular-nums">
+                      {row.transactionCount}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums font-medium">
+                      {formatCurrency(row.customerPayment)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatCurrency(row.distributable)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums font-medium text-emerald-700">
+                      {formatCurrency(row.creditedRevenue)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                          onClick={() => onView?.(row)}
+                          aria-label={`View ${row.name}`}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                          onClick={() => onExport?.(row)}
+                          disabled={row.transactionCount === 0}
+                          aria-label={`Export ${row.name}`}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function NetworkPartyRevenueDialog({
+  open,
+  onOpenChange,
+  selection,
+  entries,
+  periodLabel,
+  onExport,
+}) {
+  const party = selection?.row
+  const partyLabel = selection?.entityLabel || 'Party'
+  const revenueColumnLabel = `${partyLabel} Revenue`
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex max-h-[90vh] max-w-4xl flex-col gap-0 overflow-hidden p-0 sm:rounded-xl">
+        <DialogHeader className="border-b border-border px-6 py-4 text-left">
+          <DialogTitle>{party?.name || partyLabel} Revenue</DialogTitle>
+          <DialogDescription>
+            {party?.code ? `${party.code} · ` : ''}
+            {party?.parentName ? `${party.parentName} · ` : ''}
+            Commission share detail for {periodLabel}.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 overflow-y-auto px-6 py-4">
+          <div className="grid gap-3 sm:grid-cols-4">
+            <div className="rounded-lg border border-border px-3 py-2">
+              <p className="text-xs text-muted-foreground">Transactions</p>
+              <p className="mt-1 text-lg font-semibold tabular-nums">
+                {party?.transactionCount ?? 0}
+              </p>
+            </div>
+            <div className="rounded-lg border border-border px-3 py-2">
+              <p className="text-xs text-muted-foreground">Customer Payments</p>
+              <p className="mt-1 text-lg font-semibold tabular-nums">
+                {formatCurrency(party?.customerPayment ?? 0)}
+              </p>
+            </div>
+            <div className="rounded-lg border border-border px-3 py-2">
+              <p className="text-xs text-muted-foreground">Distributable</p>
+              <p className="mt-1 text-lg font-semibold tabular-nums">
+                {formatCurrency(party?.distributable ?? 0)}
+              </p>
+            </div>
+            <div className="rounded-lg border border-border px-3 py-2">
+              <p className="text-xs text-muted-foreground">Credited Revenue</p>
+              <p className="mt-1 text-lg font-semibold tabular-nums text-emerald-700">
+                {formatCurrency(party?.creditedRevenue ?? 0)}
+              </p>
+            </div>
+          </div>
+
+          {entries.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
+              No transactions for this {partyLabel.toLowerCase()} in the selected
+              period.
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-lg border border-border">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50 hover:bg-muted/50">
+                      <TableHead>Reference</TableHead>
+                      <TableHead>Date</TableHead>
+                      {selection?.partyType === 'franchisee' ? (
+                        <TableHead>Retailer</TableHead>
+                      ) : null}
+                      <TableHead className="text-right">Payment</TableHead>
+                      <TableHead className="text-right">Distributable</TableHead>
+                      <TableHead className="text-right">{revenueColumnLabel}</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {entries.map((entry) => (
+                      <TableRow key={entry.id}>
+                        <TableCell className="font-medium text-slate-900">
+                          {entry.reference}
+                        </TableCell>
+                        <TableCell>
+                          <DateTimeCell value={entry.createdAt} />
+                        </TableCell>
+                        {selection?.partyType === 'franchisee' ? (
+                          <TableCell>
+                            <div className="font-medium text-slate-900">
+                              {entry.retailerName || '—'}
+                            </div>
+                            {entry.retailerCode ? (
+                              <div className="text-xs text-slate-400">
+                                {entry.retailerCode}
+                              </div>
+                            ) : null}
+                          </TableCell>
+                        ) : null}
+                        <TableCell className="text-right tabular-nums">
+                          {formatCurrency(entry.customerPayment)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatCurrency(entry.distributableRevenue)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums font-medium text-emerald-700">
+                          {formatCurrency(entry.partyRevenue)}
+                        </TableCell>
+                        <TableCell>
+                          <TransactionStatusBadge status={entry.transactionStatus} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter className="border-t border-border px-6 py-4 sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            {entries.length} transaction{entries.length === 1 ? '' : 's'}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={entries.length === 0}
+            onClick={onExport}
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export default function ReportsPage() {
   const { user, dataVersion } = useAuth()
   const config = useMemo(
@@ -148,6 +398,7 @@ export default function ReportsPage() {
   })
   const [page, setPage] = useState(0)
   const [selectedTx, setSelectedTx] = useState(null)
+  const [selectedParty, setSelectedParty] = useState(null)
 
   useEffect(() => {
     setDateRange('all')
@@ -163,6 +414,7 @@ export default function ReportsPage() {
       retailerId: 'all',
     })
     setPage(0)
+    setSelectedParty(null)
   }, [user?.role])
 
   const retailerOptions = useMemo(() => {
@@ -229,7 +481,7 @@ export default function ReportsPage() {
       transactions: getTransactions(),
       fundingRequests: getFundingRequests(),
       fundingTransfers: getFundingTransfers(),
-      wallets: getWallets(),
+      wallets: [],
       revenueSharing: getRevenueSharing(),
     })
   }, [
@@ -240,7 +492,13 @@ export default function ReportsPage() {
     dataVersion,
   ])
 
-  const { kpis, datasets, orgById, walletBalance } = snapshot
+  const {
+    kpis,
+    datasets,
+    orgById,
+    franchiseeRevenueRows = [],
+    retailerRevenueRows = [],
+  } = snapshot
   const roleSlug = user?.role || 'export'
 
   const detailedTransactions = useMemo(
@@ -248,10 +506,65 @@ export default function ReportsPage() {
     [datasets.transactions],
   )
 
+  const sharePercentages = useMemo(
+    () => getActiveSharePercentages(getRevenueSharing()),
+    [dataVersion],
+  )
+
   const {
     page: currentPage,
     items: paged,
   } = paginateItems(detailedTransactions, page, DEFAULT_PAGE_SIZE)
+
+  const selectedPartyEntries = useMemo(() => {
+    if (!selectedParty) return []
+    return buildPartyRevenueDetailEntries({
+      transactions: datasets.transactions,
+      revenueSharing: getRevenueSharing(),
+      partyRole: selectedParty.partyRole,
+      organizationId: selectedParty.row.organizationId,
+      partyType: selectedParty.partyType,
+    })
+  }, [selectedParty, datasets.transactions, dataVersion])
+
+  const exportPartyRevenue = (selection, entries) => {
+    if (!selection) return
+    const slug = selection.row.code || selection.row.organizationId || 'party'
+    downloadCsv(
+      `esarisari-${selection.partyType}-revenue-${slug}.csv`,
+      partyRevenueDetailEntriesToCsv(entries, {
+        partyLabel: selection.entityLabel,
+      }),
+    )
+  }
+
+  const handleViewParty = (row, partyType) => {
+    setSelectedParty({
+      row,
+      partyType,
+      partyRole:
+        partyType === 'franchisee' ? ROLES.FRANCHISEE : ROLES.RETAILER,
+      entityLabel: partyType === 'franchisee' ? 'Franchisee' : 'Retailer',
+    })
+  }
+
+  const handleExportParty = (row, partyType) => {
+    const selection = {
+      row,
+      partyType,
+      partyRole:
+        partyType === 'franchisee' ? ROLES.FRANCHISEE : ROLES.RETAILER,
+      entityLabel: partyType === 'franchisee' ? 'Franchisee' : 'Retailer',
+    }
+    const entries = buildPartyRevenueDetailEntries({
+      transactions: datasets.transactions,
+      revenueSharing: getRevenueSharing(),
+      partyRole: selection.partyRole,
+      organizationId: row.organizationId,
+      partyType,
+    })
+    exportPartyRevenue(selection, entries)
+  }
 
   const handleFranchiseeChange = (value) => {
     setFranchiseeId(value)
@@ -427,13 +740,7 @@ export default function ReportsPage() {
         </CardContent>
       </Card>
 
-      <div className="mb-4 grid gap-4 lg:grid-cols-4">
-        <StatCard
-          title={config.walletLabel}
-          value={formatCurrency(walletBalance)}
-          icon={Wallet}
-          accent="wallet"
-        />
+      <div className="mb-4 grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div>
@@ -481,6 +788,34 @@ export default function ReportsPage() {
         />
       </div>
 
+      {config.showFranchiseeRevenueTable || config.showRetailerRevenueTable ? (
+        <div className="mb-4 space-y-4">
+          {config.showFranchiseeRevenueTable ? (
+            <NetworkRevenueTable
+              title="Franchisee Revenue"
+              description={`Each franchisee's commission share for ${periodLabel}.`}
+              rows={franchiseeRevenueRows}
+              emptyLabel="No franchisees in your network for the selected filters."
+              entityLabel="Franchisee"
+              onView={(row) => handleViewParty(row, 'franchisee')}
+              onExport={(row) => handleExportParty(row, 'franchisee')}
+            />
+          ) : null}
+          {config.showRetailerRevenueTable ? (
+            <NetworkRevenueTable
+              title="Retailer Revenue"
+              description={`Each retailer's commission share for ${periodLabel}.`}
+              rows={retailerRevenueRows}
+              emptyLabel="No retailers in your network for the selected filters."
+              entityLabel="Retailer"
+              showParentColumn={Boolean(config.showFranchiseeRevenueTable)}
+              onView={(row) => handleViewParty(row, 'retailer')}
+              onExport={(row) => handleExportParty(row, 'retailer')}
+            />
+          ) : null}
+        </div>
+      ) : null}
+
       <Card className="mb-4 overflow-hidden shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-border px-4 py-3">
           <CardTitle className="text-base font-semibold">
@@ -509,8 +844,9 @@ export default function ReportsPage() {
                       <TableHead>Customer Payment</TableHead>
                       <TableHead>Wallet Deduction</TableHead>
                       <TableHead>Distributable Rev.</TableHead>
-                      <TableHead>Retailer Share</TableHead>
-                      <TableHead>Total Distributed</TableHead>
+                      <TableHead>Retailer</TableHead>
+                      <TableHead>Franchisee</TableHead>
+                      <TableHead>Sub-Franchisee</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -518,6 +854,10 @@ export default function ReportsPage() {
                   <TableBody>
                     {paged.map((tx) => {
                       const retailer = orgById[tx.retailerOrganizationId] || null
+                      const shares = getTransactionShareAmounts(
+                        tx,
+                        sharePercentages,
+                      )
                       return (
                         <TableRow key={tx.id}>
                           <TableCell className="font-medium text-slate-900">
@@ -551,23 +891,28 @@ export default function ReportsPage() {
                           </TableCell>
                           <TableCell className="whitespace-nowrap">
                             <SignedAmount
-                              amount={tx.distributableRevenue}
+                              amount={shares.distributable}
                               direction="credit"
                               showSign={false}
                             />
                           </TableCell>
                           <TableCell className="whitespace-nowrap">
                             <SignedAmount
-                              amount={tx.retailerShare}
+                              amount={shares.retailer}
                               direction="credit"
                               showSign={false}
                             />
                           </TableCell>
                           <TableCell className="whitespace-nowrap">
                             <SignedAmount
-                              amount={
-                                getTransactionCostBreakdown(tx).distributable
-                              }
+                              amount={shares.franchisee}
+                              direction="credit"
+                              showSign={false}
+                            />
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            <SignedAmount
+                              amount={shares.subfranchisee}
                               direction="credit"
                               showSign={false}
                             />
@@ -638,6 +983,19 @@ export default function ReportsPage() {
           ) : null}
         </div>
       </div>
+
+      <NetworkPartyRevenueDialog
+        open={Boolean(selectedParty)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedParty(null)
+        }}
+        selection={selectedParty}
+        entries={selectedPartyEntries}
+        periodLabel={periodLabel}
+        onExport={() =>
+          exportPartyRevenue(selectedParty, selectedPartyEntries)
+        }
+      />
 
       <TransactionDetailsDialog
         open={Boolean(selectedTx)}

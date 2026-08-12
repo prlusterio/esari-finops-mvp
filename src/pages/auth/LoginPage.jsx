@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
-import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '@/lib/constants'
+import {
+  DEMO_ACCOUNTS,
+  DEMO_PASSWORD,
+} from '@/lib/constants'
 import { getHomePathForRole } from '@/lib/permissions'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -33,8 +36,8 @@ export default function LoginPage() {
     navigate(getHomePathForRole(result.user?.role), { replace: true })
   }
 
-  const fillDemoAccount = (demoEmail) => {
-    setEmail(demoEmail)
+  const fillDemoAccount = (account) => {
+    setEmail(account.email)
     setPassword('')
     setError('')
   }
@@ -91,7 +94,7 @@ export default function LoginPage() {
         <div>
           <h2 className="text-sm font-semibold text-foreground">Demo Accounts</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Click an account to populate the email field. Default password:{' '}
+            Click an account to populate credentials. Default password:{' '}
             <span className="font-medium text-foreground">{DEMO_PASSWORD}</span>
           </p>
 
@@ -100,13 +103,24 @@ export default function LoginPage() {
               <button
                 key={account.email}
                 type="button"
-                onClick={() => fillDemoAccount(account.email)}
-                className="flex w-full items-center justify-between rounded-md border border-border bg-muted/40 px-3 py-2 text-left transition-colors hover:bg-muted"
+                onClick={() => fillDemoAccount(account)}
+                className="flex w-full items-center justify-between gap-3 rounded-md border border-border bg-muted/40 px-3 py-2 text-left transition-colors hover:bg-muted"
               >
-                <span className="text-sm font-medium text-foreground">
-                  {account.label}
+                <span className="min-w-0">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-medium text-foreground">
+                      {account.label}
+                    </span>
+                    {account.restricted ? (
+                      <span className="rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                        Restricted
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                    {account.email}
+                  </span>
                 </span>
-                <span className="text-xs text-muted-foreground">{account.email}</span>
               </button>
             ))}
           </div>
