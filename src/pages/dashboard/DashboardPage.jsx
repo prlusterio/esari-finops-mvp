@@ -8,6 +8,7 @@ import {
 import { useAuth } from '@/context/AuthContext'
 import { ROLES } from '@/lib/constants'
 import { formatCurrency } from '@/lib/currency'
+import { filterTransactionsForRole } from '@/lib/transactions'
 import {
   getFundingRequests,
   getSettlements,
@@ -40,10 +41,14 @@ export default function DashboardPage() {
     const settlements = getSettlements()
 
     const orgWallet = wallets.find(
-      (wallet) => wallet.organizationId === user?.organizationId,
+      (wallet) =>
+        wallet.organizationId === user?.organizationId &&
+        wallet.walletType !== 'revenue',
     )
     const masterWallet = wallets.find(
-      (wallet) => wallet.organizationId === ORG_IDS.PLATFORM,
+      (wallet) =>
+        wallet.organizationId === ORG_IDS.PLATFORM &&
+        (wallet.walletType === 'master' || wallet.walletType !== 'revenue'),
     )
 
     const pendingRequests = fundingRequests.filter(
@@ -52,13 +57,27 @@ export default function DashboardPage() {
     const myPendingRequests = pendingRequests.filter(
       (request) => request.organizationId === user?.organizationId,
     )
-    const pendingFranchiseeRequests = pendingRequests.filter(
+    const pendingIncomingForOrg = pendingRequests.filter(
+      (request) => request.parentOrganizationId === user?.organizationId,
+    )
+    const pendingFranchiseeRequests = pendingIncomingForOrg.filter(
       (request) => request.requesterRole === ROLES.FRANCHISEE,
     )
-    const pendingRetailerRequests = pendingRequests.filter(
+    const pendingRetailerRequests = pendingIncomingForOrg.filter(
       (request) => request.requesterRole === ROLES.RETAILER,
     )
-    const transactionsToday = transactions.filter((tx) => isToday(tx.createdAt))
+    const pendingAdminIncoming = pendingRequests.filter(
+      (request) =>
+        request.parentOrganizationId === ORG_IDS.PLATFORM &&
+        request.requesterRole === ROLES.SUBFRANCHISEE,
+    )
+    const scopedTransactions = filterTransactionsForRole(transactions, {
+      role: user?.role,
+      organizationId: user?.organizationId,
+    })
+    const transactionsToday = scopedTransactions.filter((tx) =>
+      isToday(tx.createdAt),
+    )
     const pendingSettlements = settlements.filter(
       (settlement) => settlement.status === 'pending',
     )
@@ -66,14 +85,14 @@ export default function DashboardPage() {
     return {
       walletBalance: orgWallet?.availableBalance ?? 0,
       masterBalance: masterWallet?.availableBalance ?? 0,
-      pendingFundingCount: pendingRequests.length,
+      pendingFundingCount: pendingAdminIncoming.length,
       myPendingCount: myPendingRequests.length,
       pendingFranchiseeCount: pendingFranchiseeRequests.length,
       pendingRetailerCount: pendingRetailerRequests.length,
       transactionsTodayCount: transactionsToday.length,
       pendingSettlementsCount: pendingSettlements.length,
     }
-  }, [user?.organizationId, dataVersion])
+  }, [user?.organizationId, user?.role, dataVersion])
 
   const breadcrumbs = [
     { label: 'Home', href: '/dashboard' },

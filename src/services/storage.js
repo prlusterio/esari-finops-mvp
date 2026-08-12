@@ -181,6 +181,7 @@ export function clearAllBusinessData() {
   Object.values(BUSINESS_COLLECTIONS).forEach((collection) => {
     collection.clear()
   })
+  localStorage.removeItem(STORAGE_KEYS.WALLET_LEDGER_VERSION)
 }
 
 export function collectionNeedsSeed(name) {

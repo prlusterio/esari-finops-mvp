@@ -1,9 +1,14 @@
 import { Link } from 'react-router-dom'
+import { ShieldAlert } from 'lucide-react'
+import { useAuth } from '@/context/AuthContext'
+import { getHomePathForRole } from '@/lib/permissions'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ShieldAlert } from 'lucide-react'
 
 export default function UnauthorizedPage() {
+  const { user } = useAuth()
+  const homePath = getHomePathForRole(user?.role)
+
   return (
     <div className="mx-auto flex max-w-lg items-center justify-center py-16">
       <Card className="w-full">
@@ -18,7 +23,7 @@ export default function UnauthorizedPage() {
         </CardHeader>
         <CardContent className="flex justify-center">
           <Button asChild>
-            <Link to="/dashboard">Return to Dashboard</Link>
+            <Link to={homePath}>Return Home</Link>
           </Button>
         </CardContent>
       </Card>

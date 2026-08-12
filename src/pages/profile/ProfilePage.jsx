@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { ROLE_LABELS } from '@/lib/constants'
+import { getHomePathForRole } from '@/lib/permissions'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { PageHeader } from '@/components/shared/PageHeader'
@@ -25,7 +26,7 @@ export default function ProfilePage() {
         title="Profile"
         description="Your authenticated session details for this demo environment."
         breadcrumbs={[
-          { label: 'Home', href: '/dashboard' },
+          { label: 'Home', href: getHomePathForRole(user?.role) },
           { label: 'Profile' },
         ]}
       />

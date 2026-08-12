@@ -8,14 +8,15 @@ import {
   Scale,
   FileBarChart,
   Store,
-  Users,
   CircleDollarSign,
+  Banknote,
 } from 'lucide-react'
 import { ROLES } from './constants'
 
 /**
  * Navigation items per role.
  * `roles` lists who can access each route.
+ * `disabledRoles` keeps the item visible but non-navigable for those roles.
  */
 export const NAV_ITEMS = [
   {
@@ -23,6 +24,7 @@ export const NAV_ITEMS = [
     path: '/dashboard',
     icon: LayoutDashboard,
     roles: [ROLES.ADMIN, ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE, ROLES.RETAILER],
+    disabledRoles: [ROLES.SUBFRANCHISEE],
   },
   {
     title: 'Organizations',
@@ -33,8 +35,9 @@ export const NAV_ITEMS = [
   {
     title: 'Franchisees',
     path: '/franchisees',
-    icon: Users,
+    icon: Building2,
     roles: [ROLES.SUBFRANCHISEE],
+    disabled: true,
   },
   {
     title: 'Retailers',
@@ -52,16 +55,16 @@ export const NAV_ITEMS = [
     title: 'Wallet',
     path: '/wallet',
     icon: Wallet,
-    roles: [ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE, ROLES.RETAILER],
+    roles: [ROLES.FRANCHISEE, ROLES.RETAILER],
   },
   {
-    title: 'Funding Requests & Transfers',
+    title: 'Token Credits',
     path: '/funding',
     icon: ArrowLeftRight,
     roles: [ROLES.ADMIN, ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE],
   },
   {
-    title: 'Request Funding',
+    title: 'Token Credits',
     path: '/request-funding',
     icon: CircleDollarSign,
     roles: [ROLES.RETAILER],
@@ -79,6 +82,12 @@ export const NAV_ITEMS = [
     roles: [ROLES.ADMIN, ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE, ROLES.RETAILER],
   },
   {
+    title: 'Revenue',
+    path: '/revenue',
+    icon: Banknote,
+    roles: [ROLES.SUBFRANCHISEE],
+  },
+  {
     title: 'Settlements',
     path: '/settlements',
     icon: Scale,
@@ -88,27 +97,48 @@ export const NAV_ITEMS = [
     title: 'Reports',
     path: '/reports',
     icon: FileBarChart,
-    roles: [ROLES.ADMIN],
+    roles: [ROLES.ADMIN, ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE, ROLES.RETAILER],
   },
 ]
 
+function isNavItemDisabled(item, role) {
+  if (item.disabled) return true
+  if (Array.isArray(item.disabledRoles) && item.disabledRoles.includes(role)) {
+    return true
+  }
+  return false
+}
+
 export function getNavItemsForRole(role) {
-  return NAV_ITEMS.filter((item) => item.roles.includes(role))
+  return NAV_ITEMS.filter((item) => item.roles.includes(role)).map((item) => ({
+    ...item,
+    disabled: isNavItemDisabled(item, role),
+  }))
+}
+
+export function getHomePathForRole(role) {
+  const items = getNavItemsForRole(role).filter((item) => !item.disabled)
+  if (items.length > 0) return items[0].path
+  return '/profile'
 }
 
 export function canAccessRoute(role, path) {
   if (!role) return false
 
   // Profile is available to all authenticated users
-  if (path === '/profile' || path === '/dashboard') {
+  if (path === '/profile') {
     return true
   }
 
   const item = NAV_ITEMS.find((nav) => nav.path === path)
   if (!item) return false
-  return item.roles.includes(role)
+  if (!item.roles.includes(role)) return false
+  if (isNavItemDisabled(item, role)) return false
+  return true
 }
 
 export function getAllowedPaths(role) {
-  return getNavItemsForRole(role).map((item) => item.path)
+  return getNavItemsForRole(role)
+    .filter((item) => !item.disabled)
+    .map((item) => item.path)
 }

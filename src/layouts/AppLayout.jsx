@@ -34,7 +34,7 @@ import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 
 export default function AppLayout() {
-  const { user, organization, logout, resetDemoData, dataVersion } = useAuth()
+  const { user, organization, logout, resetDemoData } = useAuth()
   const navigate = useNavigate()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -67,7 +67,11 @@ export default function AppLayout() {
       </aside>
 
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="w-72 p-0">
+        <SheetContent
+          side="left"
+          className="w-72 border-sidebar-accent bg-sidebar p-0 text-sidebar-foreground"
+          closeClassName="text-sidebar-foreground"
+        >
           <SheetTitle className="sr-only">Navigation</SheetTitle>
           <SidebarNav
             role={user?.role}
@@ -139,7 +143,7 @@ export default function AppLayout() {
         </header>
 
         <main className="flex-1 p-4 sm:p-6">
-          <Outlet key={dataVersion} />
+          <Outlet key={user?.id || 'guest'} />
         </main>
       </div>
 

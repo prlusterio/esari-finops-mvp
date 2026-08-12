@@ -1,10 +1,12 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { ROLES } from '@/lib/constants'
+import { getHomePathForRole } from '@/lib/permissions'
 import AppLayout from '@/layouts/AppLayout'
 import AuthLayout from '@/layouts/AuthLayout'
 import ProtectedRoute from '@/routes/ProtectedRoute'
 import RoleRoute from '@/routes/RoleRoute'
+import HomeRedirect from '@/routes/HomeRedirect'
 import LoginPage from '@/pages/auth/LoginPage'
 import DashboardPage from '@/pages/dashboard/DashboardPage'
 import OrganizationsPage from '@/pages/organizations/OrganizationsPage'
@@ -13,18 +15,20 @@ import WalletPage from '@/pages/wallet/WalletPage'
 import FundingPage from '@/pages/funding/FundingPage'
 import RequestFundingPage from '@/pages/request-funding/RequestFundingPage'
 import RevenueSharingPage from '@/pages/revenue-sharing/RevenueSharingPage'
+import RevenuePage from '@/pages/revenue/RevenuePage'
 import TransactionsPage from '@/pages/transactions/TransactionsPage'
 import SettlementsPage from '@/pages/settlements/SettlementsPage'
 import ReportsPage from '@/pages/reports/ReportsPage'
-import FranchiseesPage from '@/pages/franchisees/FranchiseesPage'
 import RetailersPage from '@/pages/retailers/RetailersPage'
 import ProfilePage from '@/pages/profile/ProfilePage'
 import UnauthorizedPage from '@/pages/UnauthorizedPage'
 
 function PublicOnly({ children }) {
-  const { isAuthenticated, ready } = useAuth()
+  const { user, isAuthenticated, ready } = useAuth()
   if (!ready) return null
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />
+  if (isAuthenticated) {
+    return <Navigate to={getHomePathForRole(user?.role)} replace />
+  }
   return children
 }
 
@@ -43,8 +47,17 @@ export default function AppRoutes() {
 
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/" element={<HomeRedirect />} />
+          <Route
+            element={
+              <RoleRoute
+                roles={[ROLES.ADMIN, ROLES.FRANCHISEE, ROLES.RETAILER]}
+                path="/dashboard"
+              />
+            }
+          >
+            <Route path="/dashboard" element={<DashboardPage />} />
+          </Route>
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
@@ -59,7 +72,7 @@ export default function AppRoutes() {
           <Route
             element={
               <RoleRoute
-                roles={[ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE, ROLES.RETAILER]}
+                roles={[ROLES.FRANCHISEE, ROLES.RETAILER]}
                 path="/wallet"
               />
             }
@@ -97,16 +110,23 @@ export default function AppRoutes() {
             <Route path="/transactions" element={<TransactionsPage />} />
           </Route>
 
+          <Route element={<RoleRoute roles={[ROLES.SUBFRANCHISEE]} path="/revenue" />}>
+            <Route path="/revenue" element={<RevenuePage />} />
+          </Route>
+
           <Route element={<RoleRoute roles={[ROLES.ADMIN]} path="/settlements" />}>
             <Route path="/settlements" element={<SettlementsPage />} />
           </Route>
 
-          <Route element={<RoleRoute roles={[ROLES.ADMIN]} path="/reports" />}>
+          <Route
+            element={
+              <RoleRoute
+                roles={[ROLES.ADMIN, ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE, ROLES.RETAILER]}
+                path="/reports"
+              />
+            }
+          >
             <Route path="/reports" element={<ReportsPage />} />
-          </Route>
-
-          <Route element={<RoleRoute roles={[ROLES.SUBFRANCHISEE]} path="/franchisees" />}>
-            <Route path="/franchisees" element={<FranchiseesPage />} />
           </Route>
 
           <Route element={<RoleRoute roles={[ROLES.FRANCHISEE]} path="/retailers" />}>
@@ -115,7 +135,7 @@ export default function AppRoutes() {
         </Route>
       </Route>
 
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<HomeRedirect />} />
     </Routes>
   )
 }

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '@/lib/constants'
+import { getHomePathForRole } from '@/lib/permissions'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -29,7 +30,7 @@ export default function LoginPage() {
       return
     }
 
-    navigate('/dashboard', { replace: true })
+    navigate(getHomePathForRole(result.user?.role), { replace: true })
   }
 
   const fillDemoAccount = (demoEmail) => {

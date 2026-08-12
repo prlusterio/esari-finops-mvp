@@ -1,6 +1,19 @@
-import { ORG_IDS, ROLES } from '@/lib/constants'
+import {
+  FUNDING_STATUS,
+  ORG_IDS,
+  ROLES,
+  STORAGE_KEYS,
+  TRANSACTION_STATUS,
+  WALLET_LEDGER_VERSION,
+} from '@/lib/constants'
+import { sumCreditedShareForOrg } from '@/lib/revenue'
 import {
   collectionNeedsSeed,
+  getFundingRequests,
+  getFundingTransfers,
+  getOrganizations,
+  getTransactions,
+  getWallets,
   saveFundingRequests,
   saveFundingTransfers,
   saveOrganizations,
@@ -12,7 +25,31 @@ import {
   clearAllBusinessData,
 } from '@/services/storage'
 
+function isEmptyCollection(name) {
+  if (name === 'fundingRequests') {
+    return getFundingRequests().length === 0
+  }
+  if (name === 'fundingTransfers') {
+    return getFundingTransfers().length === 0
+  }
+  if (name === 'transactions') {
+    return getTransactions().length === 0
+  }
+  return false
+}
+
 const now = '2026-01-01T00:00:00.000Z'
+
+function daysAgoAt(daysAgo, hours = 10, minutes = 0) {
+  const date = new Date()
+  date.setDate(date.getDate() - daysAgo)
+  date.setHours(hours, minutes, 0, 0)
+  return date.toISOString()
+}
+
+function roundMoney(value) {
+  return Math.round((Number(value) + Number.EPSILON) * 100) / 100
+}
 
 export function getSeedUsers() {
   return [
@@ -68,6 +105,7 @@ export function getSeedOrganizations() {
     {
       id: ORG_IDS.PLATFORM,
       name: 'eSariSari Platform',
+      code: 'PLAT-001',
       type: 'platform',
       parentId: null,
       status: 'active',
@@ -77,6 +115,7 @@ export function getSeedOrganizations() {
     {
       id: ORG_IDS.SUB_001,
       name: 'Northern Mindanao Sub-Franchisee',
+      code: 'SF-00001',
       type: 'subfranchisee',
       parentId: ORG_IDS.PLATFORM,
       status: 'active',
@@ -86,6 +125,37 @@ export function getSeedOrganizations() {
     {
       id: ORG_IDS.FRANCHISE_001,
       name: 'CDO Franchisee',
+      code: 'FR-01010',
+      type: 'franchisee',
+      parentId: ORG_IDS.SUB_001,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: ORG_IDS.FRANCHISE_002,
+      name: 'Manila Central Retailers',
+      code: 'FR-00892',
+      type: 'franchisee',
+      parentId: ORG_IDS.SUB_001,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: ORG_IDS.FRANCHISE_003,
+      name: 'Cebu Southern Hub',
+      code: 'FR-00945',
+      type: 'franchisee',
+      parentId: ORG_IDS.SUB_001,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: ORG_IDS.FRANCHISE_004,
+      name: 'Davao East Distributors',
+      code: 'FR-01002',
       type: 'franchisee',
       parentId: ORG_IDS.SUB_001,
       status: 'active',
@@ -95,6 +165,7 @@ export function getSeedOrganizations() {
     {
       id: ORG_IDS.RETAILER_001,
       name: 'Retailer A',
+      code: 'RT-00001',
       type: 'retailer',
       parentId: ORG_IDS.FRANCHISE_001,
       status: 'active',
@@ -104,8 +175,39 @@ export function getSeedOrganizations() {
     {
       id: ORG_IDS.RETAILER_002,
       name: 'Retailer B',
+      code: 'RT-00002',
       type: 'retailer',
       parentId: ORG_IDS.FRANCHISE_001,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: ORG_IDS.RETAILER_003,
+      name: 'SariSari Central',
+      code: 'RT-00291',
+      type: 'retailer',
+      parentId: ORG_IDS.FRANCHISE_001,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: ORG_IDS.RETAILER_004,
+      name: 'QuickStop Mart',
+      code: 'RT-00882',
+      type: 'retailer',
+      parentId: ORG_IDS.FRANCHISE_001,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: ORG_IDS.RETAILER_005,
+      name: 'Neighborhood Hub',
+      code: 'RT-00104',
+      type: 'retailer',
+      parentId: ORG_IDS.FRANCHISE_002,
       status: 'active',
       createdAt: now,
       updatedAt: now,
@@ -113,8 +215,37 @@ export function getSeedOrganizations() {
   ]
 }
 
+function buildRevenueWallet(id, organizationId, role, transactions, revenueSharing) {
+  return {
+    id,
+    organizationId,
+    walletType: 'revenue',
+    availableBalance: sumCreditedShareForOrg(transactions, {
+      role,
+      organizationId,
+      revenueSharing,
+    }),
+    minimumBalance: 0,
+    status: 'active',
+    createdAt: now,
+    updatedAt: now,
+  }
+}
+
 export function getSeedWallets() {
-  return [
+  const transactions = getSeedTransactions()
+  const revenueSharing = getSeedRevenueSharing()
+
+  // Operating balances follow seeded funding transfers + opening float so
+  // Available Balance matches Funding / Transfer history.
+  //
+  // Platform:       opening 675,000 - TRF-5002 175,000 = 500,000
+  // Sub-Franchisee: opening 50,000 + TRF-5002 175,000 - TRF-5001 90,000 = 135,000
+  // Franchisee-001: opening 40,000 - TRF-5003 10,000 = 30,000
+  // Franchisee-002: opening 15,000 + TRF-5001 90,000 = 105,000
+  // Franchisee-003/004: opening float only (no completed transfers yet)
+  // Retailer-001:   opening 5,000 + TRF-5003 10,000 = 15,000
+  const operating = [
     {
       id: 'wallet-platform',
       organizationId: ORG_IDS.PLATFORM,
@@ -129,7 +260,7 @@ export function getSeedWallets() {
       id: 'wallet-sub-001',
       organizationId: ORG_IDS.SUB_001,
       walletType: 'operating',
-      availableBalance: 100000,
+      availableBalance: 135000,
       minimumBalance: 0,
       status: 'active',
       createdAt: now,
@@ -139,7 +270,37 @@ export function getSeedWallets() {
       id: 'wallet-franchise-001',
       organizationId: ORG_IDS.FRANCHISE_001,
       walletType: 'operating',
-      availableBalance: 50000,
+      availableBalance: 30000,
+      minimumBalance: 0,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: 'wallet-franchise-002',
+      organizationId: ORG_IDS.FRANCHISE_002,
+      walletType: 'operating',
+      availableBalance: 105000,
+      minimumBalance: 0,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: 'wallet-franchise-003',
+      organizationId: ORG_IDS.FRANCHISE_003,
+      walletType: 'operating',
+      availableBalance: 18000,
+      minimumBalance: 0,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: 'wallet-franchise-004',
+      organizationId: ORG_IDS.FRANCHISE_004,
+      walletType: 'operating',
+      availableBalance: 32000,
       minimumBalance: 0,
       status: 'active',
       createdAt: now,
@@ -149,7 +310,7 @@ export function getSeedWallets() {
       id: 'wallet-retailer-001',
       organizationId: ORG_IDS.RETAILER_001,
       walletType: 'operating',
-      availableBalance: 10000,
+      availableBalance: 15000,
       minimumBalance: 0,
       status: 'active',
       createdAt: now,
@@ -165,17 +326,129 @@ export function getSeedWallets() {
       createdAt: now,
       updatedAt: now,
     },
+    {
+      id: 'wallet-retailer-003',
+      organizationId: ORG_IDS.RETAILER_003,
+      walletType: 'operating',
+      availableBalance: 7500,
+      minimumBalance: 0,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: 'wallet-retailer-004',
+      organizationId: ORG_IDS.RETAILER_004,
+      walletType: 'operating',
+      availableBalance: 6200,
+      minimumBalance: 0,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: 'wallet-retailer-005',
+      organizationId: ORG_IDS.RETAILER_005,
+      walletType: 'operating',
+      availableBalance: 9100,
+      minimumBalance: 0,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    },
   ]
+
+  const revenue = [
+    buildRevenueWallet(
+      'wallet-platform-revenue',
+      ORG_IDS.PLATFORM,
+      ROLES.ADMIN,
+      transactions,
+      revenueSharing,
+    ),
+    buildRevenueWallet(
+      'wallet-sub-001-revenue',
+      ORG_IDS.SUB_001,
+      ROLES.SUBFRANCHISEE,
+      transactions,
+      revenueSharing,
+    ),
+    buildRevenueWallet(
+      'wallet-franchise-001-revenue',
+      ORG_IDS.FRANCHISE_001,
+      ROLES.FRANCHISEE,
+      transactions,
+      revenueSharing,
+    ),
+    buildRevenueWallet(
+      'wallet-franchise-002-revenue',
+      ORG_IDS.FRANCHISE_002,
+      ROLES.FRANCHISEE,
+      transactions,
+      revenueSharing,
+    ),
+    buildRevenueWallet(
+      'wallet-franchise-003-revenue',
+      ORG_IDS.FRANCHISE_003,
+      ROLES.FRANCHISEE,
+      transactions,
+      revenueSharing,
+    ),
+    buildRevenueWallet(
+      'wallet-franchise-004-revenue',
+      ORG_IDS.FRANCHISE_004,
+      ROLES.FRANCHISEE,
+      transactions,
+      revenueSharing,
+    ),
+    buildRevenueWallet(
+      'wallet-retailer-001-revenue',
+      ORG_IDS.RETAILER_001,
+      ROLES.RETAILER,
+      transactions,
+      revenueSharing,
+    ),
+    buildRevenueWallet(
+      'wallet-retailer-002-revenue',
+      ORG_IDS.RETAILER_002,
+      ROLES.RETAILER,
+      transactions,
+      revenueSharing,
+    ),
+    buildRevenueWallet(
+      'wallet-retailer-003-revenue',
+      ORG_IDS.RETAILER_003,
+      ROLES.RETAILER,
+      transactions,
+      revenueSharing,
+    ),
+    buildRevenueWallet(
+      'wallet-retailer-004-revenue',
+      ORG_IDS.RETAILER_004,
+      ROLES.RETAILER,
+      transactions,
+      revenueSharing,
+    ),
+    buildRevenueWallet(
+      'wallet-retailer-005-revenue',
+      ORG_IDS.RETAILER_005,
+      ROLES.RETAILER,
+      transactions,
+      revenueSharing,
+    ),
+  ]
+
+  return [...operating, ...revenue]
 }
 
 export function getSeedRevenueSharing() {
   return [
     {
       id: 'revshare-default',
-      retailerPercentage: 10,
-      franchiseePercentage: 30,
-      subfranchiseePercentage: 20,
-      companyPercentage: 40,
+      retailerPercentage: 40,
+      franchiseePercentage: 20,
+      subfranchiseePercentage: 10,
+      companyPercentage: 30,
       status: 'active',
       createdAt: now,
       updatedAt: now,
@@ -183,9 +456,546 @@ export function getSeedRevenueSharing() {
   ]
 }
 
+const DEFAULT_PROOF = {
+  fileName: 'deposit_slip_oct24.jpg',
+  fileSize: '1.2 MB',
+  url: '/proofs/deposit_slip_oct24.svg',
+}
+
+function withFundingDetails(request, notes) {
+  return {
+    ...request,
+    notes,
+    proofOfPayment: { ...DEFAULT_PROOF },
+  }
+}
+
+export function getSeedFundingRequests() {
+  const incoming = [
+    withFundingDetails(
+      {
+        id: 'REQ-1234',
+        organizationId: ORG_IDS.FRANCHISE_002,
+        requesterRole: ROLES.FRANCHISEE,
+        parentOrganizationId: ORG_IDS.SUB_001,
+        amount: 150000,
+        status: FUNDING_STATUS.PENDING,
+        createdAt: daysAgoAt(0, 10, 45),
+        updatedAt: daysAgoAt(0, 10, 45),
+      },
+      'Additional funds requested for the upcoming holiday season inventory restock. Transfer receipt attached.',
+    ),
+    withFundingDetails(
+      {
+        id: 'REQ-1235',
+        organizationId: ORG_IDS.FRANCHISE_003,
+        requesterRole: ROLES.FRANCHISEE,
+        parentOrganizationId: ORG_IDS.SUB_001,
+        amount: 85000,
+        status: FUNDING_STATUS.PENDING,
+        createdAt: daysAgoAt(1, 14, 12),
+        updatedAt: daysAgoAt(1, 14, 12),
+      },
+      'Wallet top-up for weekend load and bills payment volume.',
+    ),
+    withFundingDetails(
+      {
+        id: 'REQ-1236',
+        organizationId: ORG_IDS.FRANCHISE_004,
+        requesterRole: ROLES.FRANCHISEE,
+        parentOrganizationId: ORG_IDS.SUB_001,
+        amount: 210500,
+        status: FUNDING_STATUS.PENDING,
+        createdAt: daysAgoAt(2, 9, 30),
+        updatedAt: daysAgoAt(2, 9, 30),
+      },
+      'Urgent funding for distributor replenishment and float recovery.',
+    ),
+    withFundingDetails(
+      {
+        id: 'REQ-1237',
+        organizationId: ORG_IDS.FRANCHISE_001,
+        requesterRole: ROLES.FRANCHISEE,
+        parentOrganizationId: ORG_IDS.SUB_001,
+        amount: 45000,
+        status: FUNDING_STATUS.PENDING,
+        createdAt: daysAgoAt(2, 16, 5),
+        updatedAt: daysAgoAt(2, 16, 5),
+      },
+      'Additional float needed for CDO retailer network coverage.',
+    ),
+    withFundingDetails(
+      {
+        id: 'REQ-1238',
+        organizationId: ORG_IDS.FRANCHISE_002,
+        requesterRole: ROLES.FRANCHISEE,
+        parentOrganizationId: ORG_IDS.SUB_001,
+        amount: 62000,
+        status: FUNDING_STATUS.PENDING,
+        createdAt: daysAgoAt(3, 11, 20),
+        updatedAt: daysAgoAt(3, 11, 20),
+      },
+      'Deposit completed this morning. Please process once verified.',
+    ),
+    withFundingDetails(
+      {
+        id: 'REQ-1239',
+        organizationId: ORG_IDS.FRANCHISE_003,
+        requesterRole: ROLES.FRANCHISEE,
+        parentOrganizationId: ORG_IDS.SUB_001,
+        amount: 97500,
+        status: FUNDING_STATUS.PENDING,
+        createdAt: daysAgoAt(3, 15, 40),
+        updatedAt: daysAgoAt(3, 15, 40),
+      },
+      'Funding request for mid-week transaction spike.',
+    ),
+    withFundingDetails(
+      {
+        id: 'REQ-1240',
+        organizationId: ORG_IDS.FRANCHISE_004,
+        requesterRole: ROLES.FRANCHISEE,
+        parentOrganizationId: ORG_IDS.SUB_001,
+        amount: 128000,
+        status: FUNDING_STATUS.PENDING,
+        createdAt: daysAgoAt(4, 9, 15),
+        updatedAt: daysAgoAt(4, 9, 15),
+      },
+      'Proof attached for branch cash-in consolidation.',
+    ),
+    withFundingDetails(
+      {
+        id: 'REQ-1241',
+        organizationId: ORG_IDS.FRANCHISE_001,
+        requesterRole: ROLES.FRANCHISEE,
+        parentOrganizationId: ORG_IDS.SUB_001,
+        amount: 33000,
+        status: FUNDING_STATUS.PENDING,
+        createdAt: daysAgoAt(5, 14, 50),
+        updatedAt: daysAgoAt(5, 14, 50),
+      },
+      'Small top-up to maintain minimum operating balance.',
+    ),
+    withFundingDetails(
+      {
+        id: 'REQ-1242',
+        organizationId: ORG_IDS.FRANCHISE_002,
+        requesterRole: ROLES.FRANCHISEE,
+        parentOrganizationId: ORG_IDS.SUB_001,
+        amount: 76000,
+        status: FUNDING_STATUS.PENDING,
+        createdAt: daysAgoAt(6, 13, 5),
+        updatedAt: daysAgoAt(6, 13, 5),
+      },
+      'Inventory restock funding with bank transfer receipt.',
+    ),
+    withFundingDetails(
+      {
+        id: 'REQ-1243',
+        organizationId: ORG_IDS.FRANCHISE_003,
+        requesterRole: ROLES.FRANCHISEE,
+        parentOrganizationId: ORG_IDS.SUB_001,
+        amount: 54000,
+        status: FUNDING_STATUS.PENDING,
+        createdAt: daysAgoAt(7, 7, 25),
+        updatedAt: daysAgoAt(7, 7, 25),
+      },
+      'Please approve after validating attached deposit slip.',
+    ),
+    withFundingDetails(
+      {
+        id: 'REQ-1244',
+        organizationId: ORG_IDS.FRANCHISE_004,
+        requesterRole: ROLES.FRANCHISEE,
+        parentOrganizationId: ORG_IDS.SUB_001,
+        amount: 189000,
+        status: FUNDING_STATUS.PENDING,
+        createdAt: daysAgoAt(8, 12, 10),
+        updatedAt: daysAgoAt(8, 12, 10),
+      },
+      'Large float request for regional expansion weekend.',
+    ),
+    withFundingDetails(
+      {
+        id: 'REQ-1245',
+        organizationId: ORG_IDS.FRANCHISE_001,
+        requesterRole: ROLES.FRANCHISEE,
+        parentOrganizationId: ORG_IDS.SUB_001,
+        amount: 41000,
+        status: FUNDING_STATUS.PENDING,
+        createdAt: daysAgoAt(9, 4, 55),
+        updatedAt: daysAgoAt(9, 4, 55),
+      },
+      'Standard weekly funding request with proof attached.',
+    ),
+  ]
+
+  const myRequests = [
+    withFundingDetails(
+      {
+        id: 'REQ-1101',
+        organizationId: ORG_IDS.SUB_001,
+        requesterRole: ROLES.SUBFRANCHISEE,
+        parentOrganizationId: ORG_IDS.PLATFORM,
+        amount: 250000,
+        status: FUNDING_STATUS.PENDING,
+        createdAt: daysAgoAt(1, 11, 0),
+        updatedAt: daysAgoAt(1, 11, 0),
+      },
+      'Requesting platform funding to cover pending franchisee replenishment.',
+    ),
+    withFundingDetails(
+      {
+        id: 'REQ-1090',
+        organizationId: ORG_IDS.SUB_001,
+        requesterRole: ROLES.SUBFRANCHISEE,
+        parentOrganizationId: ORG_IDS.PLATFORM,
+        amount: 175000,
+        status: FUNDING_STATUS.COMPLETED,
+        createdAt: daysAgoAt(12, 10, 0),
+        updatedAt: daysAgoAt(11, 16, 0),
+      },
+      'Approved platform top-up for Northern Mindanao operations.',
+    ),
+  ]
+
+  const completed = [
+    withFundingDetails(
+      {
+        id: 'REQ-1001',
+        organizationId: ORG_IDS.FRANCHISE_002,
+        requesterRole: ROLES.FRANCHISEE,
+        parentOrganizationId: ORG_IDS.SUB_001,
+        amount: 90000,
+        status: FUNDING_STATUS.COMPLETED,
+        createdAt: daysAgoAt(14, 10, 0),
+        updatedAt: daysAgoAt(13, 15, 0),
+      },
+      'Completed transfer for prior inventory cycle.',
+    ),
+    withFundingDetails(
+      {
+        id: 'REQ-1002',
+        organizationId: ORG_IDS.FRANCHISE_003,
+        requesterRole: ROLES.FRANCHISEE,
+        parentOrganizationId: ORG_IDS.SUB_001,
+        amount: 120000,
+        status: FUNDING_STATUS.APPROVED,
+        createdAt: daysAgoAt(10, 12, 30),
+        updatedAt: daysAgoAt(9, 13, 15),
+      },
+      'Approved and queued for settlement confirmation.',
+    ),
+  ]
+
+  const retailerIncoming = [
+    withFundingDetails(
+      {
+        id: 'REQ-1301',
+        organizationId: ORG_IDS.RETAILER_001,
+        requesterRole: ROLES.RETAILER,
+        parentOrganizationId: ORG_IDS.FRANCHISE_001,
+        amount: 15000,
+        status: FUNDING_STATUS.PENDING,
+        createdAt: daysAgoAt(0, 9, 15),
+        updatedAt: daysAgoAt(0, 9, 15),
+      },
+      'Retailer float top-up for weekend peak transactions.',
+    ),
+    withFundingDetails(
+      {
+        id: 'REQ-1302',
+        organizationId: ORG_IDS.RETAILER_002,
+        requesterRole: ROLES.RETAILER,
+        parentOrganizationId: ORG_IDS.FRANCHISE_001,
+        amount: 8500,
+        status: FUNDING_STATUS.PENDING,
+        createdAt: daysAgoAt(1, 16, 40),
+        updatedAt: daysAgoAt(1, 16, 40),
+      },
+      'Urgent wallet replenishment after high load sales.',
+    ),
+    withFundingDetails(
+      {
+        id: 'REQ-1303',
+        organizationId: ORG_IDS.RETAILER_001,
+        requesterRole: ROLES.RETAILER,
+        parentOrganizationId: ORG_IDS.FRANCHISE_001,
+        amount: 12000,
+        status: FUNDING_STATUS.PENDING,
+        createdAt: daysAgoAt(2, 13, 20),
+        updatedAt: daysAgoAt(2, 13, 20),
+      },
+      'Additional funds for bills payment service coverage.',
+    ),
+  ]
+
+  const franchiseeOwn = [
+    withFundingDetails(
+      {
+        id: 'REQ-1201',
+        organizationId: ORG_IDS.FRANCHISE_001,
+        requesterRole: ROLES.FRANCHISEE,
+        parentOrganizationId: ORG_IDS.SUB_001,
+        amount: 75000,
+        status: FUNDING_STATUS.PENDING,
+        createdAt: daysAgoAt(4, 11, 0),
+        updatedAt: daysAgoAt(4, 11, 0),
+      },
+      'CDO Franchisee requesting float to support retailer network.',
+    ),
+  ]
+
+  const retailerCompleted = [
+    withFundingDetails(
+      {
+        id: 'REQ-1050',
+        organizationId: ORG_IDS.RETAILER_001,
+        requesterRole: ROLES.RETAILER,
+        parentOrganizationId: ORG_IDS.FRANCHISE_001,
+        amount: 10000,
+        status: FUNDING_STATUS.COMPLETED,
+        createdAt: daysAgoAt(15, 10, 0),
+        updatedAt: daysAgoAt(14, 14, 0),
+      },
+      'Completed retailer funding for prior week operations.',
+    ),
+  ]
+
+  return [
+    ...incoming,
+    ...myRequests,
+    ...completed,
+    ...retailerIncoming,
+    ...franchiseeOwn,
+    ...retailerCompleted,
+  ]
+}
+
+export function getSeedFundingTransfers() {
+  return [
+    {
+      id: 'TRF-5001',
+      fromOrganizationId: ORG_IDS.SUB_001,
+      toOrganizationId: ORG_IDS.FRANCHISE_002,
+      amount: 90000,
+      status: FUNDING_STATUS.COMPLETED,
+      fundingRequestId: 'REQ-1001',
+      createdAt: daysAgoAt(13, 15, 0),
+      updatedAt: daysAgoAt(13, 15, 0),
+    },
+    {
+      id: 'TRF-5002',
+      fromOrganizationId: ORG_IDS.PLATFORM,
+      toOrganizationId: ORG_IDS.SUB_001,
+      amount: 175000,
+      status: FUNDING_STATUS.COMPLETED,
+      fundingRequestId: 'REQ-1090',
+      createdAt: daysAgoAt(11, 16, 0),
+      updatedAt: daysAgoAt(11, 16, 0),
+    },
+    {
+      id: 'TRF-5003',
+      fromOrganizationId: ORG_IDS.FRANCHISE_001,
+      toOrganizationId: ORG_IDS.RETAILER_001,
+      amount: 10000,
+      status: FUNDING_STATUS.COMPLETED,
+      fundingRequestId: 'REQ-1050',
+      createdAt: daysAgoAt(14, 14, 0),
+      updatedAt: daysAgoAt(14, 14, 0),
+    },
+  ]
+}
+
+function buildTransaction({
+  id,
+  createdAt,
+  retailerOrganizationId,
+  franchiseeOrganizationId,
+  subfranchiseeOrganizationId = ORG_IDS.SUB_001,
+  retailerName,
+  retailerCode,
+  customerPayment,
+  baseCost,
+  platformProcessingFee,
+  walletDeduction,
+  retailerShare,
+  status,
+}) {
+  const resolvedBaseCost =
+    baseCost != null
+      ? Math.round(Number(baseCost) * 100) / 100
+      : Math.round(Number(walletDeduction) * 100) / 100
+  const resolvedProcessingFee =
+    platformProcessingFee != null
+      ? Math.round(Number(platformProcessingFee) * 100) / 100
+      : 0
+  const netWalletDeduction =
+    walletDeduction != null
+      ? Math.round(Number(walletDeduction) * 100) / 100
+      : Math.round((resolvedBaseCost + resolvedProcessingFee) * 100) / 100
+  const distributableRevenue =
+    Math.round((customerPayment - netWalletDeduction) * 100) / 100
+  // Total distributed across all share tiers equals distributable revenue.
+  const totalDistributed = distributableRevenue
+
+  return {
+    id,
+    reference: id,
+    createdAt,
+    updatedAt: createdAt,
+    retailerOrganizationId,
+    franchiseeOrganizationId,
+    subfranchiseeOrganizationId,
+    retailerName,
+    retailerCode,
+    customerPayment,
+    baseCost: resolvedBaseCost,
+    platformProcessingFee: resolvedProcessingFee,
+    walletDeduction: netWalletDeduction,
+    distributableRevenue,
+    retailerShare,
+    totalDistributed,
+    status,
+  }
+}
+
+export function getSeedTransactions() {
+  const shareConfig = getSeedRevenueSharing()[0]
+  const retailerPct = Number(shareConfig?.retailerPercentage ?? 40)
+
+  const featured = [
+    buildTransaction({
+      id: 'TX-8921-A',
+      createdAt: daysAgoAt(0, 10, 42),
+      retailerOrganizationId: ORG_IDS.RETAILER_003,
+      franchiseeOrganizationId: ORG_IDS.FRANCHISE_001,
+      retailerName: 'SariSari Central',
+      retailerCode: 'RT-00291',
+      customerPayment: 1500,
+      baseCost: 1425,
+      platformProcessingFee: 30,
+      walletDeduction: 1455,
+      retailerShare: roundMoney((45 * retailerPct) / 100),
+      status: TRANSACTION_STATUS.COMPLETED,
+    }),
+    buildTransaction({
+      id: 'TX-8920-B',
+      createdAt: daysAgoAt(0, 9, 15),
+      retailerOrganizationId: ORG_IDS.RETAILER_004,
+      franchiseeOrganizationId: ORG_IDS.FRANCHISE_001,
+      retailerName: 'QuickStop Mart',
+      retailerCode: 'RT-00882',
+      customerPayment: 850,
+      baseCost: 807.5,
+      platformProcessingFee: 17,
+      walletDeduction: 824.5,
+      retailerShare: roundMoney((25.5 * retailerPct) / 100),
+      status: TRANSACTION_STATUS.COMPLETED,
+    }),
+    buildTransaction({
+      id: 'TX-8919-C',
+      createdAt: daysAgoAt(1, 16, 30),
+      retailerOrganizationId: ORG_IDS.RETAILER_005,
+      franchiseeOrganizationId: ORG_IDS.FRANCHISE_002,
+      retailerName: 'Neighborhood Hub',
+      retailerCode: 'RT-00104',
+      customerPayment: 2200,
+      baseCost: 2090,
+      platformProcessingFee: 44,
+      walletDeduction: 2134,
+      retailerShare: roundMoney((66 * retailerPct) / 100),
+      status: TRANSACTION_STATUS.COMPLETED,
+    }),
+    buildTransaction({
+      id: 'TX-8918-D',
+      createdAt: daysAgoAt(0, 11, 5),
+      retailerOrganizationId: ORG_IDS.RETAILER_001,
+      franchiseeOrganizationId: ORG_IDS.FRANCHISE_001,
+      retailerName: 'Retailer A',
+      retailerCode: 'RT-00001',
+      customerPayment: 1000,
+      baseCost: 950,
+      platformProcessingFee: 20,
+      walletDeduction: 970,
+      retailerShare: roundMoney((30 * retailerPct) / 100),
+      status: TRANSACTION_STATUS.COMPLETED,
+    }),
+  ]
+
+  const retailers = [
+    {
+      id: ORG_IDS.RETAILER_001,
+      name: 'Retailer A',
+      code: 'RT-00001',
+      franchiseeOrganizationId: ORG_IDS.FRANCHISE_001,
+    },
+    {
+      id: ORG_IDS.RETAILER_002,
+      name: 'Retailer B',
+      code: 'RT-00002',
+      franchiseeOrganizationId: ORG_IDS.FRANCHISE_001,
+    },
+    {
+      id: ORG_IDS.RETAILER_003,
+      name: 'SariSari Central',
+      code: 'RT-00291',
+      franchiseeOrganizationId: ORG_IDS.FRANCHISE_001,
+    },
+    {
+      id: ORG_IDS.RETAILER_004,
+      name: 'QuickStop Mart',
+      code: 'RT-00882',
+      franchiseeOrganizationId: ORG_IDS.FRANCHISE_001,
+    },
+    {
+      id: ORG_IDS.RETAILER_005,
+      name: 'Neighborhood Hub',
+      code: 'RT-00104',
+      franchiseeOrganizationId: ORG_IDS.FRANCHISE_002,
+    },
+  ]
+
+  const generated = []
+  for (let index = 0; index < 45; index += 1) {
+    const retailer = retailers[index % retailers.length]
+    const dayOffset = 2 + Math.floor(index / 3)
+    const hour = 8 + (index % 10)
+    const minute = (index * 7) % 60
+    const payment = 500 + (index % 12) * 125
+    const baseCost = roundMoney(payment * 0.95)
+    const platformProcessingFee = roundMoney(payment * 0.02)
+    const walletDeduction = roundMoney(baseCost + platformProcessingFee)
+    const distributable = roundMoney(payment - walletDeduction)
+    const retailerShare = roundMoney((distributable * retailerPct) / 100)
+
+    generated.push(
+      buildTransaction({
+        id: `TX-${8800 + index}-${String.fromCharCode(65 + (index % 26))}`,
+        createdAt: daysAgoAt(dayOffset % 40, hour, minute),
+        retailerOrganizationId: retailer.id,
+        franchiseeOrganizationId: retailer.franchiseeOrganizationId,
+        retailerName: retailer.name,
+        retailerCode: retailer.code,
+        customerPayment: payment,
+        baseCost,
+        platformProcessingFee,
+        walletDeduction,
+        retailerShare,
+        status: TRANSACTION_STATUS.COMPLETED,
+      }),
+    )
+  }
+
+  return [...featured, ...generated]
+}
+
 /**
  * Seeds missing localStorage collections only.
  * Does not overwrite existing valid data.
+ *
+ * Exception: empty funding collections are treated as unseeded so the
+ * funding module demo data appears after this feature was added.
  */
 export function initializeMockData() {
   if (collectionNeedsSeed('users')) {
@@ -193,21 +1003,144 @@ export function initializeMockData() {
   }
   if (collectionNeedsSeed('organizations')) {
     saveOrganizations(getSeedOrganizations())
+  } else {
+    // Ensure newly added demo franchisees exist without wiping other org data.
+    const existing = getOrganizations()
+    const seedOrgs = getSeedOrganizations()
+    const byId = new Map(existing.map((org) => [org.id, org]))
+
+    seedOrgs.forEach((seedOrg) => {
+      const current = byId.get(seedOrg.id)
+      if (!current) {
+        byId.set(seedOrg.id, seedOrg)
+        return
+      }
+      byId.set(seedOrg.id, {
+        ...current,
+        name: seedOrg.name,
+        code: seedOrg.code,
+        type: seedOrg.type || current.type,
+        parentId: seedOrg.parentId ?? current.parentId,
+      })
+    })
+
+    saveOrganizations(Array.from(byId.values()))
   }
   if (collectionNeedsSeed('wallets')) {
     saveWallets(getSeedWallets())
+    localStorage.setItem(STORAGE_KEYS.WALLET_LEDGER_VERSION, WALLET_LEDGER_VERSION)
+  } else {
+    const existing = getWallets()
+    const seedWallets = getSeedWallets()
+    const byId = new Map(existing.map((wallet) => [wallet.id, wallet]))
+    const appliedLedgerVersion = localStorage.getItem(STORAGE_KEYS.WALLET_LEDGER_VERSION)
+    const shouldRealignOperating =
+      appliedLedgerVersion !== WALLET_LEDGER_VERSION
+
+    seedWallets.forEach((seedWallet) => {
+      const current = byId.get(seedWallet.id)
+      if (!current) {
+        byId.set(seedWallet.id, seedWallet)
+        return
+      }
+      if (
+        seedWallet.walletType === 'revenue' ||
+        shouldRealignOperating
+      ) {
+        byId.set(seedWallet.id, {
+          ...current,
+          ...seedWallet,
+          availableBalance: seedWallet.availableBalance,
+        })
+      }
+    })
+
+    saveWallets(Array.from(byId.values()))
+    if (shouldRealignOperating) {
+      localStorage.setItem(STORAGE_KEYS.WALLET_LEDGER_VERSION, WALLET_LEDGER_VERSION)
+    }
   }
-  if (collectionNeedsSeed('fundingRequests')) {
-    saveFundingRequests([])
+  if (collectionNeedsSeed('fundingRequests') || isEmptyCollection('fundingRequests')) {
+    saveFundingRequests(getSeedFundingRequests())
+  } else {
+    const existing = getFundingRequests()
+    const seedRequests = getSeedFundingRequests()
+    const byId = new Map(existing.map((request) => [request.id, request]))
+    let changed = false
+
+    seedRequests.forEach((seed) => {
+      const current = byId.get(seed.id)
+      if (!current) {
+        byId.set(seed.id, seed)
+        changed = true
+        return
+      }
+      if (!current.notes || !current.proofOfPayment) {
+        byId.set(seed.id, {
+          ...current,
+          notes: current.notes || seed.notes,
+          proofOfPayment: current.proofOfPayment || seed.proofOfPayment,
+        })
+        changed = true
+      }
+    })
+
+    if (changed) {
+      saveFundingRequests(Array.from(byId.values()))
+    }
   }
-  if (collectionNeedsSeed('fundingTransfers')) {
-    saveFundingTransfers([])
+  if (collectionNeedsSeed('fundingTransfers') || isEmptyCollection('fundingTransfers')) {
+    saveFundingTransfers(getSeedFundingTransfers())
+  } else {
+    const existing = getFundingTransfers()
+    const seedTransfers = getSeedFundingTransfers()
+    const missing = seedTransfers.filter(
+      (transfer) => !existing.some((item) => item.id === transfer.id),
+    )
+    if (missing.length > 0) {
+      saveFundingTransfers([...existing, ...missing])
+    }
   }
   if (collectionNeedsSeed('revenueSharing')) {
     saveRevenueSharing(getSeedRevenueSharing())
   }
-  if (collectionNeedsSeed('transactions')) {
-    saveTransactions([])
+  if (collectionNeedsSeed('transactions') || isEmptyCollection('transactions')) {
+    saveTransactions(getSeedTransactions())
+  } else {
+    const existing = getTransactions()
+    const seedTransactions = getSeedTransactions()
+    const byId = new Map(existing.map((tx) => [tx.id, tx]))
+    let changed = false
+
+    // Demo surfaces completed transactions only — normalize legacy pending rows.
+    // Also align totalDistributed with distributable (full 4-tier share total).
+    byId.forEach((tx, id) => {
+      let next = tx
+      if (tx.status === TRANSACTION_STATUS.PENDING) {
+        next = { ...next, status: TRANSACTION_STATUS.COMPLETED }
+        changed = true
+      }
+      const distributable = Number(next.distributableRevenue)
+      if (
+        Number.isFinite(distributable) &&
+        Number(next.totalDistributed) !== distributable
+      ) {
+        next = { ...next, totalDistributed: distributable }
+        changed = true
+      }
+      if (next !== tx) byId.set(id, next)
+    })
+
+    seedTransactions.forEach((seedTx) => {
+      if (!byId.has(seedTx.id)) {
+        byId.set(seedTx.id, seedTx)
+        changed = true
+      }
+    })
+
+    if (changed) {
+      saveTransactions(Array.from(byId.values()))
+    }
   }
   if (collectionNeedsSeed('settlements')) {
     saveSettlements([])
@@ -223,9 +1156,10 @@ export function resetDemoData() {
   saveUsers(getSeedUsers())
   saveOrganizations(getSeedOrganizations())
   saveWallets(getSeedWallets())
-  saveFundingRequests([])
-  saveFundingTransfers([])
+  saveFundingRequests(getSeedFundingRequests())
+  saveFundingTransfers(getSeedFundingTransfers())
   saveRevenueSharing(getSeedRevenueSharing())
-  saveTransactions([])
+  saveTransactions(getSeedTransactions())
   saveSettlements([])
+  localStorage.setItem(STORAGE_KEYS.WALLET_LEDGER_VERSION, WALLET_LEDGER_VERSION)
 }
