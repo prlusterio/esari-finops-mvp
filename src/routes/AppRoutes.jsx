@@ -15,7 +15,6 @@ import WalletManagementPage from '@/pages/wallets/WalletManagementPage'
 import WalletPage from '@/pages/wallet/WalletPage'
 import FundingPage from '@/pages/funding/FundingPage'
 import RequestFundingPage from '@/pages/request-funding/RequestFundingPage'
-import RevenueSharingPage from '@/pages/revenue-sharing/RevenueSharingPage'
 import RevenuePage from '@/pages/revenue/RevenuePage'
 import CommissionSettingsPage from '@/pages/commission-settings/CommissionSettingsPage'
 import TransactionsPage from '@/pages/transactions/TransactionsPage'
@@ -31,14 +30,6 @@ function PublicOnly({ children }) {
     return <Navigate to={getHomePathForRole(user?.role)} replace />
   }
   return children
-}
-
-function CommissionSettingsGateway() {
-  const { user } = useAuth()
-  if (user?.role === ROLES.ADMIN) {
-    return <RevenueSharingPage />
-  }
-  return <CommissionSettingsPage />
 }
 
 export default function AppRoutes() {
@@ -146,7 +137,7 @@ export default function AppRoutes() {
           >
             <Route
               path="/commission-settings"
-              element={<CommissionSettingsGateway />}
+              element={<CommissionSettingsPage />}
             />
           </Route>
 

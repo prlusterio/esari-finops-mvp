@@ -25,6 +25,9 @@ export function getFundingWorkspaceConfig({ role, organizationId, organizations 
   const parent = getParentOrganization(organizations, organizationId)
 
   if (role === ROLES.ADMIN) {
+    const recipients = getChildOrganizations(organizations, organizationId).sort(
+      (a, b) => a.name.localeCompare(b.name),
+    )
     return {
       title: 'Token Credits Requests & Transfers',
       description: 'Manage inbound funding requests and execute outbound transfers.',
@@ -35,9 +38,14 @@ export function getFundingWorkspaceConfig({ role, organizationId, organizations 
       showNewRequest: false,
       showDirectTransfer: true,
       incomingRequesterRole: ROLES.SUBFRANCHISEE,
-      incomingColumnLabel: 'Requesting Sub-Franchisee',
-      recipientLabel: 'Recipient Sub-Franchisee',
-      recipients: getChildOrganizations(organizations, organizationId, 'subfranchisee'),
+      incomingRequesterRoles: [
+        ROLES.SUBFRANCHISEE,
+        ROLES.FRANCHISEE,
+        ROLES.RETAILER,
+      ],
+      incomingColumnLabel: 'Requesting Organization',
+      recipientLabel: 'Recipient',
+      recipients,
       newRequestParentId: null,
       newRequestInfo:
         'Submit this form to request additional wallet funds from the Central Admin. Ensure your bank transfer is completed before submitting.',
@@ -111,12 +119,19 @@ export function getFundingDatasets({
   transfers,
   config,
 }) {
+  const allowedRequesterRoles = Array.isArray(config.incomingRequesterRoles)
+    ? config.incomingRequesterRoles
+    : config.incomingRequesterRole
+      ? [config.incomingRequesterRole]
+      : []
+
   const incoming = config.showIncoming
     ? sortByNewest(
         requests.filter(
           (request) =>
             request.parentOrganizationId === organizationId &&
-            request.requesterRole === config.incomingRequesterRole &&
+            (allowedRequesterRoles.length === 0 ||
+              allowedRequesterRoles.includes(request.requesterRole)) &&
             request.status === FUNDING_STATUS.PENDING,
         ),
       )

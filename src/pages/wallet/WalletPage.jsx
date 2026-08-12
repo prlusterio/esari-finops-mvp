@@ -89,7 +89,11 @@ export default function WalletPage() {
     <div>
       <PageHeader
         title="Wallet"
-        description="Your operating and revenue wallets. Request token credits from your franchisee when you need float."
+        description={
+          view.parentTypeLabel === 'CWPC Admin'
+            ? 'Your operating and revenue wallets. Request token credits from CWPC Admin when you need float.'
+            : 'Your operating and revenue wallets. Request token credits from your franchisee when you need float.'
+        }
         breadcrumbs={[
           { label: 'Home', href: getHomePathForRole(user?.role) },
           { label: 'Wallet' },
@@ -126,7 +130,7 @@ export default function WalletPage() {
         <Card>
           <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
             <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Franchisee
+              {view.parentTypeLabel || 'Franchisee'}
             </CardTitle>
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -135,7 +139,10 @@ export default function WalletPage() {
               {view.parent?.name || '—'}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              {view.parent?.code || 'Your upline franchisee'}
+              {view.parent?.code ||
+                (view.parentTypeLabel === 'CWPC Admin'
+                  ? 'Your upline platform admin'
+                  : 'Your upline franchisee')}
             </p>
           </CardContent>
         </Card>

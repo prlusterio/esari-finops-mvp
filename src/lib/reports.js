@@ -148,14 +148,29 @@ export function getNetworkFilterOptions(organizations, organizationId) {
     )
     .sort((a, b) => a.name.localeCompare(b.name))
 
-  const allRetailers =
-    nestedRetailers.length > 0
-      ? nestedRetailers
-      : isPlatformScope
-        ? organizations
-            .filter((org) => org.type === 'retailer')
-            .sort((a, b) => a.name.localeCompare(b.name))
-        : directRetailers
+  // Platform can also own retailers directly (skip franchisee / sub-franchisee).
+  const platformDirectRetailers = isPlatformScope
+    ? organizations
+        .filter(
+          (org) =>
+            org.type === 'retailer' &&
+            (org.parentId === root?.id || org.parentId === organizationId),
+        )
+        .sort((a, b) => a.name.localeCompare(b.name))
+    : []
+
+  const allRetailers = (() => {
+    if (isPlatformScope) {
+      const byId = new Map()
+      ;[...nestedRetailers, ...platformDirectRetailers].forEach((org) => {
+        byId.set(org.id, org)
+      })
+      return Array.from(byId.values()).sort((a, b) =>
+        a.name.localeCompare(b.name),
+      )
+    }
+    return nestedRetailers.length > 0 ? nestedRetailers : directRetailers
+  })()
 
   return { franchisees, retailersByFranchisee, allRetailers }
 }

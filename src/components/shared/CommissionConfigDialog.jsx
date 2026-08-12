@@ -9,6 +9,7 @@ import {
   isCommissionSplitValid,
   normalizeCommissionShares,
   parsePercentInput,
+  resolveCommissionHierarchy,
   sumCommissionPercentages,
 } from '@/lib/commission'
 import { Button } from '@/components/ui/button'
@@ -65,11 +66,13 @@ function PercentField({ id, label, value, onChange, disabled, hint }) {
 export function CommissionConfigDialog({
   open,
   onOpenChange,
+  viewerRole = 'subfranchisee',
   retailers = [],
   orgById = {},
   initial = null,
   onSave,
 }) {
+  const isAdmin = viewerRole === 'admin'
   const isEdit = Boolean(initial?.id)
   const [retailerId, setRetailerId] = useState('')
   const [effectiveDate, setEffectiveDate] = useState('')
@@ -82,13 +85,29 @@ export function CommissionConfigDialog({
   const [status, setStatus] = useState(COMMISSION_STATUS.ACTIVE)
   const [error, setError] = useState('')
 
+  const selectedRetailer = orgById[retailerId] || null
+  const hierarchy = useMemo(
+    () => resolveCommissionHierarchy(selectedRetailer, orgById),
+    [selectedRetailer, orgById],
+  )
+  const { franchisee, subfranchisee, hasFranchisee, hasSubfranchisee } =
+    hierarchy
+
   useEffect(() => {
     if (!open) return
     if (initial) {
+      const initialRetailer = orgById[initial.retailerOrganizationId]
+      const initialHierarchy = resolveCommissionHierarchy(
+        initialRetailer,
+        orgById,
+      )
       const normalized = normalizeCommissionShares({
         retailerPercentage: initial.retailerPercentage,
-        franchiseePercentage: initial.franchiseePercentage,
+        franchiseePercentage: initialHierarchy.hasFranchisee
+          ? initial.franchiseePercentage
+          : 0,
         companyPercentage: DEFAULT_PLATFORM_FEE_PERCENTAGE,
+        remainderTarget: initialHierarchy.remainderTarget,
       })
       setRetailerId(initial.retailerOrganizationId || '')
       setEffectiveDate(initial.effectiveDate || '')
@@ -103,20 +122,38 @@ export function CommissionConfigDialog({
       setStatus(COMMISSION_STATUS.ACTIVE)
     }
     setError('')
-  }, [open, initial])
+  }, [open, initial, orgById])
+
+  useEffect(() => {
+    if (!open || !retailerId || isEdit) return
+    if (!hasFranchisee && franchiseePct !== '0') {
+      setFranchiseePct('0')
+    }
+  }, [open, retailerId, isEdit, hasFranchisee, franchiseePct])
 
   const shares = useMemo(
     () =>
       normalizeCommissionShares({
         retailerPercentage: parsePercentInput(retailerPct),
-        franchiseePercentage: parsePercentInput(franchiseePct),
+        franchiseePercentage: hasFranchisee
+          ? parsePercentInput(franchiseePct)
+          : 0,
         companyPercentage: DEFAULT_PLATFORM_FEE_PERCENTAGE,
+        remainderTarget: hierarchy.remainderTarget,
       }),
-    [retailerPct, franchiseePct],
+    [
+      retailerPct,
+      franchiseePct,
+      hasFranchisee,
+      hierarchy.remainderTarget,
+    ],
   )
 
   const total = sumCommissionPercentages(shares)
-  const valid = isCommissionSplitValid(shares)
+  const valid = isCommissionSplitValid({
+    ...shares,
+    remainderTarget: hierarchy.remainderTarget,
+  })
   const preview = buildCommissionPreview(shares)
   const downlineTotal =
     Math.round(
@@ -124,10 +161,37 @@ export function CommissionConfigDialog({
         100,
     ) / 100
 
-  const selectedRetailer = orgById[retailerId] || null
-  const franchisee = selectedRetailer?.parentId
-    ? orgById[selectedRetailer.parentId]
-    : null
+  const sfLabel = isAdmin ? 'Sub-Franchisee Share' : 'Your Share'
+  const platformLabel = hasSubfranchisee ? 'Platform Fee' : 'Platform Share'
+  const infoText = !retailerId
+    ? isAdmin
+      ? 'Select a retailer to configure commission. Direct-to-admin retailers and franchisees are supported.'
+      : 'Configure commission for your franchisee and retailer downlines. Your share is calculated automatically from what remains after the platform fee and downline shares.'
+    : hasSubfranchisee
+      ? isAdmin
+        ? 'Sub-franchisee share is calculated automatically from what remains after the platform fee and downline shares.'
+        : 'Your share is calculated automatically from what remains after the platform fee and downline shares.'
+      : hasFranchisee
+        ? 'This franchisee reports directly to CWPC Admin. There is no sub-franchisee share — platform absorbs the remainder.'
+        : 'This retailer reports directly to CWPC Admin. Franchisee and sub-franchisee shares are zero — platform absorbs the remainder.'
+
+  const hierarchyHint = (() => {
+    if (!selectedRetailer) return null
+    const parts = []
+    parts.push(
+      hasFranchisee
+        ? `Franchisee: ${franchisee.name}`
+        : 'Franchisee: Direct to Admin',
+    )
+    if (isAdmin) {
+      parts.push(
+        hasSubfranchisee
+          ? `Sub-Franchisee: ${subfranchisee.name}`
+          : 'Sub-Franchisee: Direct to Admin',
+      )
+    }
+    return parts.join(' · ')
+  })()
 
   const handleSave = () => {
     setError('')
@@ -141,7 +205,9 @@ export function CommissionConfigDialog({
     }
     if (!valid) {
       setError(
-        'Retailer + Franchisee shares cannot exceed the remaining allocation after the platform fee.',
+        hasSubfranchisee
+          ? 'Retailer + Franchisee shares cannot exceed the remaining allocation after the platform fee.'
+          : 'Retailer + Franchisee shares cannot exceed 100%.',
       )
       return
     }
@@ -149,11 +215,13 @@ export function CommissionConfigDialog({
     onSave?.({
       id: initial?.id,
       retailerOrganizationId: retailerId,
-      franchiseeOrganizationId: selectedRetailer?.parentId || '',
+      franchiseeOrganizationId: franchisee?.id || '',
+      subfranchiseeOrganizationId: subfranchisee?.id || '',
       retailerPercentage: shares.retailerPercentage,
       franchiseePercentage: shares.franchiseePercentage,
       subfranchiseePercentage: shares.subfranchiseePercentage,
-      companyPercentage: DEFAULT_PLATFORM_FEE_PERCENTAGE,
+      companyPercentage: shares.companyPercentage,
+      remainderTarget: hierarchy.remainderTarget,
       effectiveDate,
       status,
     })
@@ -172,11 +240,7 @@ export function CommissionConfigDialog({
         <div className="space-y-5">
           <div className="flex gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3.5 py-3 text-sm text-slate-600">
             <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
-            <p>
-              Configure commission for your franchisee and retailer downlines.
-              Your share is calculated automatically from what remains after the
-              platform fee and downline shares.
-            </p>
+            <p>{infoText}</p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -199,10 +263,8 @@ export function CommissionConfigDialog({
                   ))}
                 </SelectContent>
               </Select>
-              {franchisee ? (
-                <p className="text-xs text-slate-400">
-                  Franchisee: {franchisee.name}
-                </p>
+              {hierarchyHint ? (
+                <p className="text-xs text-slate-400">{hierarchyHint}</p>
               ) : null}
             </div>
 
@@ -227,24 +289,55 @@ export function CommissionConfigDialog({
             <PercentField
               id="commission-franchisee"
               label="Franchisee Share %"
-              value={franchiseePct}
+              value={hasFranchisee ? franchiseePct : '0'}
               onChange={setFranchiseePct}
+              disabled={!hasFranchisee}
+              hint={
+                hasFranchisee
+                  ? undefined
+                  : 'Not applicable — retailer reports directly to CWPC Admin.'
+              }
             />
-            <PercentField
-              id="commission-your-share"
-              label="Your Share %"
-              value={String(shares.subfranchiseePercentage)}
-              onChange={() => {}}
-              disabled
-              hint="Auto-calculated remainder for your sub-franchisee share."
-            />
+            {hasSubfranchisee ? (
+              <PercentField
+                id="commission-your-share"
+                label={`${sfLabel} %`}
+                value={String(shares.subfranchiseePercentage)}
+                onChange={() => {}}
+                disabled
+                hint={
+                  isAdmin
+                    ? 'Auto-calculated remainder for the sub-franchisee.'
+                    : 'Auto-calculated remainder for your sub-franchisee share.'
+                }
+              />
+            ) : (
+              <PercentField
+                id="commission-your-share"
+                label={`${sfLabel} %`}
+                value="0"
+                onChange={() => {}}
+                disabled
+                hint="Not applicable — no sub-franchisee on this path."
+              />
+            )}
             <PercentField
               id="commission-platform"
-              label="Platform Fee %"
-              value={String(DEFAULT_PLATFORM_FEE_PERCENTAGE)}
+              label={`${platformLabel} %`}
+              value={String(
+                hasSubfranchisee
+                  ? DEFAULT_PLATFORM_FEE_PERCENTAGE
+                  : shares.companyPercentage,
+              )}
               onChange={() => {}}
               disabled
-              hint="This is configurable on CWPC Admin."
+              hint={
+                hasSubfranchisee
+                  ? isAdmin
+                    ? 'Platform fee is fixed for this MVP.'
+                    : 'This is configurable on CWPC Admin.'
+                  : 'Includes the platform fee plus any unassigned mid-tier shares.'
+              }
             />
           </div>
 
@@ -263,8 +356,11 @@ export function CommissionConfigDialog({
               <span className="text-sm font-bold text-slate-900">{total}%</span>
             </div>
             <p className="mt-1 text-xs text-slate-500">
-              Downlines {downlineTotal}% · Your share {shares.subfranchiseePercentage}%
-              · Platform fee {shares.companyPercentage}%
+              Downlines {downlineTotal}%
+              {hasSubfranchisee
+                ? ` · ${sfLabel} ${shares.subfranchiseePercentage}%`
+                : ''}{' '}
+              · {platformLabel} {shares.companyPercentage}%
             </p>
             <p
               className={cn(
@@ -342,11 +438,11 @@ export function CommissionConfigDialog({
                 <span>{formatCurrency(preview.franchiseeAmount)}</span>
               </div>
               <div className="flex justify-between gap-3">
-                <span className="text-slate-500">Your Share</span>
+                <span className="text-slate-500">{sfLabel}</span>
                 <span>{formatCurrency(preview.subfranchiseeAmount)}</span>
               </div>
               <div className="flex justify-between gap-3">
-                <span className="text-slate-500">Platform Fee</span>
+                <span className="text-slate-500">{platformLabel}</span>
                 <span>{formatCurrency(preview.companyAmount)}</span>
               </div>
             </div>

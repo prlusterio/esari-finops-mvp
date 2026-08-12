@@ -69,6 +69,161 @@ function collectNetworkOrgIds(organizations, organizationId) {
 }
 
 /**
+ * Platform-wide network: platform + all sub-franchisees, franchisees, and retailers
+ * (including franchisees/retailers attached directly to admin).
+ */
+function collectAdminNetworkOrgs(organizations = [], platformId) {
+  const subfranchisees = organizations
+    .filter((org) => org.type === 'subfranchisee')
+    .sort((a, b) => a.name.localeCompare(b.name))
+  const franchisees = organizations
+    .filter((org) => org.type === 'franchisee')
+    .sort((a, b) => a.name.localeCompare(b.name))
+  const retailers = organizations
+    .filter((org) => org.type === 'retailer')
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+  return {
+    subfranchisees,
+    franchisees,
+    retailers,
+    networkIds: new Set([
+      platformId,
+      ...subfranchisees.map((org) => org.id),
+      ...franchisees.map((org) => org.id),
+      ...retailers.map((org) => org.id),
+    ]),
+  }
+}
+
+function mapOperatingWalletRow({
+  wallet,
+  org,
+  orgById,
+  organizationId,
+  canTransferTo,
+}) {
+  const parent = org.parentId ? orgById[org.parentId] : null
+  const minimumBalance = resolveMinimumBalance(wallet, org.type)
+  const availableBalance = roundMoney(Number(wallet.availableBalance) || 0)
+  const status = getWalletBalanceStatus(availableBalance, minimumBalance)
+
+  return {
+    id: wallet.id,
+    wallet,
+    organizationId: org.id,
+    ownerName: org.name,
+    ownerCode: org.code || '',
+    orgType: org.type,
+    typeLabel: TYPE_LABELS[org.type] || org.type,
+    parentName: parent?.name || '—',
+    parentType: parent?.type || null,
+    availableBalance,
+    minimumBalance,
+    status,
+    canTransferTo: Boolean(canTransferTo),
+    isOwnWallet: org.id === organizationId,
+  }
+}
+
+/**
+ * Builds wallet directory rows + KPI totals for CWPC Admin / platform.
+ * Transfer targets are direct children of the platform only
+ * (sub-franchisee, franchisee, or retailer).
+ */
+export function buildAdminWalletDirectory({
+  organizationId,
+  organizations = [],
+  wallets = [],
+} = {}) {
+  const orgById = Object.fromEntries(organizations.map((org) => [org.id, org]))
+  const { subfranchisees, franchisees, retailers, networkIds } =
+    collectAdminNetworkOrgs(organizations, organizationId)
+
+  const operatingWallets = (wallets || []).filter(
+    (wallet) =>
+      wallet.walletType !== 'revenue' &&
+      networkIds.has(wallet.organizationId),
+  )
+
+  const rows = operatingWallets
+    .map((wallet) => {
+      const org = orgById[wallet.organizationId]
+      if (!org) return null
+      const isDirectChild =
+        org.id !== organizationId && org.parentId === organizationId
+      return mapOperatingWalletRow({
+        wallet,
+        org,
+        orgById,
+        organizationId,
+        canTransferTo: isDirectChild,
+      })
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      const typeOrder = {
+        platform: 0,
+        subfranchisee: 1,
+        franchisee: 2,
+        retailer: 3,
+      }
+      const byType =
+        (typeOrder[a.orgType] ?? 9) - (typeOrder[b.orgType] ?? 9)
+      if (byType !== 0) return byType
+      return a.ownerName.localeCompare(b.ownerName)
+    })
+
+  const ownWallet =
+    rows.find((row) => row.isOwnWallet) ||
+    (() => {
+      const wallet = getOperatingWallet(wallets, organizationId)
+      if (!wallet) return null
+      const org = orgById[organizationId]
+      const minimumBalance = resolveMinimumBalance(wallet, org?.type || 'platform')
+      const availableBalance = roundMoney(Number(wallet.availableBalance) || 0)
+      return {
+        availableBalance,
+        minimumBalance,
+        status: getWalletBalanceStatus(availableBalance, minimumBalance),
+      }
+    })()
+
+  const subfranchiseeRows = rows.filter((row) => row.orgType === 'subfranchisee')
+  const franchiseeRows = rows.filter((row) => row.orgType === 'franchisee')
+  const retailerRows = rows.filter((row) => row.orgType === 'retailer')
+
+  const sumBalance = (list) =>
+    roundMoney(list.reduce((sum, row) => sum + row.availableBalance, 0))
+
+  const lowBalanceCount = rows.filter(
+    (row) =>
+      row.status === WALLET_BALANCE_STATUS.LOW ||
+      row.status === WALLET_BALANCE_STATUS.ZERO,
+  ).length
+
+  return {
+    orgById,
+    rows,
+    subfranchisees,
+    franchisees,
+    retailers,
+    kpis: {
+      operatingBalance: ownWallet?.availableBalance ?? 0,
+      operatingStatus: ownWallet?.status || WALLET_BALANCE_STATUS.ZERO,
+      subfranchiseeTotal: sumBalance(subfranchiseeRows),
+      subfranchiseeWalletCount: subfranchiseeRows.length,
+      franchiseeTotal: sumBalance(franchiseeRows),
+      franchiseeWalletCount: franchiseeRows.length,
+      retailerTotal: sumBalance(retailerRows),
+      retailerWalletCount: retailerRows.length,
+      networkWalletCount: rows.length,
+      lowBalanceCount,
+    },
+  }
+}
+
+/**
  * Builds wallet directory rows + KPI totals for a sub-franchisee.
  */
 export function buildSubFranchiseeWalletDirectory({
@@ -92,27 +247,13 @@ export function buildSubFranchiseeWalletDirectory({
     .map((wallet) => {
       const org = orgById[wallet.organizationId]
       if (!org) return null
-
-      const parent = org.parentId ? orgById[org.parentId] : null
-      const minimumBalance = resolveMinimumBalance(wallet, org.type)
-      const availableBalance = roundMoney(Number(wallet.availableBalance) || 0)
-      const status = getWalletBalanceStatus(availableBalance, minimumBalance)
-
-      return {
-        id: wallet.id,
+      return mapOperatingWalletRow({
         wallet,
-        organizationId: org.id,
-        ownerName: org.name,
-        ownerCode: org.code || '',
-        orgType: org.type,
-        typeLabel: TYPE_LABELS[org.type] || org.type,
-        parentName: parent?.name || '—',
-        availableBalance,
-        minimumBalance,
-        status,
+        org,
+        orgById,
+        organizationId,
         canTransferTo: org.type === 'franchisee',
-        isOwnWallet: org.id === organizationId,
-      }
+      })
     })
     .filter(Boolean)
     .sort((a, b) => {
@@ -203,27 +344,13 @@ export function buildFranchiseeWalletDirectory({
     .map((wallet) => {
       const org = orgById[wallet.organizationId]
       if (!org) return null
-
-      const parent = org.parentId ? orgById[org.parentId] : null
-      const minimumBalance = resolveMinimumBalance(wallet, org.type)
-      const availableBalance = roundMoney(Number(wallet.availableBalance) || 0)
-      const status = getWalletBalanceStatus(availableBalance, minimumBalance)
-
-      return {
-        id: wallet.id,
+      return mapOperatingWalletRow({
         wallet,
-        organizationId: org.id,
-        ownerName: org.name,
-        ownerCode: org.code || '',
-        orgType: org.type,
-        typeLabel: TYPE_LABELS[org.type] || org.type,
-        parentName: parent?.name || '—',
-        availableBalance,
-        minimumBalance,
-        status,
+        org,
+        orgById,
+        organizationId,
         canTransferTo: org.type === 'retailer',
-        isOwnWallet: org.id === organizationId,
-      }
+      })
     })
     .filter(Boolean)
     .sort((a, b) => {
@@ -296,6 +423,14 @@ export function buildRetailerWalletView({
   const orgById = Object.fromEntries(organizations.map((org) => [org.id, org]))
   const org = orgById[organizationId] || null
   const parent = org?.parentId ? orgById[org.parentId] : null
+  const parentTypeLabel =
+    parent?.type === 'platform'
+      ? 'CWPC Admin'
+      : parent?.type === 'franchisee'
+        ? 'Franchisee'
+        : parent?.type === 'subfranchisee'
+          ? 'Sub-Franchisee'
+          : 'Upline'
 
   const orgWallets = (wallets || []).filter(
     (wallet) => wallet.organizationId === organizationId,
@@ -325,6 +460,7 @@ export function buildRetailerWalletView({
       orgType: org?.type || 'retailer',
       typeLabel,
       parentName: parent?.name || '—',
+      parentType: parent?.type || null,
       availableBalance,
       minimumBalance,
       status: getWalletBalanceStatus(availableBalance, minimumBalance),
@@ -339,6 +475,7 @@ export function buildRetailerWalletView({
   return {
     org,
     parent,
+    parentTypeLabel,
     operating,
     revenue,
     activity: buildWalletActivity({

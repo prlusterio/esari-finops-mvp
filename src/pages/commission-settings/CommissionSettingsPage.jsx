@@ -5,14 +5,17 @@ import {
   COMMISSION_STATUS,
   COMMISSION_STATUS_LABELS,
   DEFAULT_PLATFORM_FEE_PERCENTAGE,
+  DIRECT_TO_ADMIN,
   enrichCommissionRows,
   filterCommissionRows,
-  getNetworkRetailersForSubFranchisee,
+  getCommissionNetworkScope,
   normalizeCommissionShares,
+  resolveCommissionHierarchy,
 } from '@/lib/commission'
 import { formatDateLong } from '@/lib/date'
 import { DEFAULT_PAGE_SIZE, paginateItems } from '@/lib/pagination'
 import { getHomePathForRole } from '@/lib/permissions'
+import { ROLES } from '@/lib/constants'
 import {
   getCommissionSettings,
   getOrganizations,
@@ -56,18 +59,27 @@ function StatusBadge({ status }) {
   )
 }
 
+const EMPTY_APPLIED = {
+  retailerId: 'all',
+  franchiseeId: 'all',
+  subfranchiseeId: 'all',
+  status: 'all',
+}
+
 export default function CommissionSettingsPage() {
   const { user, dataVersion, bumpDataVersion } = useAuth()
+  const isAdmin = user?.role === ROLES.ADMIN
   const organizations = useMemo(() => getOrganizations(), [dataVersion])
   const settings = useMemo(() => getCommissionSettings(), [dataVersion])
 
-  const { franchisees, retailers } = useMemo(
+  const { subfranchisees, franchisees, retailers } = useMemo(
     () =>
-      getNetworkRetailersForSubFranchisee(
+      getCommissionNetworkScope({
+        role: user?.role,
+        organizationId: user?.organizationId,
         organizations,
-        user?.organizationId,
-      ),
-    [organizations, user?.organizationId],
+      }),
+    [organizations, user?.role, user?.organizationId],
   )
 
   const orgById = useMemo(
@@ -82,23 +94,55 @@ export default function CommissionSettingsPage() {
 
   const [retailerId, setRetailerId] = useState('all')
   const [franchiseeId, setFranchiseeId] = useState('all')
+  const [subfranchiseeId, setSubfranchiseeId] = useState('all')
   const [status, setStatus] = useState('all')
-  const [applied, setApplied] = useState({
-    retailerId: 'all',
-    franchiseeId: 'all',
-    status: 'all',
-  })
+  const [applied, setApplied] = useState(EMPTY_APPLIED)
   const [page, setPage] = useState(0)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState(null)
 
+  const franchiseeOptions = useMemo(() => {
+    if (!isAdmin || subfranchiseeId === 'all') return franchisees
+    if (subfranchiseeId === DIRECT_TO_ADMIN) {
+      return franchisees.filter((org) => {
+        const parent = orgById[org.parentId]
+        return !parent || parent.type === 'platform'
+      })
+    }
+    return franchisees.filter((org) => org.parentId === subfranchiseeId)
+  }, [franchisees, isAdmin, subfranchiseeId, orgById])
+
   const retailerOptions = useMemo(() => {
-    const scoped =
-      franchiseeId === 'all'
-        ? retailers
-        : retailers.filter((org) => org.parentId === franchiseeId)
+    let scoped = retailers
+    if (franchiseeId === DIRECT_TO_ADMIN) {
+      scoped = scoped.filter((org) => {
+        const parent = orgById[org.parentId]
+        return parent?.type === 'platform'
+      })
+    } else if (franchiseeId !== 'all') {
+      scoped = scoped.filter((org) => org.parentId === franchiseeId)
+    } else if (isAdmin && subfranchiseeId === DIRECT_TO_ADMIN) {
+      scoped = scoped.filter((org) => {
+        const hierarchy = resolveCommissionHierarchy(org, orgById)
+        return !hierarchy.hasSubfranchisee
+      })
+    } else if (isAdmin && subfranchiseeId !== 'all') {
+      const franchiseeIds = new Set(
+        franchisees
+          .filter((org) => org.parentId === subfranchiseeId)
+          .map((org) => org.id),
+      )
+      scoped = scoped.filter((org) => franchiseeIds.has(org.parentId))
+    }
     return [...scoped].sort((a, b) => a.name.localeCompare(b.name))
-  }, [retailers, franchiseeId])
+  }, [
+    retailers,
+    franchisees,
+    franchiseeId,
+    isAdmin,
+    subfranchiseeId,
+    orgById,
+  ])
 
   const rows = useMemo(() => {
     const scoped = enrichCommissionRows(settings, organizations).filter((row) =>
@@ -115,26 +159,79 @@ export default function CommissionSettingsPage() {
   const clearFilters = () => {
     setRetailerId('all')
     setFranchiseeId('all')
+    setSubfranchiseeId('all')
     setStatus('all')
-    setApplied({ retailerId: 'all', franchiseeId: 'all', status: 'all' })
+    setApplied(EMPTY_APPLIED)
     setPage(0)
   }
 
   const applyFilters = () => {
-    setApplied({ retailerId, franchiseeId, status })
+    setApplied({ retailerId, franchiseeId, subfranchiseeId, status })
     setPage(0)
+  }
+
+  const resetRetailerIfInvalid = (nextFranchiseeId, nextSubfranchiseeId) => {
+    if (retailerId === 'all') return
+    const retailer = orgById[retailerId]
+    if (!retailer) {
+      setRetailerId('all')
+      return
+    }
+    const hierarchy = resolveCommissionHierarchy(retailer, orgById)
+
+    if (nextFranchiseeId === DIRECT_TO_ADMIN) {
+      if (hierarchy.hasFranchisee) setRetailerId('all')
+      return
+    }
+    if (
+      nextFranchiseeId !== 'all' &&
+      hierarchy.franchisee?.id !== nextFranchiseeId
+    ) {
+      setRetailerId('all')
+      return
+    }
+    if (nextSubfranchiseeId === DIRECT_TO_ADMIN) {
+      if (hierarchy.hasSubfranchisee) setRetailerId('all')
+      return
+    }
+    if (
+      isAdmin &&
+      nextSubfranchiseeId !== 'all' &&
+      hierarchy.subfranchisee?.id !== nextSubfranchiseeId
+    ) {
+      setRetailerId('all')
+    }
+  }
+
+  const handleSubfranchiseeChange = (value) => {
+    setSubfranchiseeId(value)
+    if (franchiseeId !== 'all' && franchiseeId !== DIRECT_TO_ADMIN) {
+      const stillValid = franchisees.some((org) => {
+        if (org.id !== franchiseeId) return false
+        if (value === 'all') return true
+        if (value === DIRECT_TO_ADMIN) {
+          const parent = orgById[org.parentId]
+          return !parent || parent.type === 'platform'
+        }
+        return org.parentId === value
+      })
+      if (!stillValid) {
+        setFranchiseeId('all')
+        resetRetailerIfInvalid('all', value)
+        return
+      }
+    }
+    if (franchiseeId === DIRECT_TO_ADMIN && value !== 'all' && value !== DIRECT_TO_ADMIN) {
+      setFranchiseeId('all')
+      resetRetailerIfInvalid('all', value)
+      return
+    }
+    resetRetailerIfInvalid(franchiseeId, value)
   }
 
   const handleFranchiseeChange = (value) => {
     setFranchiseeId(value)
-    if (retailerId !== 'all') {
-      const stillValid = retailers.some(
-        (org) =>
-          org.id === retailerId &&
-          (value === 'all' || org.parentId === value),
-      )
-      if (!stillValid) setRetailerId('all')
-    }
+    resetRetailerIfInvalid(value, subfranchiseeId)
   }
 
   const handleSave = (payload) => {
@@ -143,10 +240,18 @@ export default function CommissionSettingsPage() {
     const entryId =
       payload.id || `comm-${payload.retailerOrganizationId}-${Date.now()}`
 
+    const retailer = orgById[payload.retailerOrganizationId]
+    const hierarchy = resolveCommissionHierarchy(retailer, orgById)
+    const remainderTarget =
+      payload.remainderTarget || hierarchy.remainderTarget
+
     const normalized = normalizeCommissionShares({
       retailerPercentage: payload.retailerPercentage,
-      franchiseePercentage: payload.franchiseePercentage,
+      franchiseePercentage: hierarchy.hasFranchisee
+        ? payload.franchiseePercentage
+        : 0,
       companyPercentage: DEFAULT_PLATFORM_FEE_PERCENTAGE,
+      remainderTarget,
     })
 
     const savedEntry = {
@@ -156,7 +261,10 @@ export default function CommissionSettingsPage() {
       ...payload,
       ...normalized,
       id: entryId,
-      subfranchiseeOrganizationId: user.organizationId,
+      franchiseeOrganizationId: hierarchy.franchisee?.id || '',
+      subfranchiseeOrganizationId: isAdmin
+        ? hierarchy.subfranchisee?.id || ''
+        : user.organizationId,
       createdAt:
         payload.id
           ? existing.find((entry) => entry.id === payload.id)?.createdAt || now
@@ -189,11 +297,19 @@ export default function CommissionSettingsPage() {
     bumpDataVersion()
   }
 
+  const filterCols = isAdmin
+    ? 'lg:grid-cols-[1fr_1fr_1fr_1fr_auto]'
+    : 'lg:grid-cols-[1fr_1fr_1fr_auto]'
+
   return (
     <div>
       <PageHeader
         title="Commission Settings"
-        description="Set retailer and franchisee commission shares for your downlines."
+        description={
+          isAdmin
+            ? 'Set retailer and franchisee commission shares across sub-franchisees, franchisees, and retailers.'
+            : 'Set retailer and franchisee commission shares for your downlines.'
+        }
         breadcrumbs={[
           { label: 'Home', href: getHomePathForRole(user?.role) },
           { label: 'Commission Settings' },
@@ -214,7 +330,54 @@ export default function CommissionSettingsPage() {
       />
 
       <Card className="mb-4 shadow-sm">
-        <CardContent className="grid gap-3 p-4 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-end">
+        <CardContent
+          className={cn('grid gap-3 p-4 lg:items-end', filterCols)}
+        >
+          {isAdmin ? (
+            <div className="space-y-2">
+              <Label className="text-xs text-slate-500">Sub-Franchisee</Label>
+              <Select
+                value={subfranchiseeId}
+                onValueChange={handleSubfranchiseeChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="All Sub-Franchisees" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sub-Franchisees</SelectItem>
+                  <SelectItem value={DIRECT_TO_ADMIN}>
+                    Direct to Admin
+                  </SelectItem>
+                  {subfranchisees.map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      {org.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+          <div className="space-y-2">
+            <Label className="text-xs text-slate-500">Franchisee</Label>
+            <Select value={franchiseeId} onValueChange={handleFranchiseeChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Franchisees" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Franchisees</SelectItem>
+                {isAdmin ? (
+                  <SelectItem value={DIRECT_TO_ADMIN}>
+                    Direct to Admin
+                  </SelectItem>
+                ) : null}
+                {franchiseeOptions.map((org) => (
+                  <SelectItem key={org.id} value={org.id}>
+                    {org.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="space-y-2">
             <Label className="text-xs text-slate-500">Retailer</Label>
             <Select value={retailerId} onValueChange={setRetailerId}>
@@ -224,22 +387,6 @@ export default function CommissionSettingsPage() {
               <SelectContent>
                 <SelectItem value="all">All Retailers</SelectItem>
                 {retailerOptions.map((org) => (
-                  <SelectItem key={org.id} value={org.id}>
-                    {org.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label className="text-xs text-slate-500">Franchisee</Label>
-            <Select value={franchiseeId} onValueChange={handleFranchiseeChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Franchisees" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Franchisees</SelectItem>
-                {franchisees.map((org) => (
                   <SelectItem key={org.id} value={org.id}>
                     {org.name}
                   </SelectItem>
@@ -278,7 +425,9 @@ export default function CommissionSettingsPage() {
       </Card>
 
       <p className="mb-3 text-xs text-slate-500">
-        Showing franchisees and retailers in your network.
+        {isAdmin
+          ? 'Showing sub-franchisees, franchisees, and retailers — including direct-to-admin downlines.'
+          : 'Showing franchisees and retailers in your network.'}
       </p>
 
       <Card className="mb-4 overflow-hidden shadow-sm">
@@ -295,9 +444,12 @@ export default function CommissionSettingsPage() {
                     <TableRow className="bg-muted/50 hover:bg-muted/50">
                       <TableHead>Retailer</TableHead>
                       <TableHead>Franchisee</TableHead>
+                      {isAdmin ? <TableHead>Sub-Franchisee</TableHead> : null}
                       <TableHead>Retailer %</TableHead>
                       <TableHead>Franchisee %</TableHead>
-                      <TableHead>Your Share %</TableHead>
+                      <TableHead>
+                        {isAdmin ? 'Sub-Franchisee %' : 'Your Share %'}
+                      </TableHead>
                       <TableHead>Platform Fee %</TableHead>
                       <TableHead>Total %</TableHead>
                       <TableHead>Effective Date</TableHead>
@@ -319,6 +471,11 @@ export default function CommissionSettingsPage() {
                         <TableCell className="text-slate-700">
                           {row.franchiseeName}
                         </TableCell>
+                        {isAdmin ? (
+                          <TableCell className="text-slate-700">
+                            {row.subfranchiseeName}
+                          </TableCell>
+                        ) : null}
                         <TableCell>{row.retailerPercentage}%</TableCell>
                         <TableCell>{row.franchiseePercentage}%</TableCell>
                         <TableCell>{row.subfranchiseePercentage}%</TableCell>
@@ -371,6 +528,7 @@ export default function CommissionSettingsPage() {
           setDialogOpen(open)
           if (!open) setEditing(null)
         }}
+        viewerRole={user?.role}
         retailers={retailers}
         orgById={orgById}
         initial={editing}

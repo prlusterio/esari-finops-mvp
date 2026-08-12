@@ -14,6 +14,7 @@ import { sumCreditedShareForOrg } from '@/lib/revenue'
 import {
   DEFAULT_PLATFORM_FEE_PERCENTAGE,
   normalizeCommissionShares,
+  resolveCommissionHierarchy,
 } from '@/lib/commission'
 import { matchProductServiceToPayment } from '@/lib/transactions'
 import {
@@ -176,6 +177,16 @@ export function getSeedOrganizations() {
       updatedAt: now,
     },
     {
+      id: ORG_IDS.FRANCHISE_005,
+      name: 'NCR Direct Franchisee',
+      code: 'FR-02001',
+      type: 'franchisee',
+      parentId: ORG_IDS.PLATFORM,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
       id: ORG_IDS.RETAILER_001,
       name: 'Retailer A',
       code: 'RT-00001',
@@ -225,6 +236,26 @@ export function getSeedOrganizations() {
       createdAt: now,
       updatedAt: now,
     },
+    {
+      id: ORG_IDS.RETAILER_006,
+      name: 'Pasig Direct Store',
+      code: 'RT-03001',
+      type: 'retailer',
+      parentId: ORG_IDS.FRANCHISE_005,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: ORG_IDS.RETAILER_007,
+      name: 'CWPC Direct Retailer',
+      code: 'RT-04001',
+      type: 'retailer',
+      parentId: ORG_IDS.PLATFORM,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    },
   ]
 }
 
@@ -269,6 +300,11 @@ const REVENUE_WALLET_SPECS = [
     role: ROLES.FRANCHISEE,
   },
   {
+    id: 'wallet-franchise-005-revenue',
+    organizationId: ORG_IDS.FRANCHISE_005,
+    role: ROLES.FRANCHISEE,
+  },
+  {
     id: 'wallet-retailer-001-revenue',
     organizationId: ORG_IDS.RETAILER_001,
     role: ROLES.RETAILER,
@@ -291,6 +327,16 @@ const REVENUE_WALLET_SPECS = [
   {
     id: 'wallet-retailer-005-revenue',
     organizationId: ORG_IDS.RETAILER_005,
+    role: ROLES.RETAILER,
+  },
+  {
+    id: 'wallet-retailer-006-revenue',
+    organizationId: ORG_IDS.RETAILER_006,
+    role: ROLES.RETAILER,
+  },
+  {
+    id: 'wallet-retailer-007-revenue',
+    organizationId: ORG_IDS.RETAILER_007,
     role: ROLES.RETAILER,
   },
 ]
@@ -423,6 +469,17 @@ export function getSeedWallets() {
       updatedAt: now,
     },
     {
+      id: 'wallet-franchise-005',
+      organizationId: ORG_IDS.FRANCHISE_005,
+      walletType: 'operating',
+      availableBalance: 28000,
+      openingBalance: 28000,
+      minimumBalance: 25000,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
       id: 'wallet-retailer-001',
       organizationId: ORG_IDS.RETAILER_001,
       walletType: 'operating',
@@ -477,6 +534,28 @@ export function getSeedWallets() {
       createdAt: now,
       updatedAt: now,
     },
+    {
+      id: 'wallet-retailer-006',
+      organizationId: ORG_IDS.RETAILER_006,
+      walletType: 'operating',
+      availableBalance: 8400,
+      openingBalance: 8400,
+      minimumBalance: 8000,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: 'wallet-retailer-007',
+      organizationId: ORG_IDS.RETAILER_007,
+      walletType: 'operating',
+      availableBalance: 11200,
+      openingBalance: 11200,
+      minimumBalance: 8000,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    },
   ]
 
   const revenue = REVENUE_WALLET_SPECS.map((spec) =>
@@ -515,31 +594,39 @@ export function getSeedRevenueSharing() {
 
 export function getSeedCommissionSettings() {
   const orgs = getSeedOrganizations()
+  const orgById = Object.fromEntries(orgs.map((org) => [org.id, org]))
   const retailers = orgs.filter((org) => org.type === 'retailer')
 
-  // Different downline splits per retailer — only platform fee stays 40%.
+  // Different downline splits per retailer — only platform fee stays 40% when SF exists.
+  // Direct-to-admin paths set SF=0 and absorb remainder into platform share.
   const sharePlans = [
     { retailerPercentage: 25, franchiseePercentage: 20, status: 'active' }, // SF 15
     { retailerPercentage: 30, franchiseePercentage: 15, status: 'active' }, // SF 15
     { retailerPercentage: 18, franchiseePercentage: 22, status: 'active' }, // SF 20
     { retailerPercentage: 28, franchiseePercentage: 12, status: 'active' }, // SF 20
     { retailerPercentage: 22, franchiseePercentage: 18, status: 'active' }, // SF 20
+    { retailerPercentage: 27, franchiseePercentage: 18, status: 'active' }, // direct franchisee → platform 55
+    { retailerPercentage: 35, franchiseePercentage: 0, status: 'active' }, // direct retailer → platform 65
   ]
 
   return retailers.map((retailer, index) => {
     const plan = sharePlans[index % sharePlans.length]
+    const hierarchy = resolveCommissionHierarchy(retailer, orgById)
     const shares = normalizeCommissionShares({
       retailerPercentage: plan.retailerPercentage,
-      franchiseePercentage: plan.franchiseePercentage,
+      franchiseePercentage: hierarchy.hasFranchisee
+        ? plan.franchiseePercentage
+        : 0,
       companyPercentage: DEFAULT_PLATFORM_FEE_PERCENTAGE,
+      remainderTarget: hierarchy.remainderTarget,
     })
     const daysAgo = 5 + index * 8
     const effective = daysAgoAt(daysAgo, 10, 0)
     return {
       id: `comm-${retailer.id}`,
       retailerOrganizationId: retailer.id,
-      franchiseeOrganizationId: retailer.parentId,
-      subfranchiseeOrganizationId: ORG_IDS.SUB_001,
+      franchiseeOrganizationId: hierarchy.franchisee?.id || '',
+      subfranchiseeOrganizationId: hierarchy.subfranchisee?.id || '',
       ...shares,
       effectiveDate: effective.slice(0, 10),
       status: plan.status,
@@ -905,7 +992,7 @@ function buildTransaction({
   createdAt,
   retailerOrganizationId,
   franchiseeOrganizationId,
-  subfranchiseeOrganizationId = ORG_IDS.SUB_001,
+  subfranchiseeOrganizationId = '',
   retailerName,
   retailerCode,
   customerPayment,
@@ -917,6 +1004,7 @@ function buildTransaction({
   franchiseePercentage,
   subfranchiseePercentage,
   companyPercentage = DEFAULT_PLATFORM_FEE_PERCENTAGE,
+  remainderTarget,
   status,
   productService,
   customerReference,
@@ -941,6 +1029,9 @@ function buildTransaction({
     retailerPercentage: retailerPercentage ?? 0,
     franchiseePercentage: franchiseePercentage ?? 0,
     companyPercentage: companyPercentage ?? DEFAULT_PLATFORM_FEE_PERCENTAGE,
+    remainderTarget:
+      remainderTarget ||
+      (subfranchiseeOrganizationId ? 'subfranchisee' : 'company'),
   })
   const resolvedRetailerShare =
     retailerShare != null
@@ -953,8 +1044,8 @@ function buildTransaction({
     createdAt,
     updatedAt: createdAt,
     retailerOrganizationId,
-    franchiseeOrganizationId,
-    subfranchiseeOrganizationId,
+    franchiseeOrganizationId: franchiseeOrganizationId || '',
+    subfranchiseeOrganizationId: subfranchiseeOrganizationId || '',
     retailerName,
     retailerCode,
     customerPayment,
@@ -991,12 +1082,30 @@ export function getSeedTransactions() {
 
   const sharesForRetailer = (retailerOrganizationId) => {
     const configured = commissionByRetailer[retailerOrganizationId]
-    if (configured) return normalizeCommissionShares(configured)
+    if (configured) {
+      return normalizeCommissionShares({
+        retailerPercentage: configured.retailerPercentage,
+        franchiseePercentage: configured.franchiseePercentage,
+        companyPercentage: configured.companyPercentage,
+        remainderTarget: configured.subfranchiseeOrganizationId
+          ? 'subfranchisee'
+          : 'company',
+      })
+    }
     return normalizeCommissionShares({
       retailerPercentage: 0,
       franchiseePercentage: 0,
       companyPercentage: DEFAULT_PLATFORM_FEE_PERCENTAGE,
+      remainderTarget: 'company',
     })
+  }
+
+  const hierarchyIdsForRetailer = (retailerOrganizationId) => {
+    const configured = commissionByRetailer[retailerOrganizationId]
+    return {
+      franchiseeOrganizationId: configured?.franchiseeOrganizationId || '',
+      subfranchiseeOrganizationId: configured?.subfranchiseeOrganizationId || '',
+    }
   }
 
   const productCatalog = [
@@ -1015,7 +1124,7 @@ export function getSeedTransactions() {
       id: 'TX-8921-A',
       createdAt: daysAgoAt(0, 10, 42),
       retailerOrganizationId: ORG_IDS.RETAILER_003,
-      franchiseeOrganizationId: ORG_IDS.FRANCHISE_001,
+      ...hierarchyIdsForRetailer(ORG_IDS.RETAILER_003),
       retailerName: 'SariSari Central',
       retailerCode: 'RT-00291',
       customerPayment: 1500,
@@ -1031,7 +1140,7 @@ export function getSeedTransactions() {
       id: 'TX-8920-B',
       createdAt: daysAgoAt(0, 9, 15),
       retailerOrganizationId: ORG_IDS.RETAILER_004,
-      franchiseeOrganizationId: ORG_IDS.FRANCHISE_001,
+      ...hierarchyIdsForRetailer(ORG_IDS.RETAILER_004),
       retailerName: 'QuickStop Mart',
       retailerCode: 'RT-00882',
       customerPayment: 850,
@@ -1047,7 +1156,7 @@ export function getSeedTransactions() {
       id: 'TX-8919-C',
       createdAt: daysAgoAt(1, 16, 30),
       retailerOrganizationId: ORG_IDS.RETAILER_005,
-      franchiseeOrganizationId: ORG_IDS.FRANCHISE_002,
+      ...hierarchyIdsForRetailer(ORG_IDS.RETAILER_005),
       retailerName: 'Neighborhood Hub',
       retailerCode: 'RT-00104',
       customerPayment: 2200,
@@ -1063,7 +1172,7 @@ export function getSeedTransactions() {
       id: 'TX-8918-D',
       createdAt: daysAgoAt(0, 11, 5),
       retailerOrganizationId: ORG_IDS.RETAILER_001,
-      franchiseeOrganizationId: ORG_IDS.FRANCHISE_001,
+      ...hierarchyIdsForRetailer(ORG_IDS.RETAILER_001),
       retailerName: 'Retailer A',
       retailerCode: 'RT-00001',
       customerPayment: 1000,
@@ -1082,31 +1191,36 @@ export function getSeedTransactions() {
       id: ORG_IDS.RETAILER_001,
       name: 'Retailer A',
       code: 'RT-00001',
-      franchiseeOrganizationId: ORG_IDS.FRANCHISE_001,
     },
     {
       id: ORG_IDS.RETAILER_002,
       name: 'Retailer B',
       code: 'RT-00002',
-      franchiseeOrganizationId: ORG_IDS.FRANCHISE_001,
     },
     {
       id: ORG_IDS.RETAILER_003,
       name: 'SariSari Central',
       code: 'RT-00291',
-      franchiseeOrganizationId: ORG_IDS.FRANCHISE_001,
     },
     {
       id: ORG_IDS.RETAILER_004,
       name: 'QuickStop Mart',
       code: 'RT-00882',
-      franchiseeOrganizationId: ORG_IDS.FRANCHISE_001,
     },
     {
       id: ORG_IDS.RETAILER_005,
       name: 'Neighborhood Hub',
       code: 'RT-00104',
-      franchiseeOrganizationId: ORG_IDS.FRANCHISE_002,
+    },
+    {
+      id: ORG_IDS.RETAILER_006,
+      name: 'Pasig Direct Store',
+      code: 'RT-03001',
+    },
+    {
+      id: ORG_IDS.RETAILER_007,
+      name: 'CWPC Direct Retailer',
+      code: 'RT-04001',
     },
   ]
 
@@ -1123,13 +1237,14 @@ export function getSeedTransactions() {
     const productService = productCatalog[index % productCatalog.length]
     const customerReference = `09${17 + (index % 10)}-${String(100 + (index % 90)).padStart(3, '0')}-${String(1000 + index).slice(-4)}`
     const shares = sharesForRetailer(retailer.id)
+    const hierarchyIds = hierarchyIdsForRetailer(retailer.id)
 
     generated.push(
       buildTransaction({
         id: `TX-${8800 + index}-${String.fromCharCode(65 + (index % 26))}`,
         createdAt: daysAgoAt(dayOffset % 40, hour, minute),
         retailerOrganizationId: retailer.id,
-        franchiseeOrganizationId: retailer.franchiseeOrganizationId,
+        ...hierarchyIds,
         retailerName: retailer.name,
         retailerCode: retailer.code,
         customerPayment: payment,
@@ -1333,6 +1448,8 @@ export function initializeMockData() {
   } else {
     const existing = getCommissionSettings()
     const seed = getSeedCommissionSettings()
+    const organizations = getOrganizations()
+    const orgById = Object.fromEntries(organizations.map((org) => [org.id, org]))
     const byId = new Map(existing.map((entry) => [entry.id, entry]))
     let changed = false
 
@@ -1343,21 +1460,31 @@ export function initializeMockData() {
         return
       }
       const current = byId.get(seedEntry.id)
-      // Only lock platform fee at 40%; keep each retailer's own downline split.
+      const retailer = orgById[current.retailerOrganizationId]
+      const hierarchy = resolveCommissionHierarchy(retailer, orgById)
       const aligned = normalizeCommissionShares({
         retailerPercentage: current.retailerPercentage,
-        franchiseePercentage: current.franchiseePercentage,
+        franchiseePercentage: hierarchy.hasFranchisee
+          ? current.franchiseePercentage
+          : 0,
         companyPercentage: DEFAULT_PLATFORM_FEE_PERCENTAGE,
+        remainderTarget: hierarchy.remainderTarget,
       })
+      const nextEntry = {
+        ...current,
+        ...aligned,
+        franchiseeOrganizationId: hierarchy.franchisee?.id || '',
+        subfranchiseeOrganizationId: hierarchy.subfranchisee?.id || '',
+      }
       if (
         Number(current.companyPercentage) !== aligned.companyPercentage ||
         Number(current.subfranchiseePercentage) !==
-          aligned.subfranchiseePercentage
+          aligned.subfranchiseePercentage ||
+        Number(current.franchiseePercentage) !== aligned.franchiseePercentage ||
+        current.franchiseeOrganizationId !== nextEntry.franchiseeOrganizationId ||
+        current.subfranchiseeOrganizationId !== nextEntry.subfranchiseeOrganizationId
       ) {
-        byId.set(seedEntry.id, {
-          ...current,
-          ...aligned,
-        })
+        byId.set(seedEntry.id, nextEntry)
         changed = true
       }
     })

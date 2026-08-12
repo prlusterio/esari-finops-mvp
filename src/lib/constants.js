@@ -35,10 +35,10 @@ export const STORAGE_KEYS = {
 export const WALLET_LEDGER_VERSION = 'funding-ledger-v3'
 
 /** Bump when seeded transactions change and existing demos should refresh once. */
-export const TRANSACTIONS_SEED_VERSION = 'varied-commission-v2'
+export const TRANSACTIONS_SEED_VERSION = 'direct-admin-v1'
 
 /** Bump when seeded commission settings change and existing demos should refresh once. */
-export const COMMISSION_SETTINGS_SEED_VERSION = 'varied-commission-v2'
+export const COMMISSION_SETTINGS_SEED_VERSION = 'direct-admin-v1'
 
 export const ORG_IDS = {
   PLATFORM: 'org-platform',
@@ -47,11 +47,14 @@ export const ORG_IDS = {
   FRANCHISE_002: 'org-franchise-002',
   FRANCHISE_003: 'org-franchise-003',
   FRANCHISE_004: 'org-franchise-004',
+  FRANCHISE_005: 'org-franchise-005',
   RETAILER_001: 'org-retailer-001',
   RETAILER_002: 'org-retailer-002',
   RETAILER_003: 'org-retailer-003',
   RETAILER_004: 'org-retailer-004',
   RETAILER_005: 'org-retailer-005',
+  RETAILER_006: 'org-retailer-006',
+  RETAILER_007: 'org-retailer-007',
 }
 
 export const FUNDING_STATUS = {

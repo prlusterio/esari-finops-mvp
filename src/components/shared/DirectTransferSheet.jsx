@@ -240,6 +240,18 @@ export function DirectTransferSheet({
                   {sortedRecipients.map((recipient) => (
                     <SelectItem key={recipient.id} value={recipient.id}>
                       {recipient.name}
+                      {recipient.code ? ` (${recipient.code})` : ''}
+                      {recipient.type
+                        ? ` · ${
+                            recipient.type === 'subfranchisee'
+                              ? 'Sub-Franchisee'
+                              : recipient.type === 'franchisee'
+                                ? 'Franchisee'
+                                : recipient.type === 'retailer'
+                                  ? 'Retailer'
+                                  : recipient.type
+                          }`
+                        : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
