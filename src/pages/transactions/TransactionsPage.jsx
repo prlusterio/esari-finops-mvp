@@ -12,11 +12,12 @@ import { getHomePathForRole } from '@/lib/permissions'
 import {
   applyTransactionFilters,
   filterTransactionsForRole,
-  getTransactionCostBreakdown,
+  getActiveSharePercentages,
   getTransactionsPageConfig,
   sortTransactionsNewest,
   transactionsToCsv,
 } from '@/lib/transactions'
+import { getTransactionShareAmounts } from '@/lib/revenue'
 import {
   getOrganizations,
   getRevenueSharing,
@@ -162,6 +163,11 @@ export default function TransactionsPage() {
         organizations,
       }),
     [scopedTransactions, appliedFilters, organizations],
+  )
+
+  const sharePercentages = useMemo(
+    () => getActiveSharePercentages(getRevenueSharing()),
+    [dataVersion],
   )
 
   const {
@@ -345,8 +351,9 @@ export default function TransactionsPage() {
                       <TableHead>Customer Payment</TableHead>
                       <TableHead>Wallet Deduction</TableHead>
                       <TableHead>Distributable Rev.</TableHead>
-                      <TableHead>Retailer Share</TableHead>
-                      <TableHead>Total Distributed</TableHead>
+                      <TableHead>Retailer</TableHead>
+                      <TableHead>Franchisee</TableHead>
+                      <TableHead>Sub-Franchisee</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -355,6 +362,10 @@ export default function TransactionsPage() {
                     {paged.map((tx) => {
                       const retailer =
                         orgById[tx.retailerOrganizationId] || null
+                      const shares = getTransactionShareAmounts(
+                        tx,
+                        sharePercentages,
+                      )
                       return (
                         <TableRow key={tx.id}>
                           <TableCell className="font-medium text-slate-900">
@@ -388,23 +399,28 @@ export default function TransactionsPage() {
                           </TableCell>
                           <TableCell className="whitespace-nowrap">
                             <SignedAmount
-                              amount={tx.distributableRevenue}
+                              amount={shares.distributable}
                               direction="credit"
                               showSign={false}
                             />
                           </TableCell>
                           <TableCell className="whitespace-nowrap">
                             <SignedAmount
-                              amount={tx.retailerShare}
+                              amount={shares.retailer}
                               direction="credit"
                               showSign={false}
                             />
                           </TableCell>
                           <TableCell className="whitespace-nowrap">
                             <SignedAmount
-                              amount={
-                                getTransactionCostBreakdown(tx).distributable
-                              }
+                              amount={shares.franchisee}
+                              direction="credit"
+                              showSign={false}
+                            />
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            <SignedAmount
+                              amount={shares.subfranchisee}
                               direction="credit"
                               showSign={false}
                             />

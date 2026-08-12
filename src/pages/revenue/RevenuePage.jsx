@@ -138,7 +138,7 @@ export default function RevenuePage() {
     [allEntries, appliedFilters],
   )
 
-  // Same source as Wallet → Revenue Wallet card.
+  // Same source as Wallet → Revenue Wallet card (all-time).
   const creditedRevenueBalance = useMemo(
     () =>
       resolveCreditedRevenueBalance({
@@ -148,6 +148,15 @@ export default function RevenuePage() {
         revenueSharing,
       }),
     [user?.role, user?.organizationId, transactions, revenueSharing],
+  )
+
+  const periodCreditedTotal = useMemo(
+    () =>
+      filteredEntries.reduce(
+        (sum, entry) => sum + (Number(entry.yourRevenue) || 0),
+        0,
+      ),
+    [filteredEntries],
   )
 
   const distributableTotal = useMemo(
@@ -227,16 +236,23 @@ export default function RevenuePage() {
         ]}
       />
 
-      <div className="mb-4 grid gap-4 sm:grid-cols-2">
+      <div className="mb-4 grid gap-4 sm:grid-cols-3">
         <StatCard
           title="Distributable Revenue"
           value={formatCurrency(distributableTotal)}
-          description={`For ${periodLabel}`}
+          description={`Commission pool · ${periodLabel}`}
           icon={Banknote}
           accent="wallet"
         />
         <StatCard
-          title="Credited Revenue"
+          title="Your Commission"
+          value={formatCurrency(periodCreditedTotal)}
+          description={`Credited in ${periodLabel}`}
+          icon={Banknote}
+          accent="success"
+        />
+        <StatCard
+          title="Revenue Wallet"
           value={formatCurrency(creditedRevenueBalance)}
           description="All-time credited revenue share"
           icon={Wallet}

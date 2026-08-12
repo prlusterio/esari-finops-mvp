@@ -28,21 +28,26 @@ function roundMoney(value) {
 export function getReportsPageConfig(role) {
   if (role === ROLES.ADMIN) {
     return {
-      subtitle: 'Platform operational and financial reports.',
+      subtitle: 'Platform commission and network earnings.',
       walletLabel: 'Master Wallet',
       showFundingExports: true,
       showRevenueExport: true,
-      showNetworkFilters: false,
+      showNetworkFilters: true,
       showRetailerFilter: false,
       showCustomDateRange: true,
-      showFranchiseeRevenueTable: false,
-      showRetailerRevenueTable: false,
+      showFranchiseeRevenueTable: true,
+      showRetailerRevenueTable: true,
+      showNetworkEarningsHero: true,
+      showViewerCommissionColumn: true,
+      yourCommissionLabel: 'Platform Commission',
+      viewerCommissionLabel: 'Platform Commission',
+      defaultDateRange: 'this_month',
     }
   }
 
   if (role === ROLES.SUBFRANCHISEE) {
     return {
-      subtitle: 'Reports for your sub-franchisee network.',
+      subtitle: 'Your commission and downline earnings.',
       walletLabel: 'Operating Wallet',
       showFundingExports: true,
       showRevenueExport: true,
@@ -51,12 +56,17 @@ export function getReportsPageConfig(role) {
       showCustomDateRange: true,
       showFranchiseeRevenueTable: true,
       showRetailerRevenueTable: true,
+      showNetworkEarningsHero: true,
+      showViewerCommissionColumn: true,
+      yourCommissionLabel: 'Your Commission',
+      viewerCommissionLabel: 'Your Commission',
+      defaultDateRange: 'this_month',
     }
   }
 
   if (role === ROLES.FRANCHISEE) {
     return {
-      subtitle: 'Reports for your franchisee network.',
+      subtitle: 'Your commission and retailer earnings.',
       walletLabel: 'Operating Wallet',
       showFundingExports: true,
       showRevenueExport: true,
@@ -65,11 +75,16 @@ export function getReportsPageConfig(role) {
       showCustomDateRange: true,
       showFranchiseeRevenueTable: false,
       showRetailerRevenueTable: true,
+      showNetworkEarningsHero: true,
+      showViewerCommissionColumn: true,
+      yourCommissionLabel: 'Your Commission',
+      viewerCommissionLabel: 'Your Commission',
+      defaultDateRange: 'this_month',
     }
   }
 
   return {
-    subtitle: 'Reports for your retailer activity.',
+    subtitle: 'Your commission from retailer activity.',
     walletLabel: 'Operating Wallet',
     showFundingExports: true,
     showRevenueExport: true,
@@ -78,6 +93,11 @@ export function getReportsPageConfig(role) {
     showCustomDateRange: true,
     showFranchiseeRevenueTable: false,
     showRetailerRevenueTable: false,
+    showNetworkEarningsHero: true,
+    showViewerCommissionColumn: false,
+    yourCommissionLabel: 'Your Commission',
+    viewerCommissionLabel: 'Your Commission',
+    defaultDateRange: 'this_month',
   }
 }
 
@@ -97,11 +117,16 @@ export function filterTransactionsByNetwork(
 }
 
 export function getNetworkFilterOptions(organizations, organizationId) {
-  const franchisees = organizations
-    .filter(
-      (org) => org.parentId === organizationId && org.type === 'franchisee',
-    )
-    .sort((a, b) => a.name.localeCompare(b.name))
+  const root = organizations.find((org) => org.id === organizationId)
+  const isPlatformScope = !organizationId || root?.type === 'platform'
+
+  const franchisees = (
+    isPlatformScope
+      ? organizations.filter((org) => org.type === 'franchisee')
+      : organizations.filter(
+          (org) => org.parentId === organizationId && org.type === 'franchisee',
+        )
+  ).sort((a, b) => a.name.localeCompare(b.name))
 
   const retailersByFranchisee = franchisees.reduce((acc, franchisee) => {
     acc[franchisee.id] = organizations
@@ -124,7 +149,13 @@ export function getNetworkFilterOptions(organizations, organizationId) {
     .sort((a, b) => a.name.localeCompare(b.name))
 
   const allRetailers =
-    nestedRetailers.length > 0 ? nestedRetailers : directRetailers
+    nestedRetailers.length > 0
+      ? nestedRetailers
+      : isPlatformScope
+        ? organizations
+            .filter((org) => org.type === 'retailer')
+            .sort((a, b) => a.name.localeCompare(b.name))
+        : directRetailers
 
   return { franchisees, retailersByFranchisee, allRetailers }
 }
@@ -173,64 +204,134 @@ export function getNetworkRevenueParties({
     return { franchisees: [], retailers: retailerList }
   }
 
+  if (role === ROLES.ADMIN) {
+    let franchiseeList =
+      franchiseeId && franchiseeId !== 'all'
+        ? franchisees.filter((org) => org.id === franchiseeId)
+        : franchisees
+
+    let retailerList = []
+    if (retailerId && retailerId !== 'all') {
+      retailerList = allRetailers.filter((org) => org.id === retailerId)
+      const parentId = retailerList[0]?.parentId
+      if (parentId) {
+        franchiseeList = franchisees.filter((org) => org.id === parentId)
+      }
+    } else if (franchiseeId && franchiseeId !== 'all') {
+      retailerList = retailersByFranchisee[franchiseeId] || []
+    } else {
+      retailerList = allRetailers
+    }
+
+    return { franchisees: franchiseeList, retailers: retailerList }
+  }
+
   return { franchisees: [], retailers: [] }
 }
 
 /**
  * Aggregates each party's earned commission share for scoped transactions.
+ * When viewerRole is set, also attributes the viewer's commission from that party's volume.
  */
 export function buildPartyRevenueRows({
   parties = [],
   transactions = [],
   revenueSharing = [],
   partyRole,
+  viewerRole = null,
   matchTransaction,
   parentNameById = {},
+  retailerCountById = {},
 } = {}) {
   const percentages = getActiveSharePercentages(revenueSharing)
 
-  return parties
-    .map((party) => {
-      const partyTxs = transactions.filter((tx) => matchTransaction(tx, party))
-      let customerPayment = 0
-      let distributable = 0
-      let creditedRevenue = 0
-      let pendingRevenue = 0
+  const rows = parties.map((party) => {
+    const partyTxs = transactions.filter((tx) => matchTransaction(tx, party))
+    let customerPayment = 0
+    let distributable = 0
+    let creditedRevenue = 0
+    let pendingRevenue = 0
+    let viewerCommission = 0
+    let pendingViewerCommission = 0
 
-      partyTxs.forEach((tx) => {
-        const costs = getTransactionCostBreakdown(tx)
-        customerPayment = roundMoney(
-          customerPayment + (Number(tx.customerPayment) || 0),
+    partyTxs.forEach((tx) => {
+      const costs = getTransactionCostBreakdown(tx)
+      customerPayment = roundMoney(
+        customerPayment + (Number(tx.customerPayment) || 0),
+      )
+      distributable = roundMoney(distributable + costs.distributable)
+
+      const share = getViewerShareAmount(tx, percentages, partyRole)
+      const viewerShare = viewerRole
+        ? getViewerShareAmount(tx, percentages, viewerRole)
+        : 0
+
+      if (toRevenueEntryStatus(tx.status) === REVENUE_ENTRY_STATUS.CREDITED) {
+        creditedRevenue = roundMoney(creditedRevenue + share)
+        viewerCommission = roundMoney(viewerCommission + viewerShare)
+      } else {
+        pendingRevenue = roundMoney(pendingRevenue + share)
+        pendingViewerCommission = roundMoney(
+          pendingViewerCommission + viewerShare,
         )
-        distributable = roundMoney(distributable + costs.distributable)
-
-        const share = getViewerShareAmount(tx, percentages, partyRole)
-        if (toRevenueEntryStatus(tx.status) === REVENUE_ENTRY_STATUS.CREDITED) {
-          creditedRevenue = roundMoney(creditedRevenue + share)
-        } else {
-          pendingRevenue = roundMoney(pendingRevenue + share)
-        }
-      })
-
-      return {
-        organizationId: party.id,
-        name: party.name,
-        code: party.code || '',
-        parentName: parentNameById[party.parentId] || '',
-        transactionCount: partyTxs.length,
-        customerPayment,
-        distributable,
-        creditedRevenue,
-        pendingRevenue,
-        totalRevenue: roundMoney(creditedRevenue + pendingRevenue),
       }
     })
+
+    const retailerCount = Object.prototype.hasOwnProperty.call(
+      retailerCountById,
+      party.id,
+    )
+      ? Number(retailerCountById[party.id]) || 0
+      : null
+
+    return {
+      organizationId: party.id,
+      name: party.name,
+      code: party.code || '',
+      parentName: parentNameById[party.parentId] || '',
+      transactionCount: partyTxs.length,
+      retailerCount,
+      customerPayment,
+      distributable,
+      creditedRevenue,
+      pendingRevenue,
+      totalRevenue: roundMoney(creditedRevenue + pendingRevenue),
+      viewerCommission,
+      pendingViewerCommission,
+      shareOfViewerTotal: 0,
+    }
+  })
+
+  const viewerTotal = rows.reduce(
+    (sum, row) => roundMoney(sum + (Number(row.viewerCommission) || 0)),
+    0,
+  )
+
+  return rows
+    .map((row) => ({
+      ...row,
+      shareOfViewerTotal:
+        viewerTotal > 0
+          ? roundMoney(((Number(row.viewerCommission) || 0) / viewerTotal) * 100)
+          : 0,
+    }))
     .sort((a, b) => {
+      if (viewerRole) {
+        if (b.viewerCommission !== a.viewerCommission) {
+          return b.viewerCommission - a.viewerCommission
+        }
+      }
       if (b.creditedRevenue !== a.creditedRevenue) {
         return b.creditedRevenue - a.creditedRevenue
       }
       return a.name.localeCompare(b.name)
     })
+}
+
+function sumPartyField(rows = [], field) {
+  return roundMoney(
+    rows.reduce((sum, row) => sum + (Number(row[field]) || 0), 0),
+  )
 }
 
 /**
@@ -242,6 +343,7 @@ export function buildPartyRevenueDetailEntries({
   partyRole,
   organizationId,
   partyType = 'retailer',
+  viewerRole = null,
 } = {}) {
   const percentages = getActiveSharePercentages(revenueSharing)
 
@@ -255,6 +357,9 @@ export function buildPartyRevenueDetailEntries({
   ).map((tx) => {
     const costs = getTransactionCostBreakdown(tx)
     const partyRevenue = getViewerShareAmount(tx, percentages, partyRole)
+    const viewerRevenue = viewerRole
+      ? getViewerShareAmount(tx, percentages, viewerRole)
+      : null
     const status = toRevenueEntryStatus(tx.status)
 
     return {
@@ -268,20 +373,29 @@ export function buildPartyRevenueDetailEntries({
       customerPayment: Number(tx.customerPayment) || 0,
       distributableRevenue: costs.distributable,
       partyRevenue,
+      viewerRevenue,
       walletDeduction: costs.netWalletDeduction,
     }
   })
 }
 
-export function partyRevenueDetailEntriesToCsv(entries = [], { partyLabel = 'Party' } = {}) {
+export function partyRevenueDetailEntriesToCsv(
+  entries = [],
+  {
+    partyLabel = 'Party',
+    includeViewerCommission = false,
+    viewerLabel = 'Your Commission',
+  } = {},
+) {
   const headers = [
     'Reference',
     'Date',
     'Retailer',
     'Retailer Code',
-    'Customer Payment',
-    'Distributable Revenue',
-    `${partyLabel} Revenue`,
+    'Sales Volume',
+    'Commission Pool',
+    `${partyLabel} Commission`,
+    ...(includeViewerCommission ? [viewerLabel] : []),
     'Status',
   ]
 
@@ -293,6 +407,7 @@ export function partyRevenueDetailEntriesToCsv(entries = [], { partyLabel = 'Par
     entry.customerPayment,
     entry.distributableRevenue,
     entry.partyRevenue,
+    ...(includeViewerCommission ? [entry.viewerRevenue ?? 0] : []),
     entry.status,
   ])
 
@@ -376,8 +491,8 @@ export function revenueEntriesToCsv(entries) {
     'Date',
     'Retailer',
     'Retailer Code',
-    'Distributable Revenue',
-    'Your Revenue',
+    'Commission Pool',
+    'Your Commission',
     'Status',
   ]
 
@@ -557,13 +672,32 @@ export function buildReportSnapshot({
     organizations.map((org) => [org.id, org.name]),
   )
 
+  const retailerCountByFranchiseeId = parties.franchisees.reduce(
+    (acc, franchisee) => {
+      acc[franchisee.id] = organizations.filter(
+        (org) => org.parentId === franchisee.id && org.type === 'retailer',
+      ).length
+      return acc
+    },
+    {},
+  )
+
+  const viewerRole =
+    role === ROLES.SUBFRANCHISEE ||
+    role === ROLES.FRANCHISEE ||
+    role === ROLES.ADMIN
+      ? role
+      : null
+
   const franchiseeRevenueRows = buildPartyRevenueRows({
     parties: parties.franchisees,
     transactions: scopedTransactions,
     revenueSharing,
     partyRole: ROLES.FRANCHISEE,
+    viewerRole,
     matchTransaction: (tx, party) => tx.franchiseeOrganizationId === party.id,
     parentNameById,
+    retailerCountById: retailerCountByFranchiseeId,
   })
 
   const retailerRevenueRows = buildPartyRevenueRows({
@@ -571,6 +705,7 @@ export function buildReportSnapshot({
     transactions: scopedTransactions,
     revenueSharing,
     partyRole: ROLES.RETAILER,
+    viewerRole,
     matchTransaction: (tx, party) => tx.retailerOrganizationId === party.id,
     parentNameById,
   })
@@ -591,6 +726,25 @@ export function buildReportSnapshot({
       transferAmountTotal,
       pendingRevenue: revenueTotals.pending,
       creditedRevenue: revenueTotals.credited,
+      franchiseeCommissionTotal: sumPartyField(
+        franchiseeRevenueRows,
+        'creditedRevenue',
+      ),
+      retailerCommissionTotal: sumPartyField(
+        retailerRevenueRows,
+        'creditedRevenue',
+      ),
+    },
+    networkEarnings: {
+      yourCommission: revenueTotals.credited,
+      pendingCommission: revenueTotals.pending,
+      franchiseeCommission: sumPartyField(
+        franchiseeRevenueRows,
+        'creditedRevenue',
+      ),
+      retailerCommission: sumPartyField(retailerRevenueRows, 'creditedRevenue'),
+      salesVolume: customerPaymentTotal,
+      commissionPool: distributableTotal,
     },
     datasets: {
       transactions: scopedTransactions,

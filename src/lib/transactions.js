@@ -61,6 +61,27 @@ export function getActiveSharePercentages(revenueSharing = []) {
 }
 
 /**
+ * Prefer share % stamped on the transaction; otherwise use active revenue-sharing config.
+ */
+export function resolveTransactionSharePercentages(tx, revenueSharing = []) {
+  const fallback = getActiveSharePercentages(revenueSharing)
+  if (
+    tx?.retailerPercentage != null ||
+    tx?.franchiseePercentage != null ||
+    tx?.subfranchiseePercentage != null ||
+    tx?.companyPercentage != null
+  ) {
+    return {
+      retailer: Number(tx.retailerPercentage ?? 0),
+      franchisee: Number(tx.franchiseePercentage ?? 0),
+      subfranchisee: Number(tx.subfranchiseePercentage ?? 0),
+      company: Number(tx.companyPercentage ?? fallback.company),
+    }
+  }
+  return fallback
+}
+
+/**
  * Resolves cost breakdown fields for the transaction details sheet.
  */
 export function getTransactionCostBreakdown(tx) {
@@ -108,7 +129,7 @@ export function buildTransactionDistribution(
   { organizations = [], role, revenueSharing = [] } = {},
 ) {
   const orgById = Object.fromEntries(organizations.map((org) => [org.id, org]))
-  const percentages = getActiveSharePercentages(revenueSharing)
+  const percentages = resolveTransactionSharePercentages(tx, revenueSharing)
   const costs = getTransactionCostBreakdown(tx)
   const distributable = costs.distributable
 
@@ -351,22 +372,22 @@ export function transactionsToCsv(
     'Status',
   ]
 
-  const percentages = getActiveSharePercentages(revenueSharing)
   const sorted = sortTransactionsNewest(transactions)
 
   const rows = sorted.map((tx) => {
     const retailer = orgById[tx.retailerOrganizationId]
     const costs = getTransactionCostBreakdown(tx)
+    const shares = resolveTransactionSharePercentages(tx, revenueSharing)
     const retailerShare = roundMoney(
       Number.isFinite(Number(tx.retailerShare))
         ? Number(tx.retailerShare)
-        : (costs.distributable * percentages.retailer) / 100,
+        : (costs.distributable * shares.retailer) / 100,
     )
     const franchiseeShare = roundMoney(
-      (costs.distributable * percentages.franchisee) / 100,
+      (costs.distributable * shares.franchisee) / 100,
     )
     const subfranchiseeShare = roundMoney(
-      (costs.distributable * percentages.subfranchisee) / 100,
+      (costs.distributable * shares.subfranchisee) / 100,
     )
     return [
       tx.reference || tx.id,

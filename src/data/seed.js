@@ -5,13 +5,17 @@ import {
   STORAGE_KEYS,
   TRANSACTION_STATUS,
   TRANSACTIONS_SEED_VERSION,
+  COMMISSION_SETTINGS_SEED_VERSION,
   WALLET_LEDGER_VERSION,
   ADMIN_DEMO_PASSWORD,
   DEMO_PASSWORD,
 } from '@/lib/constants'
 import { sumCreditedShareForOrg } from '@/lib/revenue'
-import { DEFAULT_COMMISSION_SHARES } from '@/lib/commission'
-import { DEFAULT_SHARE_PERCENTAGES, matchProductServiceToPayment } from '@/lib/transactions'
+import {
+  DEFAULT_PLATFORM_FEE_PERCENTAGE,
+  normalizeCommissionShares,
+} from '@/lib/commission'
+import { matchProductServiceToPayment } from '@/lib/transactions'
 import {
   collectionNeedsSeed,
   getCommissionSettings,
@@ -489,13 +493,19 @@ export function getSeedWallets() {
 }
 
 export function getSeedRevenueSharing() {
+  // Global fallback only — per-retailer splits live in commission settings.
+  const defaults = normalizeCommissionShares({
+    retailerPercentage: 25,
+    franchiseePercentage: 20,
+    companyPercentage: DEFAULT_PLATFORM_FEE_PERCENTAGE,
+  })
   return [
     {
       id: 'revshare-default',
-      retailerPercentage: DEFAULT_SHARE_PERCENTAGES.retailer,
-      franchiseePercentage: DEFAULT_SHARE_PERCENTAGES.franchisee,
-      subfranchiseePercentage: DEFAULT_SHARE_PERCENTAGES.subfranchisee,
-      companyPercentage: DEFAULT_SHARE_PERCENTAGES.company,
+      retailerPercentage: defaults.retailerPercentage,
+      franchiseePercentage: defaults.franchiseePercentage,
+      subfranchiseePercentage: defaults.subfranchiseePercentage,
+      companyPercentage: defaults.companyPercentage,
       status: 'active',
       createdAt: now,
       updatedAt: now,
@@ -506,9 +516,23 @@ export function getSeedRevenueSharing() {
 export function getSeedCommissionSettings() {
   const orgs = getSeedOrganizations()
   const retailers = orgs.filter((org) => org.type === 'retailer')
-  const statusCycle = ['active', 'active', 'inactive', 'active', 'active']
+
+  // Different downline splits per retailer — only platform fee stays 40%.
+  const sharePlans = [
+    { retailerPercentage: 25, franchiseePercentage: 20, status: 'active' }, // SF 15
+    { retailerPercentage: 30, franchiseePercentage: 15, status: 'active' }, // SF 15
+    { retailerPercentage: 18, franchiseePercentage: 22, status: 'active' }, // SF 20
+    { retailerPercentage: 28, franchiseePercentage: 12, status: 'active' }, // SF 20
+    { retailerPercentage: 22, franchiseePercentage: 18, status: 'active' }, // SF 20
+  ]
 
   return retailers.map((retailer, index) => {
+    const plan = sharePlans[index % sharePlans.length]
+    const shares = normalizeCommissionShares({
+      retailerPercentage: plan.retailerPercentage,
+      franchiseePercentage: plan.franchiseePercentage,
+      companyPercentage: DEFAULT_PLATFORM_FEE_PERCENTAGE,
+    })
     const daysAgo = 5 + index * 8
     const effective = daysAgoAt(daysAgo, 10, 0)
     return {
@@ -516,12 +540,9 @@ export function getSeedCommissionSettings() {
       retailerOrganizationId: retailer.id,
       franchiseeOrganizationId: retailer.parentId,
       subfranchiseeOrganizationId: ORG_IDS.SUB_001,
-      retailerPercentage: DEFAULT_COMMISSION_SHARES.retailerPercentage,
-      franchiseePercentage: DEFAULT_COMMISSION_SHARES.franchiseePercentage,
-      subfranchiseePercentage: DEFAULT_COMMISSION_SHARES.subfranchiseePercentage,
-      companyPercentage: DEFAULT_COMMISSION_SHARES.companyPercentage,
+      ...shares,
       effectiveDate: effective.slice(0, 10),
-      status: statusCycle[index % statusCycle.length],
+      status: plan.status,
       createdAt: effective,
       updatedAt: effective,
     }
@@ -892,6 +913,10 @@ function buildTransaction({
   platformProcessingFee,
   walletDeduction,
   retailerShare,
+  retailerPercentage,
+  franchiseePercentage,
+  subfranchiseePercentage,
+  companyPercentage = DEFAULT_PLATFORM_FEE_PERCENTAGE,
   status,
   productService,
   customerReference,
@@ -910,8 +935,17 @@ function buildTransaction({
       : Math.round((resolvedBaseCost + resolvedProcessingFee) * 100) / 100
   const distributableRevenue =
     Math.round((customerPayment - netWalletDeduction) * 100) / 100
-  // Total distributed across all share tiers equals distributable revenue.
   const totalDistributed = distributableRevenue
+
+  const shares = normalizeCommissionShares({
+    retailerPercentage: retailerPercentage ?? 0,
+    franchiseePercentage: franchiseePercentage ?? 0,
+    companyPercentage: companyPercentage ?? DEFAULT_PLATFORM_FEE_PERCENTAGE,
+  })
+  const resolvedRetailerShare =
+    retailerShare != null
+      ? Math.round(Number(retailerShare) * 100) / 100
+      : roundMoney((distributableRevenue * shares.retailerPercentage) / 100)
 
   return {
     id,
@@ -928,7 +962,11 @@ function buildTransaction({
     platformProcessingFee: resolvedProcessingFee,
     walletDeduction: netWalletDeduction,
     distributableRevenue,
-    retailerShare,
+    retailerShare: resolvedRetailerShare,
+    retailerPercentage: shares.retailerPercentage,
+    franchiseePercentage: shares.franchiseePercentage,
+    subfranchiseePercentage: shares.subfranchiseePercentage,
+    companyPercentage: shares.companyPercentage,
     totalDistributed,
     productService: matchProductServiceToPayment(
       productService || 'Mobile Load - Globe',
@@ -940,10 +978,27 @@ function buildTransaction({
 }
 
 export function getSeedTransactions() {
-  const shareConfig = getSeedRevenueSharing()[0]
-  const retailerPct = Number(
-    shareConfig?.retailerPercentage ?? DEFAULT_SHARE_PERCENTAGES.retailer,
+  const allCommission = getSeedCommissionSettings()
+  const commissionByRetailer = Object.fromEntries(
+    allCommission.map((entry) => [entry.retailerOrganizationId, entry]),
   )
+  // Prefer active config when a retailer has both.
+  allCommission
+    .filter((entry) => entry.status === 'active')
+    .forEach((entry) => {
+      commissionByRetailer[entry.retailerOrganizationId] = entry
+    })
+
+  const sharesForRetailer = (retailerOrganizationId) => {
+    const configured = commissionByRetailer[retailerOrganizationId]
+    if (configured) return normalizeCommissionShares(configured)
+    return normalizeCommissionShares({
+      retailerPercentage: 0,
+      franchiseePercentage: 0,
+      companyPercentage: DEFAULT_PLATFORM_FEE_PERCENTAGE,
+    })
+  }
+
   const productCatalog = [
     'Mobile Load - Globe',
     'Mobile Load - Smart',
@@ -967,7 +1022,7 @@ export function getSeedTransactions() {
       baseCost: 1425,
       platformProcessingFee: 30,
       walletDeduction: 1455,
-      retailerShare: roundMoney((45 * retailerPct) / 100),
+      ...sharesForRetailer(ORG_IDS.RETAILER_003),
       productService: 'Mobile Load - Globe',
       customerReference: '0917-123-4567',
       status: TRANSACTION_STATUS.COMPLETED,
@@ -983,7 +1038,7 @@ export function getSeedTransactions() {
       baseCost: 807.5,
       platformProcessingFee: 17,
       walletDeduction: 824.5,
-      retailerShare: roundMoney((25.5 * retailerPct) / 100),
+      ...sharesForRetailer(ORG_IDS.RETAILER_004),
       productService: 'Bills Payment - Meralco',
       customerReference: '0918-555-0192',
       status: TRANSACTION_STATUS.COMPLETED,
@@ -999,7 +1054,7 @@ export function getSeedTransactions() {
       baseCost: 2090,
       platformProcessingFee: 44,
       walletDeduction: 2134,
-      retailerShare: roundMoney((66 * retailerPct) / 100),
+      ...sharesForRetailer(ORG_IDS.RETAILER_005),
       productService: 'E-Wallet Cash-in - GCash',
       customerReference: '0920-771-3344',
       status: TRANSACTION_STATUS.COMPLETED,
@@ -1015,7 +1070,7 @@ export function getSeedTransactions() {
       baseCost: 950,
       platformProcessingFee: 20,
       walletDeduction: 970,
-      retailerShare: roundMoney((30 * retailerPct) / 100),
+      ...sharesForRetailer(ORG_IDS.RETAILER_001),
       productService: 'Mobile Load - Smart',
       customerReference: '0917-882-1001',
       status: TRANSACTION_STATUS.COMPLETED,
@@ -1065,10 +1120,9 @@ export function getSeedTransactions() {
     const baseCost = roundMoney(payment * 0.95)
     const platformProcessingFee = roundMoney(payment * 0.02)
     const walletDeduction = roundMoney(baseCost + platformProcessingFee)
-    const distributable = roundMoney(payment - walletDeduction)
-    const retailerShare = roundMoney((distributable * retailerPct) / 100)
     const productService = productCatalog[index % productCatalog.length]
     const customerReference = `09${17 + (index % 10)}-${String(100 + (index % 90)).padStart(3, '0')}-${String(1000 + index).slice(-4)}`
+    const shares = sharesForRetailer(retailer.id)
 
     generated.push(
       buildTransaction({
@@ -1082,7 +1136,7 @@ export function getSeedTransactions() {
         baseCost,
         platformProcessingFee,
         walletDeduction,
-        retailerShare,
+        ...shares,
         productService,
         customerReference,
         status: TRANSACTION_STATUS.COMPLETED,
@@ -1266,8 +1320,16 @@ export function initializeMockData() {
       saveRevenueSharing(hasDefault ? next : [seed, ...next])
     }
   }
-  if (collectionNeedsSeed('commissionSettings')) {
+  if (
+    collectionNeedsSeed('commissionSettings') ||
+    localStorage.getItem(STORAGE_KEYS.COMMISSION_SETTINGS_SEED_VERSION) !==
+      COMMISSION_SETTINGS_SEED_VERSION
+  ) {
     saveCommissionSettings(getSeedCommissionSettings())
+    localStorage.setItem(
+      STORAGE_KEYS.COMMISSION_SETTINGS_SEED_VERSION,
+      COMMISSION_SETTINGS_SEED_VERSION,
+    )
   } else {
     const existing = getCommissionSettings()
     const seed = getSeedCommissionSettings()
@@ -1281,21 +1343,21 @@ export function initializeMockData() {
         return
       }
       const current = byId.get(seedEntry.id)
-      const aligned = {
-        ...current,
-        retailerPercentage: DEFAULT_COMMISSION_SHARES.retailerPercentage,
-        franchiseePercentage: DEFAULT_COMMISSION_SHARES.franchiseePercentage,
-        subfranchiseePercentage: DEFAULT_COMMISSION_SHARES.subfranchiseePercentage,
-        companyPercentage: DEFAULT_COMMISSION_SHARES.companyPercentage,
-      }
+      // Only lock platform fee at 40%; keep each retailer's own downline split.
+      const aligned = normalizeCommissionShares({
+        retailerPercentage: current.retailerPercentage,
+        franchiseePercentage: current.franchiseePercentage,
+        companyPercentage: DEFAULT_PLATFORM_FEE_PERCENTAGE,
+      })
       if (
-        Number(current.retailerPercentage) !== aligned.retailerPercentage ||
-        Number(current.franchiseePercentage) !== aligned.franchiseePercentage ||
+        Number(current.companyPercentage) !== aligned.companyPercentage ||
         Number(current.subfranchiseePercentage) !==
-          aligned.subfranchiseePercentage ||
-        Number(current.companyPercentage) !== aligned.companyPercentage
+          aligned.subfranchiseePercentage
       ) {
-        byId.set(seedEntry.id, aligned)
+        byId.set(seedEntry.id, {
+          ...current,
+          ...aligned,
+        })
         changed = true
       }
     })
@@ -1322,14 +1384,6 @@ export function initializeMockData() {
     let changed = false
 
     // Demo surfaces completed transactions only — normalize legacy pending rows.
-    // Align totalDistributed + retailerShare with active share set (platform fee 40%).
-    const shareConfig = getRevenueSharing().find(
-      (entry) => entry.status === 'active',
-    ) || getSeedRevenueSharing()[0]
-    const retailerPct = Number(
-      shareConfig?.retailerPercentage ?? DEFAULT_SHARE_PERCENTAGES.retailer,
-    )
-
     byId.forEach((tx, id) => {
       let next = tx
       if (tx.status === TRANSACTION_STATUS.PENDING) {
@@ -1344,9 +1398,26 @@ export function initializeMockData() {
         next = { ...next, totalDistributed: distributable }
         changed = true
       }
-      if (Number.isFinite(distributable)) {
+      if (
+        next.retailerPercentage == null ||
+        next.franchiseePercentage == null ||
+        next.companyPercentage == null
+      ) {
+        const seedTx = seedTransactions.find((entry) => entry.id === id)
+        if (seedTx) {
+          next = {
+            ...next,
+            retailerPercentage: seedTx.retailerPercentage,
+            franchiseePercentage: seedTx.franchiseePercentage,
+            subfranchiseePercentage: seedTx.subfranchiseePercentage,
+            companyPercentage: seedTx.companyPercentage,
+            retailerShare: seedTx.retailerShare,
+          }
+          changed = true
+        }
+      } else if (Number.isFinite(distributable)) {
         const alignedRetailerShare = roundMoney(
-          (distributable * retailerPct) / 100,
+          (distributable * Number(next.retailerPercentage || 0)) / 100,
         )
         if (Number(next.retailerShare) !== alignedRetailerShare) {
           next = { ...next, retailerShare: alignedRetailerShare }
@@ -1413,5 +1484,9 @@ export function resetDemoData() {
   localStorage.setItem(
     STORAGE_KEYS.TRANSACTIONS_SEED_VERSION,
     TRANSACTIONS_SEED_VERSION,
+  )
+  localStorage.setItem(
+    STORAGE_KEYS.COMMISSION_SETTINGS_SEED_VERSION,
+    COMMISSION_SETTINGS_SEED_VERSION,
   )
 }

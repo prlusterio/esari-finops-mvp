@@ -27,13 +27,18 @@ export const STORAGE_KEYS = {
   WALLET_LEDGER_VERSION: 'esarisari_wallet_ledger_version',
   /** One-time migrations for seeded transaction economics / revenue scale */
   TRANSACTIONS_SEED_VERSION: 'esarisari_transactions_seed_version',
+  /** One-time migrations for seeded commission settings */
+  COMMISSION_SETTINGS_SEED_VERSION: 'esarisari_commission_settings_seed_version',
 }
 
 /** Bump when operating wallet seed balances change and existing demos should realign once. */
 export const WALLET_LEDGER_VERSION = 'funding-ledger-v3'
 
 /** Bump when seeded transactions change and existing demos should refresh once. */
-export const TRANSACTIONS_SEED_VERSION = 'revenue-scale-v2'
+export const TRANSACTIONS_SEED_VERSION = 'varied-commission-v2'
+
+/** Bump when seeded commission settings change and existing demos should refresh once. */
+export const COMMISSION_SETTINGS_SEED_VERSION = 'varied-commission-v2'
 
 export const ORG_IDS = {
   PLATFORM: 'org-platform',

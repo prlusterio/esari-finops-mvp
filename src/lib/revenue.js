@@ -3,6 +3,7 @@ import { filterItemsByDateRange } from '@/lib/date'
 import {
   getActiveSharePercentages,
   getTransactionCostBreakdown,
+  resolveTransactionSharePercentages,
 } from '@/lib/transactions'
 
 export const REVENUE_ENTRY_STATUS = {
@@ -41,14 +42,26 @@ export function getViewerShareAmount(tx, percentages, role) {
 
 /**
  * Commission amounts for each hierarchy tier on a transaction.
+ * Prefers percentages stamped on the transaction (from that retailer's commission settings).
  */
 export function getTransactionShareAmounts(tx, percentages) {
   const distributable = getTransactionCostBreakdown(tx).distributable
-  const retailer = roundMoney((distributable * percentages.retailer) / 100)
-  const franchisee = roundMoney((distributable * percentages.franchisee) / 100)
-  const subfranchisee = roundMoney(
-    (distributable * percentages.subfranchisee) / 100,
-  )
+  const fallbackConfig = percentages
+    ? [
+        {
+          status: 'active',
+          retailerPercentage: percentages.retailer,
+          franchiseePercentage: percentages.franchisee,
+          subfranchiseePercentage: percentages.subfranchisee,
+          companyPercentage: percentages.company,
+        },
+      ]
+    : []
+  const shares = resolveTransactionSharePercentages(tx, fallbackConfig)
+
+  const retailer = roundMoney((distributable * shares.retailer) / 100)
+  const franchisee = roundMoney((distributable * shares.franchisee) / 100)
+  const subfranchisee = roundMoney((distributable * shares.subfranchisee) / 100)
   const company = roundMoney(
     distributable - retailer - franchisee - subfranchisee,
   )
@@ -73,7 +86,6 @@ export function buildRevenueEntries({
 } = {}) {
   const orgById = Object.fromEntries(organizations.map((org) => [org.id, org]))
   const percentages = getActiveSharePercentages(revenueSharing)
-  const sharePercentage = getViewerSharePercentage(percentages, role)
 
   return transactions
     .map((tx) => {
@@ -83,6 +95,8 @@ export function buildRevenueEntries({
         (retailer?.parentId ? orgById[retailer.parentId] : null)
       const distributable = getTransactionCostBreakdown(tx).distributable
       const yourRevenue = getViewerShareAmount(tx, percentages, role)
+      const txShares = resolveTransactionSharePercentages(tx, revenueSharing)
+      const sharePercentage = getViewerSharePercentage(txShares, role)
       const status = toRevenueEntryStatus(tx.status)
 
       return {

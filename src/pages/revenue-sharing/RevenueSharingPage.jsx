@@ -3,6 +3,7 @@ import { AlertTriangle, Calculator, CheckCircle2, Save } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { formatCurrency } from '@/lib/currency'
 import { getHomePathForRole } from '@/lib/permissions'
+import { DEFAULT_SHARE_PERCENTAGES } from '@/lib/transactions'
 import { getRevenueSharing, saveRevenueSharing } from '@/services/storage'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Badge } from '@/components/ui/badge'
@@ -87,10 +88,18 @@ function getActiveConfig() {
 
 export default function RevenueSharingPage() {
   const { user, dataVersion, bumpDataVersion } = useAuth()
-  const [retailer, setRetailer] = useState('30')
-  const [franchisee, setFranchisee] = useState('20')
-  const [subfranchisee, setSubfranchisee] = useState('10')
-  const [company, setCompany] = useState('40')
+  const [retailer, setRetailer] = useState(
+    String(DEFAULT_SHARE_PERCENTAGES.retailer),
+  )
+  const [franchisee, setFranchisee] = useState(
+    String(DEFAULT_SHARE_PERCENTAGES.franchisee),
+  )
+  const [subfranchisee, setSubfranchisee] = useState(
+    String(DEFAULT_SHARE_PERCENTAGES.subfranchisee),
+  )
+  const [company, setCompany] = useState(
+    String(DEFAULT_SHARE_PERCENTAGES.company),
+  )
   const [samplePayment, setSamplePayment] = useState('100.00')
   const [sampleDeduction, setSampleDeduction] = useState('97.00')
   const [message, setMessage] = useState('')
@@ -100,10 +109,23 @@ export default function RevenueSharingPage() {
   useEffect(() => {
     const active = getActiveConfig()
     if (!active) return
-    setRetailer(String(active.retailerPercentage ?? 30))
-    setFranchisee(String(active.franchiseePercentage ?? 20))
-    setSubfranchisee(String(active.subfranchiseePercentage ?? 10))
-    setCompany(String(active.companyPercentage ?? 40))
+    setRetailer(
+      String(active.retailerPercentage ?? DEFAULT_SHARE_PERCENTAGES.retailer),
+    )
+    setFranchisee(
+      String(
+        active.franchiseePercentage ?? DEFAULT_SHARE_PERCENTAGES.franchisee,
+      ),
+    )
+    setSubfranchisee(
+      String(
+        active.subfranchiseePercentage ??
+          DEFAULT_SHARE_PERCENTAGES.subfranchisee,
+      ),
+    )
+    setCompany(
+      String(active.companyPercentage ?? DEFAULT_SHARE_PERCENTAGES.company),
+    )
   }, [dataVersion])
 
   const percentages = useMemo(

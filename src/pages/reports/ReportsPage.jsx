@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   Download,
   Eye,
-  Filter,
-  Receipt,
   Banknote,
+  Receipt,
+  Store,
+  Users,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { ROLES, TRANSACTION_STATUS, TRANSACTION_STATUS_LABELS } from '@/lib/constants'
@@ -82,6 +83,10 @@ function downloadCsv(filename, content) {
   URL.revokeObjectURL(url)
 }
 
+function sumRows(rows, field) {
+  return rows.reduce((sum, row) => sum + (Number(row[field]) || 0), 0)
+}
+
 function TransactionStatusBadge({ status }) {
   const isCompleted = status === TRANSACTION_STATUS.COMPLETED
   return (
@@ -133,10 +138,22 @@ function NetworkRevenueTable({
   rows,
   emptyLabel,
   showParentColumn = false,
+  showRetailerCount = false,
+  showViewerCommission = false,
   entityLabel = 'Organization',
+  partyCommissionLabel = 'Their Commission',
+  viewerCommissionLabel = 'Your Commission',
   onView,
   onExport,
 }) {
+  const totals = {
+    transactionCount: sumRows(rows, 'transactionCount'),
+    retailerCount: sumRows(rows, 'retailerCount'),
+    customerPayment: sumRows(rows, 'customerPayment'),
+    creditedRevenue: sumRows(rows, 'creditedRevenue'),
+    viewerCommission: sumRows(rows, 'viewerCommission'),
+  }
+
   return (
     <Card className="overflow-hidden shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-border px-4 py-3">
@@ -147,7 +164,7 @@ function NetworkRevenueTable({
           ) : null}
         </div>
         <p className="text-sm text-muted-foreground">
-          {rows.length} {rows.length === 1 ? 'party' : 'parties'}
+          {rows.length} {rows.length === 1 ? entityLabel.toLowerCase() : `${entityLabel.toLowerCase()}s`}
         </p>
       </CardHeader>
       <CardContent className="p-0">
@@ -162,10 +179,20 @@ function NetworkRevenueTable({
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
                   <TableHead>{entityLabel}</TableHead>
                   {showParentColumn ? <TableHead>Franchisee</TableHead> : null}
-                  <TableHead className="text-right">Transactions</TableHead>
-                  <TableHead className="text-right">Customer Payments</TableHead>
-                  <TableHead className="text-right">Distributable</TableHead>
-                  <TableHead className="text-right">Credited Revenue</TableHead>
+                  {showRetailerCount ? (
+                    <TableHead className="text-right">Retailers</TableHead>
+                  ) : null}
+                  <TableHead className="text-right">Txns</TableHead>
+                  <TableHead className="text-right">Sales Volume</TableHead>
+                  <TableHead className="text-right">{partyCommissionLabel}</TableHead>
+                  {showViewerCommission ? (
+                    <>
+                      <TableHead className="text-right">
+                        {viewerCommissionLabel}
+                      </TableHead>
+                      <TableHead className="text-right">% of Yours</TableHead>
+                    </>
+                  ) : null}
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -185,6 +212,11 @@ function NetworkRevenueTable({
                         {row.parentName || '—'}
                       </TableCell>
                     ) : null}
+                    {showRetailerCount ? (
+                      <TableCell className="text-right tabular-nums">
+                        {row.retailerCount ?? 0}
+                      </TableCell>
+                    ) : null}
                     <TableCell className="text-right tabular-nums">
                       {row.transactionCount}
                     </TableCell>
@@ -192,11 +224,18 @@ function NetworkRevenueTable({
                       {formatCurrency(row.customerPayment)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {formatCurrency(row.distributable)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums font-medium text-emerald-700">
                       {formatCurrency(row.creditedRevenue)}
                     </TableCell>
+                    {showViewerCommission ? (
+                      <>
+                        <TableCell className="text-right tabular-nums font-medium text-emerald-700">
+                          {formatCurrency(row.viewerCommission)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums text-slate-600">
+                          {row.shareOfViewerTotal.toFixed(1)}%
+                        </TableCell>
+                      </>
+                    ) : null}
                     <TableCell>
                       <div className="flex items-center justify-end gap-1">
                         <Button
@@ -224,6 +263,35 @@ function NetworkRevenueTable({
                     </TableCell>
                   </TableRow>
                 ))}
+                <TableRow className="bg-muted/30 font-medium hover:bg-muted/30">
+                  <TableCell>Total</TableCell>
+                  {showParentColumn ? <TableCell /> : null}
+                  {showRetailerCount ? (
+                    <TableCell className="text-right tabular-nums">
+                      {totals.retailerCount}
+                    </TableCell>
+                  ) : null}
+                  <TableCell className="text-right tabular-nums">
+                    {totals.transactionCount}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatCurrency(totals.customerPayment)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatCurrency(totals.creditedRevenue)}
+                  </TableCell>
+                  {showViewerCommission ? (
+                    <>
+                      <TableCell className="text-right tabular-nums text-emerald-700">
+                        {formatCurrency(totals.viewerCommission)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        100%
+                      </TableCell>
+                    </>
+                  ) : null}
+                  <TableCell />
+                </TableRow>
               </TableBody>
             </Table>
           </div>
@@ -239,26 +307,35 @@ function NetworkPartyRevenueDialog({
   selection,
   entries,
   periodLabel,
+  showViewerCommission,
+  viewerCommissionLabel = 'Your Commission',
   onExport,
 }) {
   const party = selection?.row
   const partyLabel = selection?.entityLabel || 'Party'
-  const revenueColumnLabel = `${partyLabel} Revenue`
+  const partyCommissionLabel = `${partyLabel} Commission`
+  const viewerTotal = sumRows(entries, 'viewerRevenue')
+  const partyTotal = sumRows(entries, 'partyRevenue')
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[90vh] max-w-4xl flex-col gap-0 overflow-hidden p-0 sm:rounded-xl">
         <DialogHeader className="border-b border-border px-6 py-4 text-left">
-          <DialogTitle>{party?.name || partyLabel} Revenue</DialogTitle>
+          <DialogTitle>{party?.name || partyLabel} Commission</DialogTitle>
           <DialogDescription>
             {party?.code ? `${party.code} · ` : ''}
             {party?.parentName ? `${party.parentName} · ` : ''}
-            Commission share detail for {periodLabel}.
+            Commission detail for {periodLabel}.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 overflow-y-auto px-6 py-4">
-          <div className="grid gap-3 sm:grid-cols-4">
+          <div
+            className={cn(
+              'grid gap-3',
+              showViewerCommission ? 'sm:grid-cols-5' : 'sm:grid-cols-4',
+            )}
+          >
             <div className="rounded-lg border border-border px-3 py-2">
               <p className="text-xs text-muted-foreground">Transactions</p>
               <p className="mt-1 text-lg font-semibold tabular-nums">
@@ -266,23 +343,33 @@ function NetworkPartyRevenueDialog({
               </p>
             </div>
             <div className="rounded-lg border border-border px-3 py-2">
-              <p className="text-xs text-muted-foreground">Customer Payments</p>
+              <p className="text-xs text-muted-foreground">Sales Volume</p>
               <p className="mt-1 text-lg font-semibold tabular-nums">
                 {formatCurrency(party?.customerPayment ?? 0)}
               </p>
             </div>
             <div className="rounded-lg border border-border px-3 py-2">
-              <p className="text-xs text-muted-foreground">Distributable</p>
+              <p className="text-xs text-muted-foreground">Commission Pool</p>
               <p className="mt-1 text-lg font-semibold tabular-nums">
                 {formatCurrency(party?.distributable ?? 0)}
               </p>
             </div>
             <div className="rounded-lg border border-border px-3 py-2">
-              <p className="text-xs text-muted-foreground">Credited Revenue</p>
-              <p className="mt-1 text-lg font-semibold tabular-nums text-emerald-700">
-                {formatCurrency(party?.creditedRevenue ?? 0)}
+              <p className="text-xs text-muted-foreground">{partyCommissionLabel}</p>
+              <p className="mt-1 text-lg font-semibold tabular-nums">
+                {formatCurrency(party?.creditedRevenue ?? partyTotal)}
               </p>
             </div>
+            {showViewerCommission ? (
+              <div className="rounded-lg border border-border px-3 py-2">
+                <p className="text-xs text-muted-foreground">
+                  {viewerCommissionLabel}
+                </p>
+                <p className="mt-1 text-lg font-semibold tabular-nums text-emerald-700">
+                  {formatCurrency(party?.viewerCommission ?? viewerTotal)}
+                </p>
+              </div>
+            ) : null}
           </div>
 
           {entries.length === 0 ? (
@@ -301,9 +388,13 @@ function NetworkPartyRevenueDialog({
                       {selection?.partyType === 'franchisee' ? (
                         <TableHead>Retailer</TableHead>
                       ) : null}
-                      <TableHead className="text-right">Payment</TableHead>
-                      <TableHead className="text-right">Distributable</TableHead>
-                      <TableHead className="text-right">{revenueColumnLabel}</TableHead>
+                      <TableHead className="text-right">Sales Volume</TableHead>
+                      <TableHead className="text-right">{partyCommissionLabel}</TableHead>
+                      {showViewerCommission ? (
+                        <TableHead className="text-right">
+                          {viewerCommissionLabel}
+                        </TableHead>
+                      ) : null}
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -332,11 +423,13 @@ function NetworkPartyRevenueDialog({
                           {formatCurrency(entry.customerPayment)}
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
-                          {formatCurrency(entry.distributableRevenue)}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums font-medium text-emerald-700">
                           {formatCurrency(entry.partyRevenue)}
                         </TableCell>
+                        {showViewerCommission ? (
+                          <TableCell className="text-right tabular-nums font-medium text-emerald-700">
+                            {formatCurrency(entry.viewerRevenue ?? 0)}
+                          </TableCell>
+                        ) : null}
                         <TableCell>
                           <TransactionStatusBadge status={entry.transactionStatus} />
                         </TableCell>
@@ -384,13 +477,13 @@ export default function ReportsPage() {
     [organizations, user?.organizationId],
   )
 
-  const [dateRange, setDateRange] = useState('all')
+  const [dateRange, setDateRange] = useState(config.defaultDateRange || 'all')
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
   const [franchiseeId, setFranchiseeId] = useState('all')
   const [retailerId, setRetailerId] = useState('all')
   const [appliedFilters, setAppliedFilters] = useState({
-    dateRange: 'all',
+    dateRange: config.defaultDateRange || 'all',
     customFrom: '',
     customTo: '',
     franchiseeId: 'all',
@@ -401,13 +494,14 @@ export default function ReportsPage() {
   const [selectedParty, setSelectedParty] = useState(null)
 
   useEffect(() => {
-    setDateRange('all')
+    const nextRange = config.defaultDateRange || 'all'
+    setDateRange(nextRange)
     setCustomFrom('')
     setCustomTo('')
     setFranchiseeId('all')
     setRetailerId('all')
     setAppliedFilters({
-      dateRange: 'all',
+      dateRange: nextRange,
       customFrom: '',
       customTo: '',
       franchiseeId: 'all',
@@ -415,7 +509,7 @@ export default function ReportsPage() {
     })
     setPage(0)
     setSelectedParty(null)
-  }, [user?.role])
+  }, [user?.role, config.defaultDateRange])
 
   const retailerOptions = useMemo(() => {
     if (config.showRetailerFilter) return networkOptions.allRetailers
@@ -430,7 +524,6 @@ export default function ReportsPage() {
   const customDateIncomplete =
     dateRange === 'custom' && (!customFrom || !customTo)
 
-  // Apply filters as selections change so KPIs/table/exports stay in sync.
   useEffect(() => {
     if (customDateIncomplete || customDateInvalid) return
 
@@ -498,15 +591,17 @@ export default function ReportsPage() {
     orgById,
     franchiseeRevenueRows = [],
     retailerRevenueRows = [],
+    networkEarnings,
   } = snapshot
   const roleSlug = user?.role || 'export'
+  const showViewerCommission = Boolean(config.showViewerCommissionColumn)
 
   const detailedTransactions = useMemo(
     () => sortTransactionsNewest(datasets.transactions),
     [datasets.transactions],
   )
 
-  const sharePercentages = useMemo(
+  const activeSharePercentages = useMemo(
     () => getActiveSharePercentages(getRevenueSharing()),
     [dataVersion],
   )
@@ -524,8 +619,15 @@ export default function ReportsPage() {
       partyRole: selectedParty.partyRole,
       organizationId: selectedParty.row.organizationId,
       partyType: selectedParty.partyType,
+      viewerRole: showViewerCommission ? user?.role : null,
     })
-  }, [selectedParty, datasets.transactions, dataVersion])
+  }, [
+    selectedParty,
+    datasets.transactions,
+    dataVersion,
+    showViewerCommission,
+    user?.role,
+  ])
 
   const exportPartyRevenue = (selection, entries) => {
     if (!selection) return
@@ -534,6 +636,8 @@ export default function ReportsPage() {
       `esarisari-${selection.partyType}-revenue-${slug}.csv`,
       partyRevenueDetailEntriesToCsv(entries, {
         partyLabel: selection.entityLabel,
+        includeViewerCommission: showViewerCommission,
+        viewerLabel: config.viewerCommissionLabel || 'Your Commission',
       }),
     )
   }
@@ -562,6 +666,7 @@ export default function ReportsPage() {
       partyRole: selection.partyRole,
       organizationId: row.organizationId,
       partyType,
+      viewerRole: showViewerCommission ? user?.role : null,
     })
     exportPartyRevenue(selection, entries)
   }
@@ -571,27 +676,11 @@ export default function ReportsPage() {
     setRetailerId('all')
   }
 
-  const handleApplyFilters = () => {
-    if (customDateIncomplete || customDateInvalid) return
-
-    setAppliedFilters({
-      dateRange,
-      customFrom,
-      customTo,
-      franchiseeId: config.showNetworkFilters ? franchiseeId : 'all',
-      retailerId:
-        config.showNetworkFilters || config.showRetailerFilter
-          ? retailerId
-          : 'all',
-    })
-    setPage(0)
-  }
-
   const filterGridClass = config.showNetworkFilters
-    ? 'lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-end'
+    ? 'lg:grid-cols-3'
     : config.showRetailerFilter
-      ? 'sm:grid-cols-[1fr_1fr_auto] sm:items-end'
-      : 'sm:grid-cols-[1fr_auto] sm:items-end'
+      ? 'sm:grid-cols-2'
+      : 'sm:grid-cols-1'
 
   return (
     <div>
@@ -605,9 +694,7 @@ export default function ReportsPage() {
       />
 
       <Card className="mb-4 shadow-sm">
-        <CardContent
-          className={cn('grid gap-3 p-4', filterGridClass)}
-        >
+        <CardContent className={cn('grid gap-3 p-4', filterGridClass)}>
           <div className="space-y-2">
             <Label className="text-xs text-slate-500">Date Range</Label>
             <Select value={dateRange} onValueChange={setDateRange}>
@@ -615,7 +702,6 @@ export default function ReportsPage() {
                 <SelectValue placeholder="Select range" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Time</SelectItem>
                 <SelectItem value="this_month">This Month</SelectItem>
                 <SelectItem value="7d">Last 7 Days</SelectItem>
                 <SelectItem value="30d">Last 30 Days</SelectItem>
@@ -623,6 +709,7 @@ export default function ReportsPage() {
                 <SelectItem value="6m">Last 6 Months</SelectItem>
                 <SelectItem value="this_year">This Year</SelectItem>
                 <SelectItem value="last_year">Last Year</SelectItem>
+                <SelectItem value="all">All Time</SelectItem>
                 {config.showCustomDateRange ? (
                   <SelectItem value="custom">Custom Range</SelectItem>
                 ) : null}
@@ -687,25 +774,15 @@ export default function ReportsPage() {
             </div>
           ) : null}
 
-          <Button
-            type="button"
-            className="bg-blue-600 text-white hover:bg-blue-700"
-            onClick={handleApplyFilters}
-            disabled={customDateInvalid || customDateIncomplete}
-          >
-            <Filter className="h-4 w-4" />
-            Apply Filters
-          </Button>
-
           {config.showCustomDateRange && dateRange === 'custom' ? (
             <div
               className={cn(
                 'grid gap-3 sm:grid-cols-2',
                 config.showNetworkFilters
-                  ? 'lg:col-span-4'
+                  ? 'lg:col-span-3'
                   : config.showRetailerFilter
-                    ? 'sm:col-span-3'
-                    : 'sm:col-span-2',
+                    ? 'sm:col-span-2'
+                    : 'sm:col-span-1',
               )}
             >
               <div className="space-y-2">
@@ -740,75 +817,139 @@ export default function ReportsPage() {
         </CardContent>
       </Card>
 
-      <div className="mb-4 grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div>
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Transaction Activity
-              </CardTitle>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">
-                {kpis.completedTxCount} completed · {periodLabel}
-              </p>
-            </div>
-            <Receipt className="h-4 w-4 shrink-0 text-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 divide-x divide-border">
-              <div className="pr-3">
-                <p className="truncate text-xs text-muted-foreground">Count</p>
-                <p className="mt-1 truncate text-lg font-semibold tabular-nums text-foreground">
-                  {kpis.transactionCount}
+      {config.showNetworkEarningsHero ? (
+        <div
+          className={cn(
+            'mb-4 grid gap-4 sm:grid-cols-2',
+            config.showFranchiseeRevenueTable
+              ? 'xl:grid-cols-4'
+              : config.showRetailerRevenueTable
+                ? 'xl:grid-cols-3'
+                : 'xl:grid-cols-2',
+          )}
+        >
+          <StatCard
+            title={config.yourCommissionLabel || 'Your Commission'}
+            value={formatCurrency(networkEarnings?.yourCommission ?? kpis.creditedRevenue)}
+            description={`For ${periodLabel}`}
+            descriptionBelowTitle
+            icon={Banknote}
+            accent="success"
+          />
+          {config.showFranchiseeRevenueTable ? (
+            <StatCard
+              title="Franchisee Commissions"
+              value={formatCurrency(networkEarnings?.franchiseeCommission ?? 0)}
+              description={`Network franchisees · ${periodLabel}`}
+              descriptionBelowTitle
+              icon={Users}
+            />
+          ) : null}
+          {config.showRetailerRevenueTable ? (
+            <StatCard
+              title="Retailer Commissions"
+              value={formatCurrency(networkEarnings?.retailerCommission ?? 0)}
+              description={`Network retailers · ${periodLabel}`}
+              descriptionBelowTitle
+              icon={Store}
+            />
+          ) : null}
+          <StatCard
+            title="Sales Volume"
+            value={formatCurrency(networkEarnings?.salesVolume ?? kpis.customerPaymentTotal)}
+            description={`${kpis.completedTxCount} transactions · ${periodLabel}`}
+            descriptionBelowTitle
+            icon={Receipt}
+          />
+        </div>
+      ) : (
+        <div className="mb-4 grid gap-4 lg:grid-cols-3">
+          <Card className="lg:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Transaction Activity
+                </CardTitle>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  {kpis.completedTxCount} completed · {periodLabel}
                 </p>
               </div>
-              <div className="px-3">
-                <p className="truncate text-xs text-muted-foreground">Payments</p>
-                <p className="mt-1 truncate text-lg font-semibold tabular-nums text-success">
-                  {formatCurrency(kpis.customerPaymentTotal)}
-                </p>
+              <Receipt className="h-4 w-4 shrink-0 text-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 divide-x divide-border">
+                <div className="pr-3">
+                  <p className="truncate text-xs text-muted-foreground">Count</p>
+                  <p className="mt-1 truncate text-lg font-semibold tabular-nums text-foreground">
+                    {kpis.transactionCount}
+                  </p>
+                </div>
+                <div className="px-3">
+                  <p className="truncate text-xs text-muted-foreground">
+                    Sales Volume
+                  </p>
+                  <p className="mt-1 truncate text-lg font-semibold tabular-nums text-success">
+                    {formatCurrency(kpis.customerPaymentTotal)}
+                  </p>
+                </div>
+                <div className="pl-3">
+                  <p className="truncate text-xs text-muted-foreground">
+                    Commission Pool
+                  </p>
+                  <p className="mt-1 truncate text-lg font-semibold tabular-nums text-success">
+                    {formatCurrency(kpis.distributableTotal)}
+                  </p>
+                </div>
               </div>
-              <div className="pl-3">
-                <p className="truncate text-xs text-muted-foreground">
-                  Distributable
-                </p>
-                <p className="mt-1 truncate text-lg font-semibold tabular-nums text-success">
-                  {formatCurrency(kpis.distributableTotal)}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <StatCard
-          title="Your Revenue"
-          value={formatCurrency(kpis.creditedRevenue)}
-          description={`For ${periodLabel}`}
-          descriptionBelowTitle
-          icon={Banknote}
-          accent="success"
-        />
-      </div>
+            </CardContent>
+          </Card>
+          <StatCard
+            title={config.yourCommissionLabel || 'Your Commission'}
+            value={formatCurrency(kpis.creditedRevenue)}
+            description={`For ${periodLabel}`}
+            descriptionBelowTitle
+            icon={Banknote}
+            accent="success"
+          />
+        </div>
+      )}
 
       {config.showFranchiseeRevenueTable || config.showRetailerRevenueTable ? (
         <div className="mb-4 space-y-4">
           {config.showFranchiseeRevenueTable ? (
             <NetworkRevenueTable
-              title="Franchisee Revenue"
-              description={`Each franchisee's commission share for ${periodLabel}.`}
+              title="Franchisee Commissions"
+              description={`What each franchisee earned, and ${
+                user?.role === ROLES.ADMIN ? 'platform' : 'your'
+              } commission from their volume · ${periodLabel}.`}
               rows={franchiseeRevenueRows}
               emptyLabel="No franchisees in your network for the selected filters."
               entityLabel="Franchisee"
+              showRetailerCount
+              showViewerCommission={showViewerCommission}
+              partyCommissionLabel="Their Commission"
+              viewerCommissionLabel={
+                config.viewerCommissionLabel || 'Your Commission'
+              }
               onView={(row) => handleViewParty(row, 'franchisee')}
               onExport={(row) => handleExportParty(row, 'franchisee')}
             />
           ) : null}
           {config.showRetailerRevenueTable ? (
             <NetworkRevenueTable
-              title="Retailer Revenue"
-              description={`Each retailer's commission share for ${periodLabel}.`}
+              title="Retailer Commissions"
+              description={`What each retailer earned, and ${
+                user?.role === ROLES.ADMIN ? 'platform' : 'your'
+              } commission from their volume · ${periodLabel}.`}
               rows={retailerRevenueRows}
               emptyLabel="No retailers in your network for the selected filters."
               entityLabel="Retailer"
               showParentColumn={Boolean(config.showFranchiseeRevenueTable)}
+              showViewerCommission={showViewerCommission}
+              partyCommissionLabel="Their Commission"
+              viewerCommissionLabel={
+                config.viewerCommissionLabel || 'Your Commission'
+              }
               onView={(row) => handleViewParty(row, 'retailer')}
               onExport={(row) => handleExportParty(row, 'retailer')}
             />
@@ -856,7 +997,7 @@ export default function ReportsPage() {
                       const retailer = orgById[tx.retailerOrganizationId] || null
                       const shares = getTransactionShareAmounts(
                         tx,
-                        sharePercentages,
+                        activeSharePercentages,
                       )
                       return (
                         <TableRow key={tx.id}>
@@ -957,7 +1098,7 @@ export default function ReportsPage() {
         <div className="grid gap-4 md:grid-cols-2">
           <ExportCard
             title="Transactions"
-            description="Customer payments, wallet deductions, and distributable revenue for your scope."
+            description="Sales volume and commission shares for your scope."
             count={datasets.transactions.length}
             onExport={() =>
               downloadCsv(
@@ -970,8 +1111,8 @@ export default function ReportsPage() {
           />
           {config.showRevenueExport ? (
             <ExportCard
-              title="Revenue Share"
-              description="Your per-transaction revenue share for the selected period."
+              title="Your Commission"
+              description="Your per-transaction commission for the selected period."
               count={datasets.revenueEntries.length}
               onExport={() =>
                 downloadCsv(
@@ -992,6 +1133,10 @@ export default function ReportsPage() {
         selection={selectedParty}
         entries={selectedPartyEntries}
         periodLabel={periodLabel}
+        showViewerCommission={showViewerCommission}
+        viewerCommissionLabel={
+          config.viewerCommissionLabel || 'Your Commission'
+        }
         onExport={() =>
           exportPartyRevenue(selectedParty, selectedPartyEntries)
         }

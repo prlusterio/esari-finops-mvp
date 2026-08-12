@@ -194,6 +194,7 @@ export function clearAllBusinessData() {
   })
   localStorage.removeItem(STORAGE_KEYS.WALLET_LEDGER_VERSION)
   localStorage.removeItem(STORAGE_KEYS.TRANSACTIONS_SEED_VERSION)
+  localStorage.removeItem(STORAGE_KEYS.COMMISSION_SETTINGS_SEED_VERSION)
 }
 
 export function collectionNeedsSeed(name) {
