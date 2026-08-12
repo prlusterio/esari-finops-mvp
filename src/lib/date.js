@@ -66,6 +66,8 @@ export function formatReportPeriodLabel(dateRange, customRange = null) {
   switch (dateRange) {
     case 'all':
       return 'All time'
+    case 'this_month':
+      return 'This month'
     case '7d':
       return 'Last 7 days'
     case '30d':
@@ -121,7 +123,7 @@ function endOfDay(dateInput) {
 
 /**
  * Filters items by createdAt-style date field using Reports date-range options.
- * Supports: all | 7d | 30d | 90d | 3m | 6m | this_year | last_year | custom
+ * Supports: all | this_month | 7d | 30d | 90d | 3m | 6m | this_year | last_year | custom
  */
 export function filterItemsByDateRange(
   items,
@@ -149,7 +151,10 @@ export function filterItemsByDateRange(
   let from = null
   let to = null
 
-  if (dateRange === '7d' || dateRange === '30d' || dateRange === '90d') {
+  if (dateRange === 'this_month') {
+    from = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0)
+    to = endOfDay(now)
+  } else if (dateRange === '7d' || dateRange === '30d' || dateRange === '90d') {
     const days = dateRange === '7d' ? 7 : dateRange === '30d' ? 30 : 90
     from = new Date(now)
     from.setDate(from.getDate() - days)

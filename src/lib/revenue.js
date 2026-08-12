@@ -208,3 +208,20 @@ export function sumCreditedShareForOrg(
     ),
   )
 }
+
+/**
+ * Single source of truth for Revenue Wallet / Credited Revenue cards.
+ * Always derived from completed transactions (not a possibly-stale wallet field).
+ */
+export function resolveCreditedRevenueBalance({
+  role,
+  organizationId,
+  transactions = [],
+  revenueSharing = [],
+} = {}) {
+  return sumCreditedShareForOrg(transactions, {
+    role,
+    organizationId,
+    revenueSharing,
+  })
+}

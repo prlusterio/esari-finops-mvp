@@ -24,7 +24,7 @@ export const NAV_ITEMS = [
     path: '/dashboard',
     icon: LayoutDashboard,
     roles: [ROLES.ADMIN, ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE, ROLES.RETAILER],
-    disabledRoles: [ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE],
+    disabledRoles: [ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE, ROLES.RETAILER],
   },
   {
     title: 'Organizations',
@@ -92,7 +92,7 @@ export const NAV_ITEMS = [
     title: 'Revenue',
     path: '/revenue',
     icon: Banknote,
-    roles: [ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE],
+    roles: [ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE, ROLES.RETAILER],
   },
   {
     title: 'Commission Settings',

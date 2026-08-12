@@ -3,6 +3,7 @@ import { Banknote, Eye, Filter, Wallet } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { ROLES } from '@/lib/constants'
 import { formatCurrency } from '@/lib/currency'
+import { formatReportPeriodLabel } from '@/lib/date'
 import { DEFAULT_PAGE_SIZE, paginateItems } from '@/lib/pagination'
 import { DateTimeCell } from '@/components/shared/DateTimeCell'
 import { SignedAmount } from '@/components/shared/SignedAmount'
@@ -12,9 +13,9 @@ import { getNetworkFilterOptions } from '@/lib/reports'
 import {
   buildRevenueEntries,
   filterRevenueEntries,
+  resolveCreditedRevenueBalance,
   REVENUE_ENTRY_STATUS,
   REVENUE_ENTRY_STATUS_LABELS,
-  sumRevenueByStatus,
 } from '@/lib/revenue'
 import { filterTransactionsForRole } from '@/lib/transactions'
 import {
@@ -65,11 +66,15 @@ function RevenueStatusBadge({ status }) {
 
 export default function RevenuePage() {
   const { user, dataVersion } = useAuth()
+  const isRetailer = user?.role === ROLES.RETAILER
   const canViewRevenue =
-    user?.role === ROLES.SUBFRANCHISEE || user?.role === ROLES.FRANCHISEE
+    user?.role === ROLES.SUBFRANCHISEE ||
+    user?.role === ROLES.FRANCHISEE ||
+    user?.role === ROLES.RETAILER
 
   const organizations = useMemo(() => getOrganizations(), [dataVersion])
   const revenueSharing = useMemo(() => getRevenueSharing(), [dataVersion])
+  const transactions = useMemo(() => getTransactions(), [dataVersion])
 
   const [dateRange, setDateRange] = useState('all')
   const [customFrom, setCustomFrom] = useState('')
@@ -103,32 +108,46 @@ export default function RevenuePage() {
   }, [user?.role])
 
   const retailerOptions = useMemo(() => {
-    if (!user?.organizationId) return []
+    if (!user?.organizationId || isRetailer) return []
     return getNetworkFilterOptions(organizations, user.organizationId)
       .allRetailers
-  }, [organizations, user?.organizationId])
+  }, [organizations, user?.organizationId, isRetailer])
 
-  const allEntries = useMemo(() => {
-    const scoped = filterTransactionsForRole(getTransactions(), {
-      role: user?.role,
-      organizationId: user?.organizationId,
-    })
-    return buildRevenueEntries({
-      transactions: scoped,
-      organizations,
-      role: user?.role,
-      revenueSharing,
-    })
-  }, [user?.role, user?.organizationId, organizations, revenueSharing, dataVersion])
+  const scopedTransactions = useMemo(
+    () =>
+      filterTransactionsForRole(transactions, {
+        role: user?.role,
+        organizationId: user?.organizationId,
+      }),
+    [transactions, user?.role, user?.organizationId],
+  )
+
+  const allEntries = useMemo(
+    () =>
+      buildRevenueEntries({
+        transactions: scopedTransactions,
+        organizations,
+        role: user?.role,
+        revenueSharing,
+      }),
+    [scopedTransactions, organizations, user?.role, revenueSharing],
+  )
 
   const filteredEntries = useMemo(
     () => filterRevenueEntries(allEntries, appliedFilters),
     [allEntries, appliedFilters],
   )
 
-  const totals = useMemo(
-    () => sumRevenueByStatus(filteredEntries),
-    [filteredEntries],
+  // Same source as Wallet → Revenue Wallet card.
+  const creditedRevenueBalance = useMemo(
+    () =>
+      resolveCreditedRevenueBalance({
+        role: user?.role,
+        organizationId: user?.organizationId,
+        transactions,
+        revenueSharing,
+      }),
+    [user?.role, user?.organizationId, transactions, revenueSharing],
   )
 
   const distributableTotal = useMemo(
@@ -138,6 +157,11 @@ export default function RevenuePage() {
         0,
       ),
     [filteredEntries],
+  )
+
+  const periodLabel = formatReportPeriodLabel(
+    appliedFilters.dateRange,
+    appliedFilters.customDateRange,
   )
 
   const {
@@ -161,7 +185,7 @@ export default function RevenuePage() {
         dateRange === 'custom'
           ? { from: customFrom, to: customTo }
           : null,
-      retailerId,
+      retailerId: isRetailer ? 'all' : retailerId,
       search,
       status: REVENUE_ENTRY_STATUS.CREDITED,
     })
@@ -192,7 +216,11 @@ export default function RevenuePage() {
     <div>
       <PageHeader
         title="Revenue"
-        description="Track distributable revenue and your credited share from completed transactions."
+        description={
+          isRetailer
+            ? 'Track distributable revenue and your credited share from your completed transactions.'
+            : 'Track distributable revenue and your credited share from completed transactions.'
+        }
         breadcrumbs={[
           { label: 'Home', href: getHomePathForRole(user?.role) },
           { label: 'Revenue' },
@@ -203,21 +231,28 @@ export default function RevenuePage() {
         <StatCard
           title="Distributable Revenue"
           value={formatCurrency(distributableTotal)}
-          description="Total distributable from completed transactions"
+          description={`For ${periodLabel}`}
           icon={Banknote}
           accent="wallet"
         />
         <StatCard
           title="Credited Revenue"
-          value={formatCurrency(totals.credited)}
-          description="Your share from completed transactions"
+          value={formatCurrency(creditedRevenueBalance)}
+          description="All-time credited revenue share"
           icon={Wallet}
           accent="success"
         />
       </div>
 
       <Card className="mb-4 shadow-sm">
-        <CardContent className="grid gap-3 p-4 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-end">
+        <CardContent
+          className={cn(
+            'grid gap-3 p-4 lg:items-end',
+            isRetailer
+              ? 'lg:grid-cols-[1fr_1fr_auto]'
+              : 'lg:grid-cols-[1fr_1fr_1fr_auto]',
+          )}
+        >
           <div className="space-y-2">
             <Label className="text-xs text-slate-500">Date Range</Label>
             <Select value={dateRange} onValueChange={setDateRange}>
@@ -226,6 +261,7 @@ export default function RevenuePage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="this_month">This Month</SelectItem>
                 <SelectItem value="7d">Last 7 Days</SelectItem>
                 <SelectItem value="30d">Last 30 Days</SelectItem>
                 <SelectItem value="3m">Last 3 Months</SelectItem>
@@ -237,22 +273,24 @@ export default function RevenuePage() {
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-xs text-slate-500">Retailer</Label>
-            <Select value={retailerId} onValueChange={setRetailerId}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Retailers" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Retailers</SelectItem>
-                {retailerOptions.map((org) => (
-                  <SelectItem key={org.id} value={org.id}>
-                    {org.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {!isRetailer ? (
+            <div className="space-y-2">
+              <Label className="text-xs text-slate-500">Retailer</Label>
+              <Select value={retailerId} onValueChange={setRetailerId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Retailers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Retailers</SelectItem>
+                  {retailerOptions.map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      {org.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
 
           <div className="space-y-2">
             <Label className="text-xs text-slate-500">Reference</Label>
@@ -277,7 +315,12 @@ export default function RevenuePage() {
           </Button>
 
           {dateRange === 'custom' ? (
-            <div className="grid gap-3 sm:grid-cols-2 lg:col-span-4">
+            <div
+              className={cn(
+                'grid gap-3 sm:grid-cols-2',
+                isRetailer ? 'lg:col-span-3' : 'lg:col-span-4',
+              )}
+            >
               <div className="space-y-2">
                 <Label className="text-xs text-slate-500" htmlFor="revenue-from">
                   From
@@ -324,7 +367,9 @@ export default function RevenuePage() {
                     <TableRow className="bg-muted/50 hover:bg-muted/50">
                       <TableHead>Reference</TableHead>
                       <TableHead>Date</TableHead>
-                      <TableHead>Retailer</TableHead>
+                      <TableHead>
+                        {isRetailer ? 'Product / Service' : 'Retailer'}
+                      </TableHead>
                       <TableHead>Distributable Rev.</TableHead>
                       <TableHead>Your Revenue</TableHead>
                       <TableHead>Status</TableHead>
@@ -341,15 +386,23 @@ export default function RevenuePage() {
                           <DateTimeCell value={entry.createdAt} />
                         </TableCell>
                         <TableCell>
-                          <div className="font-semibold text-slate-900">
-                            {entry.retailerName}
-                          </div>
-                          {user?.role === ROLES.SUBFRANCHISEE &&
-                          entry.franchiseeName ? (
-                            <div className="text-xs text-slate-400">
-                              {entry.franchiseeName}
+                          {isRetailer ? (
+                            <div className="max-w-[220px] truncate font-medium text-slate-900">
+                              {entry.transaction?.productService || '—'}
                             </div>
-                          ) : null}
+                          ) : (
+                            <>
+                              <div className="font-semibold text-slate-900">
+                                {entry.retailerName}
+                              </div>
+                              {user?.role === ROLES.SUBFRANCHISEE &&
+                              entry.franchiseeName ? (
+                                <div className="text-xs text-slate-400">
+                                  {entry.franchiseeName}
+                                </div>
+                              ) : null}
+                            </>
+                          )}
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           <SignedAmount

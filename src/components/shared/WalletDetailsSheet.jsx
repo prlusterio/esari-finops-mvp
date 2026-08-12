@@ -1,5 +1,6 @@
 import { formatCurrency, formatSignedCurrency } from '@/lib/currency'
 import {
+  sumWalletActivityNet,
   WALLET_BALANCE_STATUS,
   WALLET_BALANCE_STATUS_LABELS,
 } from '@/lib/wallets'
@@ -54,6 +55,8 @@ export function WalletDetailsSheet({
 }) {
   if (!walletRow) return null
 
+  const activityNet = sumWalletActivityNet(activity)
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full gap-0 p-0 sm:max-w-[30rem]">
@@ -66,6 +69,10 @@ export function WalletDetailsSheet({
           </div>
           <p className="mt-2 text-2xl font-bold text-slate-900">
             {formatCurrency(walletRow.availableBalance)}
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            Available balance = opening float + funding activity (
+            {formatCurrency(activityNet)})
           </p>
         </SheetHeader>
 

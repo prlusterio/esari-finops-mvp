@@ -145,6 +145,8 @@ export default function WalletManagementPage() {
       organizationId: selectedRow.organizationId,
       transfers,
       organizations,
+      openingBalance: selectedRow.wallet?.openingBalance,
+      availableBalance: selectedRow.availableBalance,
     })
   }, [selectedRow, transfers, organizations])
 

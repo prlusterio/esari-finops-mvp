@@ -52,10 +52,7 @@ export default function AppRoutes() {
           <Route path="/" element={<HomeRedirect />} />
           <Route
             element={
-              <RoleRoute
-                roles={[ROLES.ADMIN, ROLES.RETAILER]}
-                path="/dashboard"
-              />
+              <RoleRoute roles={[ROLES.ADMIN]} path="/dashboard" />
             }
           >
             <Route path="/dashboard" element={<DashboardPage />} />
@@ -126,7 +123,7 @@ export default function AppRoutes() {
           <Route
             element={
               <RoleRoute
-                roles={[ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE]}
+                roles={[ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE, ROLES.RETAILER]}
                 path="/revenue"
               />
             }

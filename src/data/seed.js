@@ -4,6 +4,7 @@ import {
   ROLES,
   STORAGE_KEYS,
   TRANSACTION_STATUS,
+  TRANSACTIONS_SEED_VERSION,
   WALLET_LEDGER_VERSION,
 } from '@/lib/constants'
 import { sumCreditedShareForOrg } from '@/lib/revenue'
@@ -237,6 +238,103 @@ function buildRevenueWallet(id, organizationId, role, transactions, revenueShari
   }
 }
 
+const REVENUE_WALLET_SPECS = [
+  { id: 'wallet-platform-revenue', organizationId: ORG_IDS.PLATFORM, role: ROLES.ADMIN },
+  { id: 'wallet-sub-001-revenue', organizationId: ORG_IDS.SUB_001, role: ROLES.SUBFRANCHISEE },
+  {
+    id: 'wallet-franchise-001-revenue',
+    organizationId: ORG_IDS.FRANCHISE_001,
+    role: ROLES.FRANCHISEE,
+  },
+  {
+    id: 'wallet-franchise-002-revenue',
+    organizationId: ORG_IDS.FRANCHISE_002,
+    role: ROLES.FRANCHISEE,
+  },
+  {
+    id: 'wallet-franchise-003-revenue',
+    organizationId: ORG_IDS.FRANCHISE_003,
+    role: ROLES.FRANCHISEE,
+  },
+  {
+    id: 'wallet-franchise-004-revenue',
+    organizationId: ORG_IDS.FRANCHISE_004,
+    role: ROLES.FRANCHISEE,
+  },
+  {
+    id: 'wallet-retailer-001-revenue',
+    organizationId: ORG_IDS.RETAILER_001,
+    role: ROLES.RETAILER,
+  },
+  {
+    id: 'wallet-retailer-002-revenue',
+    organizationId: ORG_IDS.RETAILER_002,
+    role: ROLES.RETAILER,
+  },
+  {
+    id: 'wallet-retailer-003-revenue',
+    organizationId: ORG_IDS.RETAILER_003,
+    role: ROLES.RETAILER,
+  },
+  {
+    id: 'wallet-retailer-004-revenue',
+    organizationId: ORG_IDS.RETAILER_004,
+    role: ROLES.RETAILER,
+  },
+  {
+    id: 'wallet-retailer-005-revenue',
+    organizationId: ORG_IDS.RETAILER_005,
+    role: ROLES.RETAILER,
+  },
+]
+
+/**
+ * Keep persisted revenue wallets aligned with completed-transaction share totals.
+ * Must run after transactions are seeded/migrated.
+ */
+function reconcileRevenueWallets() {
+  const transactions = getTransactions()
+  const revenueSharing = getRevenueSharing()
+  const existing = getWallets()
+  const byId = new Map(existing.map((wallet) => [wallet.id, wallet]))
+  let changed = false
+
+  REVENUE_WALLET_SPECS.forEach((spec) => {
+    const balance = sumCreditedShareForOrg(transactions, {
+      role: spec.role,
+      organizationId: spec.organizationId,
+      revenueSharing,
+    })
+    const current = byId.get(spec.id)
+    if (!current) {
+      byId.set(
+        spec.id,
+        buildRevenueWallet(
+          spec.id,
+          spec.organizationId,
+          spec.role,
+          transactions,
+          revenueSharing,
+        ),
+      )
+      changed = true
+      return
+    }
+    if (Number(current.availableBalance) !== balance) {
+      byId.set(spec.id, {
+        ...current,
+        availableBalance: balance,
+        updatedAt: new Date().toISOString(),
+      })
+      changed = true
+    }
+  })
+
+  if (changed) {
+    saveWallets(Array.from(byId.values()))
+  }
+}
+
 export function getSeedWallets() {
   const transactions = getSeedTransactions()
   const revenueSharing = getSeedRevenueSharing()
@@ -256,6 +354,7 @@ export function getSeedWallets() {
       organizationId: ORG_IDS.PLATFORM,
       walletType: 'master',
       availableBalance: 500000,
+      openingBalance: 675000,
       minimumBalance: 100000,
       status: 'active',
       createdAt: now,
@@ -266,6 +365,7 @@ export function getSeedWallets() {
       organizationId: ORG_IDS.SUB_001,
       walletType: 'operating',
       availableBalance: 135000,
+      openingBalance: 50000,
       minimumBalance: 50000,
       status: 'active',
       createdAt: now,
@@ -276,6 +376,7 @@ export function getSeedWallets() {
       organizationId: ORG_IDS.FRANCHISE_001,
       walletType: 'operating',
       availableBalance: 30000,
+      openingBalance: 40000,
       minimumBalance: 25000,
       status: 'active',
       createdAt: now,
@@ -286,6 +387,7 @@ export function getSeedWallets() {
       organizationId: ORG_IDS.FRANCHISE_002,
       walletType: 'operating',
       availableBalance: 105000,
+      openingBalance: 15000,
       minimumBalance: 25000,
       status: 'active',
       createdAt: now,
@@ -296,6 +398,7 @@ export function getSeedWallets() {
       organizationId: ORG_IDS.FRANCHISE_003,
       walletType: 'operating',
       availableBalance: 18000,
+      openingBalance: 18000,
       minimumBalance: 25000,
       status: 'active',
       createdAt: now,
@@ -306,6 +409,7 @@ export function getSeedWallets() {
       organizationId: ORG_IDS.FRANCHISE_004,
       walletType: 'operating',
       availableBalance: 32000,
+      openingBalance: 32000,
       minimumBalance: 25000,
       status: 'active',
       createdAt: now,
@@ -316,6 +420,7 @@ export function getSeedWallets() {
       organizationId: ORG_IDS.RETAILER_001,
       walletType: 'operating',
       availableBalance: 15000,
+      openingBalance: 5000,
       minimumBalance: 8000,
       status: 'active',
       createdAt: now,
@@ -326,6 +431,7 @@ export function getSeedWallets() {
       organizationId: ORG_IDS.RETAILER_002,
       walletType: 'operating',
       availableBalance: 5000,
+      openingBalance: 5000,
       minimumBalance: 8000,
       status: 'active',
       createdAt: now,
@@ -336,6 +442,7 @@ export function getSeedWallets() {
       organizationId: ORG_IDS.RETAILER_003,
       walletType: 'operating',
       availableBalance: 7500,
+      openingBalance: 7500,
       minimumBalance: 8000,
       status: 'active',
       createdAt: now,
@@ -346,6 +453,7 @@ export function getSeedWallets() {
       organizationId: ORG_IDS.RETAILER_004,
       walletType: 'operating',
       availableBalance: 6200,
+      openingBalance: 6200,
       minimumBalance: 8000,
       status: 'active',
       createdAt: now,
@@ -356,6 +464,7 @@ export function getSeedWallets() {
       organizationId: ORG_IDS.RETAILER_005,
       walletType: 'operating',
       availableBalance: 9100,
+      openingBalance: 9100,
       minimumBalance: 8000,
       status: 'active',
       createdAt: now,
@@ -363,85 +472,15 @@ export function getSeedWallets() {
     },
   ]
 
-  const revenue = [
+  const revenue = REVENUE_WALLET_SPECS.map((spec) =>
     buildRevenueWallet(
-      'wallet-platform-revenue',
-      ORG_IDS.PLATFORM,
-      ROLES.ADMIN,
+      spec.id,
+      spec.organizationId,
+      spec.role,
       transactions,
       revenueSharing,
     ),
-    buildRevenueWallet(
-      'wallet-sub-001-revenue',
-      ORG_IDS.SUB_001,
-      ROLES.SUBFRANCHISEE,
-      transactions,
-      revenueSharing,
-    ),
-    buildRevenueWallet(
-      'wallet-franchise-001-revenue',
-      ORG_IDS.FRANCHISE_001,
-      ROLES.FRANCHISEE,
-      transactions,
-      revenueSharing,
-    ),
-    buildRevenueWallet(
-      'wallet-franchise-002-revenue',
-      ORG_IDS.FRANCHISE_002,
-      ROLES.FRANCHISEE,
-      transactions,
-      revenueSharing,
-    ),
-    buildRevenueWallet(
-      'wallet-franchise-003-revenue',
-      ORG_IDS.FRANCHISE_003,
-      ROLES.FRANCHISEE,
-      transactions,
-      revenueSharing,
-    ),
-    buildRevenueWallet(
-      'wallet-franchise-004-revenue',
-      ORG_IDS.FRANCHISE_004,
-      ROLES.FRANCHISEE,
-      transactions,
-      revenueSharing,
-    ),
-    buildRevenueWallet(
-      'wallet-retailer-001-revenue',
-      ORG_IDS.RETAILER_001,
-      ROLES.RETAILER,
-      transactions,
-      revenueSharing,
-    ),
-    buildRevenueWallet(
-      'wallet-retailer-002-revenue',
-      ORG_IDS.RETAILER_002,
-      ROLES.RETAILER,
-      transactions,
-      revenueSharing,
-    ),
-    buildRevenueWallet(
-      'wallet-retailer-003-revenue',
-      ORG_IDS.RETAILER_003,
-      ROLES.RETAILER,
-      transactions,
-      revenueSharing,
-    ),
-    buildRevenueWallet(
-      'wallet-retailer-004-revenue',
-      ORG_IDS.RETAILER_004,
-      ROLES.RETAILER,
-      transactions,
-      revenueSharing,
-    ),
-    buildRevenueWallet(
-      'wallet-retailer-005-revenue',
-      ORG_IDS.RETAILER_005,
-      ROLES.RETAILER,
-      transactions,
-      revenueSharing,
-    ),
-  ]
+  )
 
   return [...operating, ...revenue]
 }
@@ -1115,21 +1154,34 @@ export function initializeMockData() {
         })
         return
       }
-      // Keep live balances, but adopt seeded minimum thresholds when missing.
+      // Keep live balances, but adopt seeded opening float + minimums when missing.
+      const next = { ...current }
+      let patched = false
+      if (
+        seedWallet.walletType !== 'revenue' &&
+        !(Number(current.openingBalance) > 0) &&
+        Number(seedWallet.openingBalance) > 0
+      ) {
+        next.openingBalance = seedWallet.openingBalance
+        patched = true
+      }
       if (
         seedWallet.walletType !== 'revenue' &&
         !(Number(current.minimumBalance) > 0) &&
         Number(seedWallet.minimumBalance) > 0
       ) {
-        byId.set(seedWallet.id, {
-          ...current,
-          minimumBalance: seedWallet.minimumBalance,
-        })
+        next.minimumBalance = seedWallet.minimumBalance
+        patched = true
+      }
+      if (patched) {
+        byId.set(seedWallet.id, next)
       }
     })
 
     saveWallets(Array.from(byId.values()))
     if (shouldRealignOperating) {
+      // Keep transfer history aligned with reset balances (drop orphan demo transfers).
+      saveFundingTransfers(getSeedFundingTransfers())
       localStorage.setItem(STORAGE_KEYS.WALLET_LEDGER_VERSION, WALLET_LEDGER_VERSION)
     }
   }
@@ -1236,8 +1288,17 @@ export function initializeMockData() {
       saveCommissionSettings(Array.from(byId.values()))
     }
   }
-  if (collectionNeedsSeed('transactions') || isEmptyCollection('transactions')) {
+  if (
+    collectionNeedsSeed('transactions') ||
+    isEmptyCollection('transactions') ||
+    localStorage.getItem(STORAGE_KEYS.TRANSACTIONS_SEED_VERSION) !==
+      TRANSACTIONS_SEED_VERSION
+  ) {
     saveTransactions(getSeedTransactions())
+    localStorage.setItem(
+      STORAGE_KEYS.TRANSACTIONS_SEED_VERSION,
+      TRANSACTIONS_SEED_VERSION,
+    )
   } else {
     const existing = getTransactions()
     const seedTransactions = getSeedTransactions()
@@ -1310,6 +1371,8 @@ export function initializeMockData() {
       saveTransactions(Array.from(byId.values()))
     }
   }
+  // Always recompute revenue wallets from the finalized transaction ledger.
+  reconcileRevenueWallets()
   if (collectionNeedsSeed('settlements')) {
     saveSettlements([])
   }
@@ -1331,4 +1394,8 @@ export function resetDemoData() {
   saveTransactions(getSeedTransactions())
   saveSettlements([])
   localStorage.setItem(STORAGE_KEYS.WALLET_LEDGER_VERSION, WALLET_LEDGER_VERSION)
+  localStorage.setItem(
+    STORAGE_KEYS.TRANSACTIONS_SEED_VERSION,
+    TRANSACTIONS_SEED_VERSION,
+  )
 }
