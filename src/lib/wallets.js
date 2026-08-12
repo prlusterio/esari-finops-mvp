@@ -172,6 +172,115 @@ export function buildSubFranchiseeWalletDirectory({
 }
 
 /**
+ * Builds wallet directory rows + KPI totals for a franchisee.
+ * Scope: own wallet + retailers under them (not the sub-franchisee upline).
+ */
+export function buildFranchiseeWalletDirectory({
+  organizationId,
+  organizations = [],
+  wallets = [],
+} = {}) {
+  const orgById = Object.fromEntries(organizations.map((org) => [org.id, org]))
+  const retailers = getChildOrganizations(
+    organizations,
+    organizationId,
+    'retailer',
+  ).sort((a, b) => a.name.localeCompare(b.name))
+
+  const networkIds = new Set([
+    organizationId,
+    ...retailers.map((org) => org.id),
+  ])
+
+  const operatingWallets = (wallets || []).filter(
+    (wallet) =>
+      wallet.walletType !== 'revenue' &&
+      networkIds.has(wallet.organizationId),
+  )
+
+  const rows = operatingWallets
+    .map((wallet) => {
+      const org = orgById[wallet.organizationId]
+      if (!org) return null
+
+      const parent = org.parentId ? orgById[org.parentId] : null
+      const minimumBalance = resolveMinimumBalance(wallet, org.type)
+      const availableBalance = roundMoney(Number(wallet.availableBalance) || 0)
+      const status = getWalletBalanceStatus(availableBalance, minimumBalance)
+
+      return {
+        id: wallet.id,
+        wallet,
+        organizationId: org.id,
+        ownerName: org.name,
+        ownerCode: org.code || '',
+        orgType: org.type,
+        typeLabel: TYPE_LABELS[org.type] || org.type,
+        parentName: parent?.name || '—',
+        availableBalance,
+        minimumBalance,
+        status,
+        canTransferTo: org.type === 'retailer',
+        isOwnWallet: org.id === organizationId,
+      }
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      const typeOrder = {
+        franchisee: 0,
+        retailer: 1,
+      }
+      const byType =
+        (typeOrder[a.orgType] ?? 9) - (typeOrder[b.orgType] ?? 9)
+      if (byType !== 0) return byType
+      return a.ownerName.localeCompare(b.ownerName)
+    })
+
+  const ownWallet =
+    rows.find((row) => row.isOwnWallet) ||
+    (() => {
+      const wallet = getOperatingWallet(wallets, organizationId)
+      if (!wallet) return null
+      const org = orgById[organizationId]
+      const minimumBalance = resolveMinimumBalance(wallet, org?.type)
+      const availableBalance = roundMoney(Number(wallet.availableBalance) || 0)
+      return {
+        availableBalance,
+        minimumBalance,
+        status: getWalletBalanceStatus(availableBalance, minimumBalance),
+      }
+    })()
+
+  const retailerRows = rows.filter((row) => row.orgType === 'retailer')
+
+  const sumBalance = (list) =>
+    roundMoney(list.reduce((sum, row) => sum + row.availableBalance, 0))
+
+  const lowBalanceCount = rows.filter(
+    (row) =>
+      row.status === WALLET_BALANCE_STATUS.LOW ||
+      row.status === WALLET_BALANCE_STATUS.ZERO,
+  ).length
+
+  return {
+    orgById,
+    rows,
+    franchisees: [],
+    retailers,
+    kpis: {
+      operatingBalance: ownWallet?.availableBalance ?? 0,
+      operatingStatus: ownWallet?.status || WALLET_BALANCE_STATUS.ZERO,
+      franchiseeTotal: 0,
+      franchiseeWalletCount: 0,
+      retailerTotal: sumBalance(retailerRows),
+      retailerWalletCount: retailerRows.length,
+      networkWalletCount: rows.length,
+      lowBalanceCount,
+    },
+  }
+}
+
+/**
  * Builds recent wallet activity from funding transfers for an organization.
  */
 export function buildWalletActivity({

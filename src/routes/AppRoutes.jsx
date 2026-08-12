@@ -53,7 +53,7 @@ export default function AppRoutes() {
           <Route
             element={
               <RoleRoute
-                roles={[ROLES.ADMIN, ROLES.FRANCHISEE, ROLES.RETAILER]}
+                roles={[ROLES.ADMIN, ROLES.RETAILER]}
                 path="/dashboard"
               />
             }
@@ -74,7 +74,7 @@ export default function AppRoutes() {
           <Route
             element={
               <RoleRoute
-                roles={[ROLES.SUBFRANCHISEE]}
+                roles={[ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE]}
                 path="/wallet-management"
               />
             }
@@ -87,10 +87,7 @@ export default function AppRoutes() {
 
           <Route
             element={
-              <RoleRoute
-                roles={[ROLES.FRANCHISEE, ROLES.RETAILER]}
-                path="/wallet"
-              />
+              <RoleRoute roles={[ROLES.RETAILER]} path="/wallet" />
             }
           >
             <Route path="/wallet" element={<WalletPage />} />
@@ -126,7 +123,14 @@ export default function AppRoutes() {
             <Route path="/transactions" element={<TransactionsPage />} />
           </Route>
 
-          <Route element={<RoleRoute roles={[ROLES.SUBFRANCHISEE]} path="/revenue" />}>
+          <Route
+            element={
+              <RoleRoute
+                roles={[ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE]}
+                path="/revenue"
+              />
+            }
+          >
             <Route path="/revenue" element={<RevenuePage />} />
           </Route>
 

@@ -9,11 +9,13 @@ import {
   Wallet,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { ROLES } from '@/lib/constants'
 import { formatCurrency } from '@/lib/currency'
 import { getFundingWorkspaceConfig } from '@/lib/funding'
 import { DEFAULT_PAGE_SIZE, paginateItems } from '@/lib/pagination'
 import { getHomePathForRole } from '@/lib/permissions'
 import {
+  buildFranchiseeWalletDirectory,
   buildSubFranchiseeWalletDirectory,
   buildWalletActivity,
   WALLET_BALANCE_STATUS,
@@ -87,6 +89,7 @@ function StatusBadge({ status }) {
 
 export default function WalletManagementPage() {
   const { user, dataVersion, bumpDataVersion } = useAuth()
+  const isFranchisee = user?.role === ROLES.FRANCHISEE
   const organizations = useMemo(() => getOrganizations(), [dataVersion])
   const wallets = useMemo(() => getWallets(), [dataVersion])
   const transfers = useMemo(() => getFundingTransfers(), [dataVersion])
@@ -101,15 +104,16 @@ export default function WalletManagementPage() {
     [user?.role, user?.organizationId, organizations],
   )
 
-  const directory = useMemo(
-    () =>
-      buildSubFranchiseeWalletDirectory({
-        organizationId: user?.organizationId,
-        organizations,
-        wallets,
-      }),
-    [user?.organizationId, organizations, wallets],
-  )
+  const directory = useMemo(() => {
+    const args = {
+      organizationId: user?.organizationId,
+      organizations,
+      wallets,
+    }
+    return isFranchisee
+      ? buildFranchiseeWalletDirectory(args)
+      : buildSubFranchiseeWalletDirectory(args)
+  }, [isFranchisee, user?.organizationId, organizations, wallets])
 
   const [lowOnly, setLowOnly] = useState(false)
   const [page, setPage] = useState(0)
@@ -178,14 +182,23 @@ export default function WalletManagementPage() {
     <div>
       <PageHeader
         title="Wallet Management"
-        description="Monitor and manage platform liquidity across your organizational hierarchy."
+        description={
+          isFranchisee
+            ? 'Monitor your operating wallet and manage liquidity for retailers under you.'
+            : 'Monitor and manage platform liquidity across your organizational hierarchy.'
+        }
         breadcrumbs={[
           { label: 'Home', href: getHomePathForRole(user?.role) },
           { label: 'Wallets' },
         ]}
       />
 
-      <div className="mb-4 grid gap-4 lg:grid-cols-4">
+      <div
+        className={cn(
+          'mb-4 grid gap-4',
+          isFranchisee ? 'lg:grid-cols-3' : 'lg:grid-cols-4',
+        )}
+      >
         <Card className="lg:col-span-1">
           <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
             <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -202,20 +215,22 @@ export default function WalletManagementPage() {
             </p>
           </CardContent>
         </Card>
-        <StatCard
-          title="Franchisee Total"
-          value={formatCurrency(directory.kpis.franchiseeTotal)}
-          description={`${directory.kpis.franchiseeWalletCount} wallet${directory.kpis.franchiseeWalletCount === 1 ? '' : 's'}`}
-          icon={Store}
-        />
+        {!isFranchisee ? (
+          <StatCard
+            title="Franchisee Total"
+            value={formatCurrency(directory.kpis.franchiseeTotal)}
+            description={`${directory.kpis.franchiseeWalletCount} wallet${directory.kpis.franchiseeWalletCount === 1 ? '' : 's'}`}
+            icon={Store}
+          />
+        ) : null}
         <StatCard
           title="Retailer Total"
           value={formatCurrency(directory.kpis.retailerTotal)}
           description={`${directory.kpis.retailerWalletCount} wallet${directory.kpis.retailerWalletCount === 1 ? '' : 's'}`}
-          icon={Users}
+          icon={isFranchisee ? Store : Users}
         />
         <StatCard
-          title="Network Wallets"
+          title={isFranchisee ? 'Managed Wallets' : 'Network Wallets'}
           value={directory.kpis.networkWalletCount}
           description={`${directory.kpis.lowBalanceCount} low / zero`}
           icon={Building2}
@@ -261,7 +276,9 @@ export default function WalletManagementPage() {
             <div className="px-4 py-12 text-center text-sm text-muted-foreground">
               {lowOnly
                 ? 'No low or zero balance wallets in your network.'
-                : 'No wallets found in your network.'}
+                : isFranchisee
+                  ? 'No wallets found for you or your retailers.'
+                  : 'No wallets found in your network.'}
             </div>
           ) : (
             <>

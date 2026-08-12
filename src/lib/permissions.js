@@ -24,7 +24,7 @@ export const NAV_ITEMS = [
     path: '/dashboard',
     icon: LayoutDashboard,
     roles: [ROLES.ADMIN, ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE, ROLES.RETAILER],
-    disabledRoles: [ROLES.SUBFRANCHISEE],
+    disabledRoles: [ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE],
   },
   {
     title: 'Organizations',
@@ -44,6 +44,7 @@ export const NAV_ITEMS = [
     path: '/retailers',
     icon: Store,
     roles: [ROLES.FRANCHISEE],
+    disabled: true,
   },
   {
     title: 'Wallets',
@@ -55,13 +56,13 @@ export const NAV_ITEMS = [
     title: 'Wallets',
     path: '/wallet-management',
     icon: Wallet,
-    roles: [ROLES.SUBFRANCHISEE],
+    roles: [ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE],
   },
   {
     title: 'Wallet',
     path: '/wallet',
     icon: Wallet,
-    roles: [ROLES.FRANCHISEE, ROLES.RETAILER],
+    roles: [ROLES.RETAILER],
   },
   {
     title: 'Token Credits',
@@ -91,7 +92,7 @@ export const NAV_ITEMS = [
     title: 'Revenue',
     path: '/revenue',
     icon: Banknote,
-    roles: [ROLES.SUBFRANCHISEE],
+    roles: [ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE],
   },
   {
     title: 'Commission Settings',

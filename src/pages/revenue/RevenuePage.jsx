@@ -65,7 +65,8 @@ function RevenueStatusBadge({ status }) {
 
 export default function RevenuePage() {
   const { user, dataVersion } = useAuth()
-  const isSubFranchisee = user?.role === ROLES.SUBFRANCHISEE
+  const canViewRevenue =
+    user?.role === ROLES.SUBFRANCHISEE || user?.role === ROLES.FRANCHISEE
 
   const organizations = useMemo(() => getOrganizations(), [dataVersion])
   const revenueSharing = useMemo(() => getRevenueSharing(), [dataVersion])
@@ -167,7 +168,7 @@ export default function RevenuePage() {
     setPage(0)
   }
 
-  if (!isSubFranchisee) {
+  if (!canViewRevenue) {
     return (
       <div>
         <PageHeader
@@ -343,7 +344,8 @@ export default function RevenuePage() {
                           <div className="font-semibold text-slate-900">
                             {entry.retailerName}
                           </div>
-                          {entry.franchiseeName ? (
+                          {user?.role === ROLES.SUBFRANCHISEE &&
+                          entry.franchiseeName ? (
                             <div className="text-xs text-slate-400">
                               {entry.franchiseeName}
                             </div>
