@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { FileUp, FileImage, Send, Wallet, X } from 'lucide-react'
+import { FileUp, FileImage, Info, Send, Wallet, X } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -174,26 +174,25 @@ export function DirectTransferSheet({
       return
     }
 
-    if (!proofFile) {
-      setError('Proof of payment / receipt is required.')
-      return
-    }
-
     setSubmitting(true)
 
     try {
-      const dataUrl = await readFileAsDataUrl(proofFile)
       const recipient = recipients.find((item) => item.id === recipientId)
+      let proofOfPayment = null
+      if (proofFile) {
+        const dataUrl = await readFileAsDataUrl(proofFile)
+        proofOfPayment = {
+          fileName: proofFile.name,
+          fileSize: formatFileSize(proofFile.size),
+          url: dataUrl,
+        }
+      }
       onConfirmIntent?.({
         fromOrganizationId: user.organizationId,
         toOrganizationId: recipientId,
         amount: numericAmount,
         notes: notes.trim(),
-        proofOfPayment: {
-          fileName: proofFile.name,
-          fileSize: formatFileSize(proofFile.size),
-          url: dataUrl,
-        },
+        proofOfPayment,
         recipientName: recipient?.name || 'Recipient',
         recipientLabel,
         balanceAfter: Number(availableBalance) - numericAmount,
@@ -269,8 +268,16 @@ export function DirectTransferSheet({
 
             <div className="space-y-2">
               <Label className="text-sm text-slate-700">
-                Proof of Payment / Receipt <span className="text-red-500">*</span>
+                Proof of Payment / Receipt{' '}
+                <span className="font-normal text-slate-400">(optional)</span>
               </Label>
+              <p className="flex gap-1.5 text-xs text-slate-500">
+                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-600" />
+                <span>
+                  You can skip uploading for now. Proof of payment will be
+                  required in the live app.
+                </span>
+              </p>
 
               {!proofFile ? (
                 <button
@@ -298,8 +305,8 @@ export function DirectTransferSheet({
                   <div className="text-sm font-semibold text-slate-800">
                     Upload transfer document
                   </div>
-                  <div className="mt-1 text-xs text-red-500">
-                    * Required for verification
+                  <div className="mt-1 text-xs text-slate-400">
+                    SVG, PNG, JPG, or PDF · up to 5MB
                   </div>
                 </button>
               ) : (

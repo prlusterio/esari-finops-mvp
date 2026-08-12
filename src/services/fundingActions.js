@@ -204,16 +204,13 @@ export function rejectFundingRequest(request, options = {}) {
  *   parentOrganizationId: string,
  *   amount: number,
  *   notes?: string,
- *   proofOfPayment: object,
+ *   proofOfPayment?: object | null,
  * }} payload
  */
 export function createFundingRequest(payload) {
   const numericAmount = Number(payload.amount)
   if (Number.isNaN(numericAmount) || numericAmount <= 0) {
     throw new Error('Enter a valid amount greater than 0.')
-  }
-  if (!payload.proofOfPayment) {
-    throw new Error('Proof of payment is required.')
   }
   if (!payload.organizationId || !payload.parentOrganizationId) {
     throw new Error('Organization details are required.')
@@ -229,7 +226,7 @@ export function createFundingRequest(payload) {
     amount: numericAmount,
     status: FUNDING_STATUS.PENDING,
     notes: String(payload.notes || '').trim(),
-    proofOfPayment: payload.proofOfPayment,
+    proofOfPayment: payload.proofOfPayment || undefined,
     createdAt: now,
     updatedAt: now,
   }

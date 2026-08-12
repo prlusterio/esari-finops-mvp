@@ -140,26 +140,25 @@ export function NewFundingRequestSheet({
       return
     }
 
-    if (!proofFile) {
-      setError('Proof of payment is required.')
-      return
-    }
-
     setSubmitting(true)
 
     try {
-      const dataUrl = await readFileAsDataUrl(proofFile)
+      let proofOfPayment = null
+      if (proofFile) {
+        const dataUrl = await readFileAsDataUrl(proofFile)
+        proofOfPayment = {
+          fileName: proofFile.name,
+          fileSize: formatFileSize(proofFile.size),
+          url: dataUrl,
+        }
+      }
       onConfirmIntent?.({
         organizationId: user.organizationId,
         requesterRole: user.role,
         parentOrganizationId,
         amount: numericAmount,
         notes: notes.trim(),
-        proofOfPayment: {
-          fileName: proofFile.name,
-          fileSize: formatFileSize(proofFile.size),
-          url: dataUrl,
-        },
+        proofOfPayment,
       })
       onOpenChange(false)
     } catch (submitError) {
@@ -212,8 +211,16 @@ export function NewFundingRequestSheet({
 
             <div className="space-y-2">
               <Label className="text-sm text-slate-700">
-                Proof of Payment <span className="text-red-500">*</span>
+                Proof of Payment{' '}
+                <span className="font-normal text-slate-400">(optional)</span>
               </Label>
+              <p className="flex gap-1.5 text-xs text-slate-500">
+                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-600" />
+                <span>
+                  You can skip uploading for now. Proof of payment will be
+                  required in the live app.
+                </span>
+              </p>
 
               {!proofFile ? (
                 <button
