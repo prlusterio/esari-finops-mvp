@@ -45,12 +45,12 @@ export default function RevenuePage() {
   const fundingRequests = useMemo(() => getFundingRequests(), [dataVersion])
   const transactions = useMemo(() => getTransactions(), [dataVersion])
 
-  const [dateRange, setDateRange] = useState('all')
+  const [dateRange, setDateRange] = useState('this_month')
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
   const [search, setSearch] = useState('')
   const [appliedFilters, setAppliedFilters] = useState({
-    dateRange: 'all',
+    dateRange: 'this_month',
     customDateRange: null,
     search: '',
   })
@@ -59,12 +59,12 @@ export default function RevenuePage() {
 
   useEffect(() => {
     setPage(0)
-    setDateRange('all')
+    setDateRange('this_month')
     setCustomFrom('')
     setCustomTo('')
     setSearch('')
     setAppliedFilters({
-      dateRange: 'all',
+      dateRange: 'this_month',
       customDateRange: null,
       search: '',
     })

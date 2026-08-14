@@ -217,7 +217,11 @@ export default function FundingWorkspacePage() {
       )
     }, 0)
     const creditsReleased = datasets.approved
-      .filter((request) => isReleasedStatus(request.status))
+      .filter(
+        (request) =>
+          isReleasedStatus(request.status) &&
+          request.parentOrganizationId === user?.organizationId,
+      )
       .reduce(
         (sum, request) =>
           sum + (Number(request.creditsReleased) || getRequestCredits(request)),
@@ -230,7 +234,7 @@ export default function FundingWorkspacePage() {
       pendingCredits,
       creditsReleased,
     }
-  }, [datasets])
+  }, [datasets, user?.organizationId])
 
   const myRequestDepositRate = useMemo(() => {
     return getDepositRate({

@@ -122,7 +122,7 @@ export default function WalletPage() {
         <StatCard
           title="Sale Margin"
           value={formatCurrency(view.kpis.saleMargin ?? view.kpis.revenueBalance)}
-          description="Customer payment minus credits consumed · see Revenue for detail"
+          description="Customer payment minus credits consumed (all-time) · filter by period on Revenue"
           icon={Banknote}
           accent="success"
         />

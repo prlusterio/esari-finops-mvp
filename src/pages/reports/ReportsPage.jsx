@@ -920,7 +920,7 @@ export default function ReportsPage() {
           <StatCard
             title="Cash Deposited"
             value={formatCurrency(kpis.cashDepositedTotal ?? 0)}
-            description={`Internet Credits proofs · ${periodLabel}`}
+            description={`All requests in period (incl. pending) · ${periodLabel}`}
             descriptionBelowTitle
             icon={Banknote}
           />
