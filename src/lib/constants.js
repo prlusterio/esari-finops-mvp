@@ -29,6 +29,10 @@ export const STORAGE_KEYS = {
   TRANSACTIONS_SEED_VERSION: 'esarisari_transactions_seed_version',
   /** One-time migrations for seeded commission settings */
   COMMISSION_SETTINGS_SEED_VERSION: 'esarisari_commission_settings_seed_version',
+  /** One-time migrations for internet credits funding request shape */
+  INTERNET_CREDITS_SEED_VERSION: 'esarisari_internet_credits_seed_version',
+  /** Deposit rate overrides per downline */
+  DEPOSIT_RATES: 'esarisari_deposit_rates',
 }
 
 /** Bump when operating wallet seed balances change and existing demos should realign once. */
@@ -39,6 +43,16 @@ export const TRANSACTIONS_SEED_VERSION = 'direct-admin-v1'
 
 /** Bump when seeded commission settings change and existing demos should refresh once. */
 export const COMMISSION_SETTINGS_SEED_VERSION = 'direct-admin-v1'
+
+/** Bump when internet-credits funding seeds change and existing demos should refresh once. */
+export const INTERNET_CREDITS_SEED_VERSION = 'internet-credits-retailer-v1'
+
+/** Default deposit rate (cash ÷ credit face) by hop. */
+export const CREDIT_DEPOSIT_RATES = {
+  ADMIN_TO_SUB: 0.6,
+  SUB_TO_FRANCHISEE: 0.7,
+  FRANCHISEE_TO_RETAILER: 0.8,
+}
 
 export const ORG_IDS = {
   PLATFORM: 'org-platform',
@@ -61,14 +75,18 @@ export const FUNDING_STATUS = {
   PENDING: 'pending',
   APPROVED: 'approved',
   COMPLETED: 'completed',
+  RELEASED: 'released',
   REJECTED: 'rejected',
+  REVERSED: 'reversed',
 }
 
 export const FUNDING_STATUS_LABELS = {
-  [FUNDING_STATUS.PENDING]: 'Pending Review',
+  [FUNDING_STATUS.PENDING]: 'Pending',
   [FUNDING_STATUS.APPROVED]: 'Approved',
   [FUNDING_STATUS.COMPLETED]: 'Completed',
+  [FUNDING_STATUS.RELEASED]: 'Released',
   [FUNDING_STATUS.REJECTED]: 'Rejected',
+  [FUNDING_STATUS.REVERSED]: 'Reversed',
 }
 
 export const TRANSACTION_STATUS = {

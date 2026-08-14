@@ -415,7 +415,7 @@ export function CommissionConfigDialog({
                 </span>
               </div>
               <div className="flex justify-between gap-3">
-                <span className="text-slate-500">Wallet Deduction</span>
+                <span className="text-slate-500">Credits Consumed</span>
                 <span className="font-medium text-red-600">
                   -{formatCurrency(preview.deduction)}
                 </span>

@@ -1,5 +1,6 @@
 import {
   FUNDING_STATUS,
+  INTERNET_CREDITS_SEED_VERSION,
   ORG_IDS,
   ROLES,
   STORAGE_KEYS,
@@ -9,6 +10,7 @@ import {
   WALLET_LEDGER_VERSION,
   ADMIN_DEMO_PASSWORD,
   DEMO_PASSWORD,
+  CREDIT_DEPOSIT_RATES,
 } from '@/lib/constants'
 import { sumCreditedShareForOrg } from '@/lib/revenue'
 import {
@@ -20,6 +22,7 @@ import { matchProductServiceToPayment } from '@/lib/transactions'
 import {
   collectionNeedsSeed,
   getCommissionSettings,
+  getDepositRates,
   getFundingRequests,
   getFundingTransfers,
   getOrganizations,
@@ -28,6 +31,7 @@ import {
   getUsers,
   getWallets,
   saveCommissionSettings,
+  saveDepositRates,
   saveFundingRequests,
   saveFundingTransfers,
   saveOrganizations,
@@ -636,6 +640,41 @@ export function getSeedCommissionSettings() {
   })
 }
 
+export function getSeedDepositRates() {
+  return [
+    {
+      id: 'dr-sub-001',
+      organizationId: ORG_IDS.SUB_001,
+      parentOrganizationId: ORG_IDS.PLATFORM,
+      hop: 'admin_to_sub',
+      depositRate: 0.58,
+      reason: 'Launch rate for primary Sub-Franchisee',
+      updatedAt: daysAgoAt(12, 11, 0),
+      updatedByUserId: 'user-admin',
+    },
+    {
+      id: 'dr-franchise-001',
+      organizationId: ORG_IDS.FRANCHISE_001,
+      parentOrganizationId: ORG_IDS.SUB_001,
+      hop: 'sub_to_franchisee',
+      depositRate: 0.72,
+      reason: 'Preferred franchisee volume rate',
+      updatedAt: daysAgoAt(8, 14, 0),
+      updatedByUserId: 'user-subfranchisee',
+    },
+    {
+      id: 'dr-retailer-001',
+      organizationId: ORG_IDS.RETAILER_001,
+      parentOrganizationId: ORG_IDS.FRANCHISE_001,
+      hop: 'franchisee_to_retailer',
+      depositRate: 0.78,
+      reason: 'Pilot retailer promo',
+      updatedAt: daysAgoAt(5, 9, 30),
+      updatedByUserId: 'user-franchisee',
+    },
+  ]
+}
+
 const DEFAULT_PROOF = {
   fileName: 'deposit_slip_oct24.jpg',
   fileSize: '1.2 MB',
@@ -658,12 +697,15 @@ export function getSeedFundingRequests() {
         organizationId: ORG_IDS.FRANCHISE_002,
         requesterRole: ROLES.FRANCHISEE,
         parentOrganizationId: ORG_IDS.SUB_001,
-        amount: 150000,
+        amount: 3500,
+        depositAmount: 3500,
+        depositRate: CREDIT_DEPOSIT_RATES.SUB_TO_FRANCHISEE,
+        suggestedCredits: 5000,
         status: FUNDING_STATUS.PENDING,
         createdAt: daysAgoAt(0, 10, 45),
         updatedAt: daysAgoAt(0, 10, 45),
       },
-      'Additional funds requested for the upcoming holiday season inventory restock. Transfer receipt attached.',
+      'Internet credits request — ₱3,500 deposit at 70% rate (suggested 5,000 credits).',
     ),
     withFundingDetails(
       {
@@ -671,12 +713,19 @@ export function getSeedFundingRequests() {
         organizationId: ORG_IDS.FRANCHISE_003,
         requesterRole: ROLES.FRANCHISEE,
         parentOrganizationId: ORG_IDS.SUB_001,
-        amount: 85000,
-        status: FUNDING_STATUS.PENDING,
+        amount: 14000,
+        depositAmount: 14000,
+        depositRate: CREDIT_DEPOSIT_RATES.SUB_TO_FRANCHISEE,
+        suggestedCredits: 20000,
+        creditsReleased: 20000,
+        paymentReferenceId: 'PAY-REF-1235',
+        releaseSource: 'balance',
+        status: FUNDING_STATUS.RELEASED,
+        approvedAt: daysAgoAt(1, 15, 0),
         createdAt: daysAgoAt(1, 14, 12),
-        updatedAt: daysAgoAt(1, 14, 12),
+        updatedAt: daysAgoAt(1, 15, 0),
       },
-      'Wallet top-up for weekend load and bills payment volume.',
+      'Released internet credits to franchisee at 70% deposit rate.',
     ),
     withFundingDetails(
       {
@@ -684,12 +733,15 @@ export function getSeedFundingRequests() {
         organizationId: ORG_IDS.FRANCHISE_004,
         requesterRole: ROLES.FRANCHISEE,
         parentOrganizationId: ORG_IDS.SUB_001,
-        amount: 210500,
+        amount: 7000,
+        depositAmount: 7000,
+        depositRate: CREDIT_DEPOSIT_RATES.SUB_TO_FRANCHISEE,
+        suggestedCredits: 10000,
         status: FUNDING_STATUS.PENDING,
         createdAt: daysAgoAt(2, 9, 30),
         updatedAt: daysAgoAt(2, 9, 30),
       },
-      'Urgent funding for distributor replenishment and float recovery.',
+      'Urgent internet credits for distributor replenishment.',
     ),
     withFundingDetails(
       {
@@ -817,12 +869,31 @@ export function getSeedFundingRequests() {
         organizationId: ORG_IDS.SUB_001,
         requesterRole: ROLES.SUBFRANCHISEE,
         parentOrganizationId: ORG_IDS.PLATFORM,
-        amount: 250000,
+        amount: 15000,
+        depositAmount: 15000,
+        depositRate: CREDIT_DEPOSIT_RATES.ADMIN_TO_SUB,
+        suggestedCredits: 25000,
         status: FUNDING_STATUS.PENDING,
         createdAt: daysAgoAt(1, 11, 0),
         updatedAt: daysAgoAt(1, 11, 0),
       },
-      'Requesting platform funding to cover pending franchisee replenishment.',
+      'Internet credits request — ₱15,000 deposit at 60% rate (suggested 25,000 credits).',
+    ),
+    withFundingDetails(
+      {
+        id: 'REQ-1500',
+        organizationId: ORG_IDS.SUB_001,
+        requesterRole: ROLES.SUBFRANCHISEE,
+        parentOrganizationId: ORG_IDS.PLATFORM,
+        amount: 30000,
+        depositAmount: 30000,
+        depositRate: CREDIT_DEPOSIT_RATES.ADMIN_TO_SUB,
+        suggestedCredits: 50000,
+        status: FUNDING_STATUS.PENDING,
+        createdAt: daysAgoAt(0, 9, 30),
+        updatedAt: daysAgoAt(0, 9, 30),
+      },
+      'Additional internet credits float for franchisee replenishment.',
     ),
     withFundingDetails(
       {
@@ -830,12 +901,19 @@ export function getSeedFundingRequests() {
         organizationId: ORG_IDS.SUB_001,
         requesterRole: ROLES.SUBFRANCHISEE,
         parentOrganizationId: ORG_IDS.PLATFORM,
-        amount: 175000,
-        status: FUNDING_STATUS.COMPLETED,
+        amount: 30000,
+        depositAmount: 30000,
+        depositRate: CREDIT_DEPOSIT_RATES.ADMIN_TO_SUB,
+        suggestedCredits: 50000,
+        creditsReleased: 50000,
+        paymentReferenceId: 'PAY-REF-1090',
+        releaseSource: 'mint',
+        status: FUNDING_STATUS.RELEASED,
+        approvedAt: daysAgoAt(11, 16, 0),
         createdAt: daysAgoAt(12, 10, 0),
         updatedAt: daysAgoAt(11, 16, 0),
       },
-      'Approved platform top-up for Northern Mindanao operations.',
+      'Released internet credits for Northern Mindanao operations.',
     ),
   ]
 
@@ -875,12 +953,15 @@ export function getSeedFundingRequests() {
         organizationId: ORG_IDS.RETAILER_001,
         requesterRole: ROLES.RETAILER,
         parentOrganizationId: ORG_IDS.FRANCHISE_001,
-        amount: 15000,
+        amount: 560,
+        depositAmount: 560,
+        depositRate: CREDIT_DEPOSIT_RATES.FRANCHISEE_TO_RETAILER,
+        suggestedCredits: 700,
         status: FUNDING_STATUS.PENDING,
         createdAt: daysAgoAt(0, 9, 15),
         updatedAt: daysAgoAt(0, 9, 15),
       },
-      'Retailer float top-up for weekend peak transactions.',
+      'Internet credits request — ₱560 deposit at 80% rate (suggested 700 credits).',
     ),
     withFundingDetails(
       {
@@ -888,12 +969,15 @@ export function getSeedFundingRequests() {
         organizationId: ORG_IDS.RETAILER_002,
         requesterRole: ROLES.RETAILER,
         parentOrganizationId: ORG_IDS.FRANCHISE_001,
-        amount: 8500,
+        amount: 800,
+        depositAmount: 800,
+        depositRate: CREDIT_DEPOSIT_RATES.FRANCHISEE_TO_RETAILER,
+        suggestedCredits: 1000,
         status: FUNDING_STATUS.PENDING,
         createdAt: daysAgoAt(1, 16, 40),
         updatedAt: daysAgoAt(1, 16, 40),
       },
-      'Urgent wallet replenishment after high load sales.',
+      'Internet credits replenishment after high load sales.',
     ),
     withFundingDetails(
       {
@@ -901,12 +985,19 @@ export function getSeedFundingRequests() {
         organizationId: ORG_IDS.RETAILER_001,
         requesterRole: ROLES.RETAILER,
         parentOrganizationId: ORG_IDS.FRANCHISE_001,
-        amount: 12000,
-        status: FUNDING_STATUS.PENDING,
+        amount: 1600,
+        depositAmount: 1600,
+        depositRate: CREDIT_DEPOSIT_RATES.FRANCHISEE_TO_RETAILER,
+        suggestedCredits: 2000,
+        creditsReleased: 2000,
+        paymentReferenceId: 'PAY-REF-1303',
+        releaseSource: 'balance',
+        status: FUNDING_STATUS.RELEASED,
+        approvedAt: daysAgoAt(2, 14, 0),
         createdAt: daysAgoAt(2, 13, 20),
-        updatedAt: daysAgoAt(2, 13, 20),
+        updatedAt: daysAgoAt(2, 14, 0),
       },
-      'Additional funds for bills payment service coverage.',
+      'Released internet credits to retailer at 80% deposit rate.',
     ),
   ]
 
@@ -917,12 +1008,15 @@ export function getSeedFundingRequests() {
         organizationId: ORG_IDS.FRANCHISE_001,
         requesterRole: ROLES.FRANCHISEE,
         parentOrganizationId: ORG_IDS.SUB_001,
-        amount: 75000,
+        amount: 14000,
+        depositAmount: 14000,
+        depositRate: CREDIT_DEPOSIT_RATES.SUB_TO_FRANCHISEE,
+        suggestedCredits: 20000,
         status: FUNDING_STATUS.PENDING,
         createdAt: daysAgoAt(4, 11, 0),
         updatedAt: daysAgoAt(4, 11, 0),
       },
-      'CDO Franchisee requesting float to support retailer network.',
+      'Franchisee requesting internet credits from Sub at 70% deposit rate.',
     ),
   ]
 
@@ -933,12 +1027,19 @@ export function getSeedFundingRequests() {
         organizationId: ORG_IDS.RETAILER_001,
         requesterRole: ROLES.RETAILER,
         parentOrganizationId: ORG_IDS.FRANCHISE_001,
-        amount: 10000,
-        status: FUNDING_STATUS.COMPLETED,
+        amount: 800,
+        depositAmount: 800,
+        depositRate: CREDIT_DEPOSIT_RATES.FRANCHISEE_TO_RETAILER,
+        suggestedCredits: 1000,
+        creditsReleased: 1000,
+        paymentReferenceId: 'PAY-REF-1050',
+        releaseSource: 'balance',
+        status: FUNDING_STATUS.RELEASED,
+        approvedAt: daysAgoAt(14, 14, 0),
         createdAt: daysAgoAt(15, 10, 0),
         updatedAt: daysAgoAt(14, 14, 0),
       },
-      'Completed retailer funding for prior week operations.',
+      'Released retailer internet credits for prior week operations.',
     ),
   ]
 
@@ -968,9 +1069,12 @@ export function getSeedFundingTransfers() {
       id: 'TRF-5002',
       fromOrganizationId: ORG_IDS.PLATFORM,
       toOrganizationId: ORG_IDS.SUB_001,
-      amount: 175000,
+      amount: 50000,
       status: FUNDING_STATUS.COMPLETED,
       fundingRequestId: 'REQ-1090',
+      paymentReferenceId: 'PAY-REF-1090',
+      transferKind: 'internet_credit_mint',
+      notes: 'Internet credit release',
       createdAt: daysAgoAt(11, 16, 0),
       updatedAt: daysAgoAt(11, 16, 0),
     },
@@ -978,9 +1082,12 @@ export function getSeedFundingTransfers() {
       id: 'TRF-5003',
       fromOrganizationId: ORG_IDS.FRANCHISE_001,
       toOrganizationId: ORG_IDS.RETAILER_001,
-      amount: 10000,
+      amount: 1000,
       status: FUNDING_STATUS.COMPLETED,
       fundingRequestId: 'REQ-1050',
+      paymentReferenceId: 'PAY-REF-1050',
+      transferKind: 'internet_credit_transfer',
+      notes: 'Internet credit release',
       createdAt: daysAgoAt(14, 14, 0),
       updatedAt: daysAgoAt(14, 14, 0),
     },
@@ -1372,16 +1479,30 @@ export function initializeMockData() {
   }
   if (collectionNeedsSeed('fundingRequests') || isEmptyCollection('fundingRequests')) {
     saveFundingRequests(getSeedFundingRequests())
+    localStorage.setItem(
+      STORAGE_KEYS.INTERNET_CREDITS_SEED_VERSION,
+      INTERNET_CREDITS_SEED_VERSION,
+    )
   } else {
     const existing = getFundingRequests()
     const seedRequests = getSeedFundingRequests()
     const byId = new Map(existing.map((request) => [request.id, request]))
     let changed = false
+    const appliedCreditsVersion = localStorage.getItem(
+      STORAGE_KEYS.INTERNET_CREDITS_SEED_VERSION,
+    )
+    const shouldRealignInternetCredits =
+      appliedCreditsVersion !== INTERNET_CREDITS_SEED_VERSION
 
     seedRequests.forEach((seed) => {
       const current = byId.get(seed.id)
       if (!current) {
         byId.set(seed.id, seed)
+        changed = true
+        return
+      }
+      if (shouldRealignInternetCredits) {
+        byId.set(seed.id, { ...current, ...seed })
         changed = true
         return
       }
@@ -1397,6 +1518,24 @@ export function initializeMockData() {
 
     if (changed) {
       saveFundingRequests(Array.from(byId.values()))
+    }
+    if (shouldRealignInternetCredits) {
+      const existingTransfers = getFundingTransfers()
+      const seedTransfers = getSeedFundingTransfers()
+      const transferById = new Map(
+        existingTransfers.map((transfer) => [transfer.id, transfer]),
+      )
+      seedTransfers.forEach((seedTransfer) => {
+        transferById.set(seedTransfer.id, {
+          ...(transferById.get(seedTransfer.id) || {}),
+          ...seedTransfer,
+        })
+      })
+      saveFundingTransfers(Array.from(transferById.values()))
+      localStorage.setItem(
+        STORAGE_KEYS.INTERNET_CREDITS_SEED_VERSION,
+        INTERNET_CREDITS_SEED_VERSION,
+      )
     }
   }
   if (collectionNeedsSeed('fundingTransfers') || isEmptyCollection('fundingTransfers')) {
@@ -1493,6 +1632,11 @@ export function initializeMockData() {
       saveCommissionSettings(Array.from(byId.values()))
     }
   }
+
+  if (collectionNeedsSeed('depositRates') || getDepositRates().length === 0) {
+    saveDepositRates(getSeedDepositRates())
+  }
+
   if (
     collectionNeedsSeed('transactions') ||
     isEmptyCollection('transactions') ||
@@ -1615,5 +1759,9 @@ export function resetDemoData() {
   localStorage.setItem(
     STORAGE_KEYS.COMMISSION_SETTINGS_SEED_VERSION,
     COMMISSION_SETTINGS_SEED_VERSION,
+  )
+  localStorage.setItem(
+    STORAGE_KEYS.INTERNET_CREDITS_SEED_VERSION,
+    INTERNET_CREDITS_SEED_VERSION,
   )
 }

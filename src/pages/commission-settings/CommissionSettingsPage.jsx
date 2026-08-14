@@ -307,8 +307,8 @@ export default function CommissionSettingsPage() {
         title="Commission Settings"
         description={
           isAdmin
-            ? 'Set retailer and franchisee commission shares across sub-franchisees, franchisees, and retailers.'
-            : 'Set retailer and franchisee commission shares for your downlines.'
+            ? 'Set retailer and franchisee transaction commission shares across the network. These % splits are separate from Internet Credits deposit rates (60/70/80).'
+            : 'Set retailer and franchisee transaction commission shares for your downlines. These % splits are separate from Internet Credits deposit rates.'
         }
         breadcrumbs={[
           { label: 'Home', href: getHomePathForRole(user?.role) },

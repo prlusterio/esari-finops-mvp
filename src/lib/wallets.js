@@ -1,6 +1,9 @@
 import { ROLE_LABELS, ROLES } from '@/lib/constants'
 import { getChildOrganizations } from '@/lib/funding'
-import { resolveCreditedRevenueBalance } from '@/lib/revenue'
+import {
+  buildRetailerMarginEntries,
+  sumCreditEconomyField,
+} from '@/lib/creditEconomics'
 import { getOperatingWallet } from '@/services/fundingActions'
 
 export const WALLET_BALANCE_STATUS = {
@@ -417,9 +420,9 @@ export function buildRetailerWalletView({
   wallets = [],
   transfers = [],
   transactions = [],
-  revenueSharing = [],
   role = ROLES.RETAILER,
 } = {}) {
+  void role
   const orgById = Object.fromEntries(organizations.map((org) => [org.id, org]))
   const org = orgById[organizationId] || null
   const parent = org?.parentId ? orgById[org.parentId] : null
@@ -440,12 +443,12 @@ export function buildRetailerWalletView({
   const revenueWallet =
     orgWallets.find((wallet) => wallet.walletType === 'revenue') || null
 
-  const creditedRevenue = resolveCreditedRevenueBalance({
-    role,
-    organizationId,
+  const marginEntries = buildRetailerMarginEntries({
     transactions,
-    revenueSharing,
+    organizationId,
+    dateRange: 'all',
   })
+  const saleMarginTotal = sumCreditEconomyField(marginEntries, 'margin')
 
   const toRow = (wallet, typeLabel) => {
     if (!wallet) return null
@@ -469,7 +472,7 @@ export function buildRetailerWalletView({
     }
   }
 
-  const operating = toRow(operatingWallet, 'Operating')
+  const operating = toRow(operatingWallet, 'Available Credits')
   const revenue = toRow(revenueWallet, 'Revenue')
 
   return {
@@ -488,16 +491,17 @@ export function buildRetailerWalletView({
     kpis: {
       operatingBalance: operating?.availableBalance ?? 0,
       operatingStatus: operating?.status || WALLET_BALANCE_STATUS.ZERO,
-      // Same formula as Revenue page Credited Revenue.
-      revenueBalance: creditedRevenue,
+      // Same formula as Revenue page (sale margin).
+      saleMargin: saleMarginTotal,
+      revenueBalance: saleMarginTotal,
       minimumBalance: operating?.minimumBalance ?? 0,
     },
   }
 }
 
 /**
- * Builds recent wallet activity from funding transfers for an organization.
- * Always includes Opening Balance so Recent Activity reconciles to Available Balance:
+ * Builds recent wallet activity from credit releases for an organization.
+ * Always includes Opening Credits so Recent Activity reconciles to Available Credits:
  * opening + credits − debits = available.
  */
 export function buildWalletActivity({
@@ -543,7 +547,7 @@ export function buildWalletActivity({
       id: transfer.id,
       createdAt: transfer.createdAt,
       reference: transfer.id,
-      typeLabel: isCredit ? 'Funding Received' : 'Funding Transferred',
+      typeLabel: isCredit ? 'Credits Received' : 'Credits Released',
       direction: isCredit ? 'credit' : 'debit',
       amount: Number(transfer.amount) || 0,
       counterpartyName: orgById[counterpartyId]?.name || counterpartyId || '—',
@@ -568,10 +572,10 @@ export function buildWalletActivity({
       id: `opening-${organizationId}`,
       createdAt: resolvedOpeningAt,
       reference: 'OPENING',
-      typeLabel: 'Opening Balance',
+      typeLabel: 'Opening Credits',
       direction: 'credit',
       amount: opening,
-      counterpartyName: 'Initial float',
+      counterpartyName: 'Initial inventory',
     })
   }
 

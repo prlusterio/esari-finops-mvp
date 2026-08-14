@@ -14,6 +14,15 @@ import {
   getFundingDatasets,
   getFundingWorkspaceConfig,
 } from '@/lib/funding'
+import {
+  buildSuggestedCreditsCopy,
+  findDuplicatePaymentReference,
+  getDepositRate,
+  getRequestCredits,
+  getRequestDepositAmount,
+  isReleasedStatus,
+  suggestCredits,
+} from '@/lib/internetCredits'
 import { DEFAULT_PAGE_SIZE, paginateItems } from '@/lib/pagination'
 import { getHomePathForRole } from '@/lib/permissions'
 import {
@@ -21,6 +30,8 @@ import {
   createFundingRequest,
   executeWalletTransfer,
   rejectFundingRequest,
+  releaseInternetCredits,
+  reverseInternetCredits,
 } from '@/services/fundingActions'
 import {
   getFundingRequests,
@@ -53,8 +64,11 @@ import {
 } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 
-function sumAmounts(items) {
-  return items.reduce((total, item) => total + (Number(item.amount) || 0), 0)
+function sumDeposits(items) {
+  return items.reduce(
+    (total, item) => total + getRequestDepositAmount(item),
+    0,
+  )
 }
 
 function FundingMetricCard({ label, value, icon: Icon, valueClassName, iconClassName }) {
@@ -124,6 +138,11 @@ export default function FundingWorkspacePage() {
     [user?.role, user?.organizationId, organizations],
   )
 
+  const internetCredits = config.mode === 'internetCredits'
+  const releaseSource = config.releaseSource === 'balance' ? 'balance' : 'mint'
+  const showTransfersTab = config.showTransfersTab !== false
+  const showApprovedTab = config.showApprovedTab !== false
+
   const [tab, setTab] = useState(config.defaultTab)
   const [pageByTab, setPageByTab] = useState({
     incoming: 0,
@@ -140,6 +159,8 @@ export default function FundingWorkspacePage() {
   const [actionBusy, setActionBusy] = useState(false)
   const [actionError, setActionError] = useState('')
   const [rejectReason, setRejectReason] = useState('')
+  const [paymentReferenceId, setPaymentReferenceId] = useState('')
+  const [creditsToRelease, setCreditsToRelease] = useState('')
 
   useEffect(() => {
     setTab(config.defaultTab)
@@ -178,16 +199,53 @@ export default function FundingWorkspacePage() {
   )
 
   const summaryMetrics = useMemo(() => {
-    const pendingIncomingAmount = sumAmounts(datasets.incoming)
-    const myPendingAmount = sumAmounts(
+    const pendingIncomingAmount = sumDeposits(datasets.incoming)
+    const myPendingAmount = sumDeposits(
       datasets.mine.filter((request) => request.status === FUNDING_STATUS.PENDING),
     )
+    const pendingCredits = datasets.incoming.reduce((sum, request) => {
+      const rate =
+        Number(request.depositRate) ||
+        getDepositRate({
+          organizationId: request.organizationId,
+          requesterRole: request.requesterRole,
+        })
+      return (
+        sum +
+        (Number(request.suggestedCredits) ||
+          suggestCredits(getRequestDepositAmount(request), rate))
+      )
+    }, 0)
+    const creditsReleased = datasets.approved
+      .filter((request) => isReleasedStatus(request.status))
+      .reduce(
+        (sum, request) =>
+          sum + (Number(request.creditsReleased) || getRequestCredits(request)),
+        0,
+      )
 
     return {
       pendingIncomingAmount,
       myPendingAmount,
+      pendingCredits,
+      creditsReleased,
     }
   }, [datasets])
+
+  const myRequestDepositRate = useMemo(() => {
+    return getDepositRate({
+      organizationId: user?.organizationId,
+      parentOrganizationId: config.newRequestParentId,
+      hop: config.myRequestHop,
+      requesterRole: user?.role,
+    })
+  }, [
+    config.myRequestHop,
+    config.newRequestParentId,
+    user?.organizationId,
+    user?.role,
+    dataVersion,
+  ])
 
   const openRequestDialog = (request, mode) => {
     setSelectedRequest(request)
@@ -201,6 +259,22 @@ export default function FundingWorkspacePage() {
   const openConfirm = (action) => {
     setActionError('')
     setRejectReason('')
+    setPaymentReferenceId('')
+    if (action.type === 'approve' && internetCredits) {
+      const deposit = getRequestDepositAmount(action.request)
+      const rate =
+        Number(action.request.depositRate) ||
+        getDepositRate({
+          organizationId: action.request.organizationId,
+          requesterRole: action.request.requesterRole,
+        })
+      const suggested =
+        Number(action.request.suggestedCredits) ||
+        suggestCredits(deposit, rate)
+      setCreditsToRelease(String(suggested))
+    } else {
+      setCreditsToRelease('')
+    }
     setConfirmAction(action)
   }
 
@@ -209,11 +283,27 @@ export default function FundingWorkspacePage() {
     setConfirmAction(null)
     setActionError('')
     setRejectReason('')
+    setPaymentReferenceId('')
+    setCreditsToRelease('')
   }
 
   const showSuccess = (payload) => {
     setSuccessAction(payload)
   }
+
+  const duplicatePaymentWarning = useMemo(() => {
+    if (!confirmAction || confirmAction.type !== 'approve' || !internetCredits) {
+      return ''
+    }
+    const duplicate = findDuplicatePaymentReference(
+      getFundingRequests(),
+      paymentReferenceId,
+      confirmAction.request?.id,
+    )
+    return duplicate
+      ? `Soft warning: this payment reference was already used on ${duplicate.id}.`
+      : ''
+  }, [confirmAction, internetCredits, paymentReferenceId])
 
   const handleConfirmAction = () => {
     if (!confirmAction) return
@@ -222,36 +312,98 @@ export default function FundingWorkspacePage() {
 
     try {
       if (confirmAction.type === 'approve') {
-        const result = approveAndTransferFundingRequest(
-          confirmAction.request,
-          user.organizationId,
-        )
-        setConfirmAction(null)
-        bumpDataVersion()
-        setTab('transfers')
-        setPageByTab((prev) => ({ ...prev, transfers: 0, incoming: 0 }))
-        showSuccess({
-          title: 'Transfer completed',
-          message: 'The funding request was approved and funds were transferred.',
-          details: [
-            { label: 'Request', value: result.request.id },
-            { label: 'Transfer', value: result.transfer.id },
-            { label: 'Amount', value: formatCurrency(result.transfer.amount) },
-          ],
-        })
+        if (internetCredits) {
+          const result = releaseInternetCredits(confirmAction.request, {
+            actorOrganizationId: user.organizationId,
+            actorUserId: user.id,
+            paymentReferenceId,
+            creditsToRelease: Number(creditsToRelease),
+            source: releaseSource,
+          })
+          setConfirmAction(null)
+          bumpDataVersion()
+          if (showApprovedTab) setTab('approved')
+          else setTab(config.showIncoming ? 'incoming' : 'mine')
+          setPageByTab((prev) => ({ ...prev, approved: 0, incoming: 0 }))
+          showSuccess({
+            title: 'Credits released',
+            message: result.duplicatePaymentReference
+              ? `Credits released. Note: payment reference was also used on ${result.duplicatePaymentReference.id}.`
+              : 'Internet credits were released successfully.',
+            details: [
+              { label: 'Request', value: result.request.id },
+              {
+                label: 'Credits released',
+                value: formatCurrency(result.request.creditsReleased),
+              },
+              {
+                label: 'Payment reference',
+                value: result.request.paymentReferenceId,
+              },
+            ],
+          })
+        } else {
+          const result = approveAndTransferFundingRequest(
+            confirmAction.request,
+            user.organizationId,
+          )
+          setConfirmAction(null)
+          bumpDataVersion()
+          setTab(showTransfersTab ? 'transfers' : 'approved')
+          setPageByTab((prev) => ({ ...prev, transfers: 0, incoming: 0 }))
+          showSuccess({
+            title: 'Transfer completed',
+            message:
+              'The funding request was approved and funds were transferred.',
+            details: [
+              { label: 'Request', value: result.request.id },
+              { label: 'Transfer', value: result.transfer.id },
+              { label: 'Amount', value: formatCurrency(result.transfer.amount) },
+            ],
+          })
+        }
       } else if (confirmAction.type === 'reject') {
         const result = rejectFundingRequest(confirmAction.request, {
           reason: rejectReason,
+          requireReason: internetCredits,
         })
         setConfirmAction(null)
         bumpDataVersion()
         setPageByTab((prev) => ({ ...prev, incoming: 0 }))
         showSuccess({
           title: 'Request rejected',
-          message: 'The funding request was rejected and the requester can see the updated status.',
+          message:
+            'The request was rejected and the requester can see the updated status.',
           details: [
             { label: 'Request', value: result.request.id },
-            { label: 'Amount', value: formatCurrency(result.request.amount) },
+            {
+              label: 'Deposit',
+              value: formatCurrency(getRequestDepositAmount(result.request)),
+            },
+          ],
+        })
+      } else if (confirmAction.type === 'reverse') {
+        const result = reverseInternetCredits(confirmAction.request, {
+          actorOrganizationId: user.organizationId,
+          reason: rejectReason,
+        })
+        setConfirmAction(null)
+        bumpDataVersion()
+        showSuccess({
+          title: 'Credits reversed',
+          message:
+            releaseSource === 'balance'
+              ? 'Credits were clawed back and restored to your Available Credits.'
+              : 'Released credits were clawed back from the requester.',
+          details: [
+            { label: 'Request', value: result.request.id },
+            {
+              label: 'Credits',
+              value: formatCurrency(
+                Number(result.request.creditsReleased) ||
+                  getRequestCredits(result.request),
+              ),
+            },
           ],
         })
       } else if (confirmAction.type === 'new-request') {
@@ -262,10 +414,23 @@ export default function FundingWorkspacePage() {
         setPageByTab((prev) => ({ ...prev, mine: 0 }))
         showSuccess({
           title: 'Request submitted',
-          message: 'Your funding request is pending review by your parent organization.',
+          message: internetCredits
+            ? 'Your credits request is pending review by your upline.'
+            : 'Your funding request is pending review by your parent organization.',
           details: [
             { label: 'Request', value: result.request.id },
-            { label: 'Amount', value: formatCurrency(result.request.amount) },
+            {
+              label: 'Deposit',
+              value: formatCurrency(result.request.depositAmount || result.request.amount),
+            },
+            ...(internetCredits
+              ? [
+                  {
+                    label: 'Suggested credits',
+                    value: formatCurrency(result.request.suggestedCredits),
+                  },
+                ]
+              : []),
           ],
         })
       } else if (confirmAction.type === 'direct-transfer') {
@@ -299,11 +464,56 @@ export default function FundingWorkspacePage() {
         confirmLabel: 'Confirm',
         confirmVariant: 'default',
         reasonEnabled: false,
+        creditFieldsEnabled: false,
+        creditsHint: '',
       }
     }
 
     if (confirmAction.type === 'approve') {
       const org = orgById[confirmAction.request.organizationId]
+      const deposit = getRequestDepositAmount(confirmAction.request)
+      const rate =
+        Number(confirmAction.request.depositRate) ||
+        getDepositRate({
+          organizationId: confirmAction.request.organizationId,
+          requesterRole: confirmAction.request.requesterRole,
+        })
+      const suggested =
+        Number(confirmAction.request.suggestedCredits) ||
+        suggestCredits(deposit, rate)
+      const creditsValue = Number(creditsToRelease) || suggested
+      const copy = buildSuggestedCreditsCopy({
+        depositAmount: deposit,
+        depositRate: rate,
+        credits: suggested,
+      })
+
+      if (internetCredits) {
+        return {
+          title: 'Confirm approve & release',
+          description:
+            releaseSource === 'balance'
+              ? 'This will debit your Available Credits and credit the requester.'
+              : 'This will mint internet credits to the requester (no Admin wallet debit).',
+          rows: buildAmountConfirmRows({
+            amount: deposit,
+            balanceAfter:
+              releaseSource === 'balance'
+                ? Number(walletBalance) - creditsValue
+                : undefined,
+            counterpartyLabel: 'Requester',
+            counterpartyName: org?.name || confirmAction.request.organizationId,
+            amountLabel: 'Deposit',
+            balanceLabel: 'Available Credits after',
+          }),
+          confirmLabel: 'Approve & Release',
+          confirmVariant: 'default',
+          reasonEnabled: false,
+          creditFieldsEnabled: true,
+          creditsHint: copy.formula,
+        }
+      }
+
       return {
         title: 'Confirm approve & transfer',
         description:
@@ -318,6 +528,8 @@ export default function FundingWorkspacePage() {
         confirmLabel: 'Approve & Transfer',
         confirmVariant: 'default',
         reasonEnabled: false,
+        creditFieldsEnabled: false,
+        creditsHint: '',
       }
     }
 
@@ -327,26 +539,56 @@ export default function FundingWorkspacePage() {
         title: 'Confirm rejection',
         description: 'The requester will see this request as rejected.',
         rows: buildAmountConfirmRows({
-          amount: confirmAction.request.amount,
+          amount: getRequestDepositAmount(confirmAction.request),
           counterpartyLabel: 'Requester',
           counterpartyName: org?.name || confirmAction.request.organizationId,
+          amountLabel: internetCredits ? 'Deposit' : 'Amount',
         }),
         confirmLabel: 'Reject Request',
         confirmVariant: 'destructive',
         reasonEnabled: true,
+        creditFieldsEnabled: false,
+        creditsHint: '',
+      }
+    }
+
+    if (confirmAction.type === 'reverse') {
+      const org = orgById[confirmAction.request.organizationId]
+      return {
+        title: 'Confirm reverse credits',
+        description:
+          releaseSource === 'balance'
+            ? 'Credits will be clawed back from the requester and restored to you.'
+            : 'Credits will be clawed back from the requester.',
+        rows: buildAmountConfirmRows({
+          amount:
+            Number(confirmAction.request.creditsReleased) ||
+            getRequestCredits(confirmAction.request),
+          counterpartyLabel: 'Requester',
+          counterpartyName: org?.name || confirmAction.request.organizationId,
+          amountLabel: 'Credits',
+        }),
+        confirmLabel: 'Reverse Credits',
+        confirmVariant: 'destructive',
+        reasonEnabled: true,
+        creditFieldsEnabled: false,
+        creditsHint: '',
       }
     }
 
     if (confirmAction.type === 'new-request') {
       return {
-        title: 'Confirm funding request',
+        title: internetCredits ? 'Confirm credits request' : 'Confirm funding request',
         description: 'Submit this request for parent organization review.',
         rows: buildAmountConfirmRows({
           amount: confirmAction.payload.amount,
+          amountLabel: internetCredits ? 'Deposit' : 'Amount',
         }),
         confirmLabel: 'Submit Request',
         confirmVariant: 'default',
         reasonEnabled: false,
+        creditFieldsEnabled: false,
+        creditsHint: '',
       }
     }
 
@@ -363,8 +605,17 @@ export default function FundingWorkspacePage() {
       confirmLabel: 'Confirm Transfer',
       confirmVariant: 'default',
       reasonEnabled: false,
+      creditFieldsEnabled: false,
+      creditsHint: '',
     }
-  }, [confirmAction, orgById, walletBalance])
+  }, [
+    confirmAction,
+    creditsToRelease,
+    internetCredits,
+    orgById,
+    releaseSource,
+    walletBalance,
+  ])
 
   const setPage = (key, value) => {
     setPageByTab((prev) => ({ ...prev, [key]: value }))
@@ -391,6 +642,15 @@ export default function FundingWorkspacePage() {
     DEFAULT_PAGE_SIZE,
   ).items
 
+  const metricCols =
+    internetCredits && config.showIncoming
+      ? config.showMine
+        ? 'sm:grid-cols-2 xl:grid-cols-4'
+        : 'sm:grid-cols-2 xl:grid-cols-3'
+      : config.showIncoming && config.showMine
+        ? 'sm:grid-cols-2 xl:grid-cols-3'
+        : 'sm:grid-cols-2'
+
   const headerActions = (
     <>
       {config.showDirectTransfer ? (
@@ -411,7 +671,7 @@ export default function FundingWorkspacePage() {
           onClick={() => setNewRequestOpen(true)}
         >
           <Plus className="h-4 w-4" />
-          New Funding Request
+          {internetCredits ? 'New Credits Request' : 'New Funding Request'}
         </Button>
       ) : null}
     </>
@@ -429,20 +689,21 @@ export default function FundingWorkspacePage() {
         actions={headerActions}
       />
 
-      <div
-        className={cn(
-          'mb-4 grid gap-4',
-          config.showIncoming && config.showMine
-            ? 'sm:grid-cols-2 xl:grid-cols-3'
-            : 'sm:grid-cols-2',
-        )}
-      >
+      <div className={cn('mb-4 grid gap-4', metricCols)}>
         {config.showIncoming ? (
           <FundingMetricCard
-            label="Pending Incoming"
+            label={internetCredits ? 'Pending Deposits' : 'Pending Incoming'}
             value={formatCurrency(summaryMetrics.pendingIncomingAmount)}
             icon={TrendingUp}
             iconClassName="bg-emerald-50 text-emerald-600"
+          />
+        ) : null}
+        {internetCredits && config.showIncoming ? (
+          <FundingMetricCard
+            label="Pending Credits"
+            value={formatCurrency(summaryMetrics.pendingCredits)}
+            icon={Clock3}
+            iconClassName="bg-amber-50 text-amber-700"
           />
         ) : null}
         {config.showMine ? (
@@ -454,7 +715,7 @@ export default function FundingWorkspacePage() {
           />
         ) : null}
         <FundingMetricCard
-          label="Available Balance"
+          label={internetCredits ? 'Available Credits' : 'Available Balance'}
           value={formatCurrency(walletBalance)}
           icon={Landmark}
           valueClassName="text-blue-600"
@@ -465,13 +726,23 @@ export default function FundingWorkspacePage() {
       <Tabs value={tab} onValueChange={setTab} className="space-y-4">
         <TabsList className="w-full justify-start overflow-x-auto">
           {config.showIncoming ? (
-            <TabsTrigger value="incoming">Incoming Requests</TabsTrigger>
+            <TabsTrigger value="incoming">
+              {config.incomingTabLabel || 'Incoming Requests'}
+            </TabsTrigger>
           ) : null}
           {config.showMine ? (
-            <TabsTrigger value="mine">My Requests</TabsTrigger>
+            <TabsTrigger value="mine">
+              {config.mineTabLabel || 'My Requests'}
+            </TabsTrigger>
           ) : null}
-          <TabsTrigger value="approved">Approved / Completed</TabsTrigger>
-          <TabsTrigger value="transfers">Transfer History</TabsTrigger>
+          {showApprovedTab ? (
+            <TabsTrigger value="approved">
+              {internetCredits ? 'Released / History' : 'Approved / Completed'}
+            </TabsTrigger>
+          ) : null}
+          {showTransfersTab ? (
+            <TabsTrigger value="transfers">Transfer History</TabsTrigger>
+          ) : null}
         </TabsList>
 
         {config.showIncoming ? (
@@ -479,7 +750,13 @@ export default function FundingWorkspacePage() {
             <Card className="overflow-hidden shadow-sm">
               <CardContent className="p-0">
                 {datasets.incoming.length === 0 ? (
-                  <EmptyState message="No incoming funding requests at the moment." />
+                  <EmptyState
+                    message={
+                      internetCredits
+                        ? 'No incoming credits requests at the moment.'
+                        : 'No incoming funding requests at the moment.'
+                    }
+                  />
                 ) : (
                   <>
                     <Table>
@@ -488,7 +765,12 @@ export default function FundingWorkspacePage() {
                           <TableHead>Request ID</TableHead>
                           <TableHead>Date</TableHead>
                           <TableHead>{config.incomingColumnLabel}</TableHead>
-                          <TableHead>Amount (PHP)</TableHead>
+                          <TableHead>
+                            {internetCredits ? 'Deposit (PHP)' : 'Amount (PHP)'}
+                          </TableHead>
+                          {internetCredits ? (
+                            <TableHead>Credits</TableHead>
+                          ) : null}
                           <TableHead>Status</TableHead>
                           <TableHead>Action</TableHead>
                         </TableRow>
@@ -508,8 +790,13 @@ export default function FundingWorkspacePage() {
                               />
                             </TableCell>
                             <TableCell className="font-semibold text-foreground">
-                              {formatCurrency(request.amount)}
+                              {formatCurrency(getRequestDepositAmount(request))}
                             </TableCell>
+                            {internetCredits ? (
+                              <TableCell className="font-semibold">
+                                {formatCurrency(0)}
+                              </TableCell>
+                            ) : null}
                             <TableCell>
                               <FundingStatusBadge status={request.status} />
                             </TableCell>
@@ -517,7 +804,9 @@ export default function FundingWorkspacePage() {
                               <button
                                 type="button"
                                 className="text-sm font-medium text-wallet hover:underline"
-                                onClick={() => openRequestDialog(request, 'review')}
+                                onClick={() =>
+                                  openRequestDialog(request, 'review')
+                                }
                               >
                                 Review
                               </button>
@@ -545,7 +834,7 @@ export default function FundingWorkspacePage() {
             <Card className="overflow-hidden shadow-sm">
               <CardContent className="p-0">
                 {datasets.mine.length === 0 ? (
-                  <EmptyState message="You have not submitted any funding requests yet." />
+                  <EmptyState message="You have not submitted any requests yet." />
                 ) : (
                   <>
                     <Table>
@@ -554,7 +843,12 @@ export default function FundingWorkspacePage() {
                           <TableHead>Request ID</TableHead>
                           <TableHead>Date</TableHead>
                           <TableHead>Submitted To</TableHead>
-                          <TableHead>Amount (PHP)</TableHead>
+                          <TableHead>
+                            {internetCredits ? 'Deposit (PHP)' : 'Amount (PHP)'}
+                          </TableHead>
+                          {internetCredits ? (
+                            <TableHead>Credits</TableHead>
+                          ) : null}
                           <TableHead>Status</TableHead>
                           <TableHead>Action</TableHead>
                         </TableRow>
@@ -562,18 +856,32 @@ export default function FundingWorkspacePage() {
                       <TableBody>
                         {pagedMine.map((request) => (
                           <TableRow key={request.id}>
-                            <TableCell className="font-medium">{request.id}</TableCell>
+                            <TableCell className="font-medium">
+                              {request.id}
+                            </TableCell>
                             <TableCell>
                               <DateTimeCell value={request.createdAt} />
                             </TableCell>
                             <TableCell>
                               <OrganizationCell
-                                organization={orgById[request.parentOrganizationId]}
+                                organization={
+                                  orgById[request.parentOrganizationId]
+                                }
                               />
                             </TableCell>
                             <TableCell className="font-semibold">
-                              {formatCurrency(request.amount)}
+                              {formatCurrency(getRequestDepositAmount(request))}
                             </TableCell>
+                            {internetCredits ? (
+                              <TableCell className="font-semibold">
+                                {isReleasedStatus(request.status)
+                                  ? formatCurrency(
+                                      Number(request.creditsReleased) ||
+                                        getRequestCredits(request),
+                                    )
+                                  : formatCurrency(getRequestCredits(request))}
+                              </TableCell>
+                            ) : null}
                             <TableCell>
                               <FundingStatusBadge status={request.status} />
                             </TableCell>
@@ -581,7 +889,9 @@ export default function FundingWorkspacePage() {
                               <button
                                 type="button"
                                 className="text-sm font-medium text-wallet hover:underline"
-                                onClick={() => openRequestDialog(request, 'view')}
+                                onClick={() =>
+                                  openRequestDialog(request, 'view')
+                                }
                               >
                                 View
                               </button>
@@ -604,138 +914,184 @@ export default function FundingWorkspacePage() {
           </TabsContent>
         ) : null}
 
-        <TabsContent value="approved">
-          <Card className="overflow-hidden shadow-sm">
-            <CardContent className="p-0">
-              {datasets.approved.length === 0 ? (
-                <EmptyState message="No approved or completed funding requests yet." />
-              ) : (
-                <>
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/50 hover:bg-muted/50">
-                        <TableHead>Request ID</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Organization</TableHead>
-                        <TableHead>Amount (PHP)</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {pagedApproved.map((request) => (
-                        <TableRow key={request.id}>
-                          <TableCell className="font-medium">{request.id}</TableCell>
-                          <TableCell>
-                            <DateTimeCell value={request.createdAt} />
-                          </TableCell>
-                          <TableCell>
-                            <OrganizationCell
-                              organization={orgById[request.organizationId]}
-                            />
-                          </TableCell>
-                          <TableCell className="font-semibold">
-                            {formatCurrency(request.amount)}
-                          </TableCell>
-                          <TableCell>
-                            <FundingStatusBadge status={request.status} />
-                          </TableCell>
-                          <TableCell>
-                            <button
-                              type="button"
-                              className="text-sm font-medium text-wallet hover:underline"
-                              onClick={() => openRequestDialog(request, 'view')}
-                            >
-                              View
-                            </button>
-                          </TableCell>
+        {showApprovedTab ? (
+          <TabsContent value="approved">
+            <Card className="overflow-hidden shadow-sm">
+              <CardContent className="p-0">
+                {datasets.approved.length === 0 ? (
+                  <EmptyState message="No released or completed requests yet." />
+                ) : (
+                  <>
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50 hover:bg-muted/50">
+                          <TableHead>Request ID</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Organization</TableHead>
+                          <TableHead>
+                            {internetCredits ? 'Deposit (PHP)' : 'Amount (PHP)'}
+                          </TableHead>
+                          {internetCredits ? (
+                            <TableHead>Credits</TableHead>
+                          ) : null}
+                          <TableHead>Status</TableHead>
+                          <TableHead>Action</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  <TablePagination
-                    page={pageByTab.approved}
-                    pageSize={DEFAULT_PAGE_SIZE}
-                    total={datasets.approved.length}
-                    onPageChange={(page) => setPage('approved', page)}
-                    itemLabel="requests"
-                  />
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="transfers">
-          <Card className="overflow-hidden shadow-sm">
-            <CardContent className="p-0">
-              {datasets.transfers.length === 0 ? (
-                <EmptyState message="No transfer history available yet." />
-              ) : (
-                <>
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/50 hover:bg-muted/50">
-                        <TableHead>Transfer ID</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>From</TableHead>
-                        <TableHead>To</TableHead>
-                        <TableHead>Amount (PHP)</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {pagedTransfers.map((transfer) => {
-                        const orgId = user?.organizationId
-                        let direction = null
-                        if (orgId && transfer.toOrganizationId === orgId) {
-                          direction = 'credit'
-                        } else if (orgId && transfer.fromOrganizationId === orgId) {
-                          direction = 'debit'
-                        }
-
-                        return (
-                          <TableRow key={transfer.id}>
-                            <TableCell className="font-medium">{transfer.id}</TableCell>
+                      </TableHeader>
+                      <TableBody>
+                        {pagedApproved.map((request) => (
+                          <TableRow key={request.id}>
+                            <TableCell className="font-medium">
+                              {request.id}
+                            </TableCell>
                             <TableCell>
-                              <DateTimeCell value={transfer.createdAt} />
+                              <DateTimeCell value={request.createdAt} />
                             </TableCell>
                             <TableCell>
                               <OrganizationCell
-                                organization={orgById[transfer.fromOrganizationId]}
+                                organization={orgById[request.organizationId]}
                               />
                             </TableCell>
+                            <TableCell className="font-semibold">
+                              {formatCurrency(getRequestDepositAmount(request))}
+                            </TableCell>
+                            {internetCredits ? (
+                              <TableCell className="font-semibold">
+                                {formatCurrency(
+                                  Number(request.creditsReleased) ||
+                                    getRequestCredits(request),
+                                )}
+                              </TableCell>
+                            ) : null}
                             <TableCell>
-                              <OrganizationCell
-                                organization={orgById[transfer.toOrganizationId]}
-                              />
+                              <FundingStatusBadge status={request.status} />
                             </TableCell>
                             <TableCell>
-                              <SignedAmount
-                                amount={transfer.amount}
-                                direction={direction}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <FundingStatusBadge status={transfer.status} />
+                              <div className="flex flex-wrap gap-3">
+                                <button
+                                  type="button"
+                                  className="text-sm font-medium text-wallet hover:underline"
+                                  onClick={() =>
+                                    openRequestDialog(request, 'view')
+                                  }
+                                >
+                                  View
+                                </button>
+                                {internetCredits &&
+                                isReleasedStatus(request.status) &&
+                                request.parentOrganizationId ===
+                                  user?.organizationId ? (
+                                  <button
+                                    type="button"
+                                    className="text-sm font-medium text-red-600 hover:underline"
+                                    onClick={() =>
+                                      openConfirm({ type: 'reverse', request })
+                                    }
+                                  >
+                                    Reverse
+                                  </button>
+                                ) : null}
+                              </div>
                             </TableCell>
                           </TableRow>
-                        )
-                      })}
-                    </TableBody>
-                  </Table>
-                  <TablePagination
-                    page={pageByTab.transfers}
-                    pageSize={DEFAULT_PAGE_SIZE}
-                    total={datasets.transfers.length}
-                    onPageChange={(page) => setPage('transfers', page)}
-                    itemLabel="transfers"
-                  />
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    <TablePagination
+                      page={pageByTab.approved}
+                      pageSize={DEFAULT_PAGE_SIZE}
+                      total={datasets.approved.length}
+                      onPageChange={(page) => setPage('approved', page)}
+                      itemLabel="requests"
+                    />
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        ) : null}
+
+        {showTransfersTab ? (
+          <TabsContent value="transfers">
+            <Card className="overflow-hidden shadow-sm">
+              <CardContent className="p-0">
+                {datasets.transfers.length === 0 ? (
+                  <EmptyState message="No transfer history available yet." />
+                ) : (
+                  <>
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50 hover:bg-muted/50">
+                          <TableHead>Transfer ID</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>From</TableHead>
+                          <TableHead>To</TableHead>
+                          <TableHead>Amount (PHP)</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {pagedTransfers.map((transfer) => {
+                          const orgId = user?.organizationId
+                          let direction = null
+                          if (orgId && transfer.toOrganizationId === orgId) {
+                            direction = 'credit'
+                          } else if (
+                            orgId &&
+                            transfer.fromOrganizationId === orgId
+                          ) {
+                            direction = 'debit'
+                          }
+
+                          return (
+                            <TableRow key={transfer.id}>
+                              <TableCell className="font-medium">
+                                {transfer.id}
+                              </TableCell>
+                              <TableCell>
+                                <DateTimeCell value={transfer.createdAt} />
+                              </TableCell>
+                              <TableCell>
+                                <OrganizationCell
+                                  organization={
+                                    orgById[transfer.fromOrganizationId]
+                                  }
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <OrganizationCell
+                                  organization={
+                                    orgById[transfer.toOrganizationId]
+                                  }
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <SignedAmount
+                                  amount={transfer.amount}
+                                  direction={direction}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <FundingStatusBadge status={transfer.status} />
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                    <TablePagination
+                      page={pageByTab.transfers}
+                      pageSize={DEFAULT_PAGE_SIZE}
+                      total={datasets.transfers.length}
+                      onPageChange={(page) => setPage('transfers', page)}
+                      itemLabel="transfers"
+                    />
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        ) : null}
       </Tabs>
 
       <ReviewFundingRequestDialog
@@ -750,6 +1106,8 @@ export default function FundingWorkspacePage() {
         walletBalance={walletBalance}
         viewerOrganizationId={user?.organizationId}
         mode={dialogMode}
+        internetCredits={internetCredits}
+        releaseSource={releaseSource}
         onReject={(request) => {
           closeRequestDialog()
           openConfirm({ type: 'reject', request })
@@ -767,6 +1125,8 @@ export default function FundingWorkspacePage() {
           user={user}
           parentOrganizationId={config.newRequestParentId}
           infoMessage={config.newRequestInfo}
+          internetCredits={internetCredits}
+          depositRate={internetCredits ? myRequestDepositRate : null}
           onConfirmIntent={(payload) => {
             openConfirm({ type: 'new-request', payload })
           }}
@@ -800,9 +1160,21 @@ export default function FundingWorkspacePage() {
         reasonEnabled={confirmDialogProps.reasonEnabled}
         reason={rejectReason}
         onReasonChange={setRejectReason}
+        reasonLabel={
+          confirmAction?.type === 'reverse' || confirmAction?.type === 'reject'
+            ? 'Reason (required)'
+            : 'Reason (optional)'
+        }
         busy={actionBusy}
         error={actionError}
         onConfirm={handleConfirmAction}
+        creditFieldsEnabled={confirmDialogProps.creditFieldsEnabled}
+        paymentReferenceId={paymentReferenceId}
+        onPaymentReferenceChange={setPaymentReferenceId}
+        creditsToRelease={creditsToRelease}
+        onCreditsToReleaseChange={setCreditsToRelease}
+        creditsHint={confirmDialogProps.creditsHint}
+        duplicatePaymentWarning={duplicatePaymentWarning}
       />
 
       <FundingSuccessDialog

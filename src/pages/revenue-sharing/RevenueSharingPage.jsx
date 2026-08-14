@@ -337,7 +337,7 @@ export default function RevenueSharingPage() {
               />
               <MoneyField
                 id="sample-deduction"
-                label="Sample Wallet Deduction (₱)"
+                label="Sample Credits Consumed (₱)"
                 value={sampleDeduction}
                 onChange={setSampleDeduction}
               />

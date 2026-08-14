@@ -3,12 +3,12 @@ import {
   Building2,
   Wallet,
   ArrowLeftRight,
-  PieChart,
   Receipt,
   FileBarChart,
   Store,
   CircleDollarSign,
   Banknote,
+  Percent,
 } from 'lucide-react'
 import { ROLES } from './constants'
 
@@ -70,22 +70,22 @@ export const NAV_ITEMS = [
     roles: [ROLES.RETAILER],
   },
   {
-    title: 'Token Credits',
+    title: 'Internet Credits',
     path: '/funding',
     icon: ArrowLeftRight,
     roles: [ROLES.ADMIN, ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE],
   },
   {
-    title: 'Token Credits',
+    title: 'Internet Credits',
     path: '/request-funding',
     icon: CircleDollarSign,
     roles: [ROLES.RETAILER],
   },
   {
-    title: 'Commission Settings',
-    path: '/commission-settings',
-    icon: PieChart,
-    roles: [ROLES.ADMIN],
+    title: 'Deposit Rates',
+    path: '/deposit-rates',
+    icon: Percent,
+    roles: [ROLES.ADMIN, ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE],
   },
   {
     title: 'Transactions',
@@ -97,13 +97,7 @@ export const NAV_ITEMS = [
     title: 'Revenue',
     path: '/revenue',
     icon: Banknote,
-    roles: [ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE, ROLES.RETAILER],
-  },
-  {
-    title: 'Commission Settings',
-    path: '/commission-settings',
-    icon: PieChart,
-    roles: [ROLES.SUBFRANCHISEE],
+    roles: [ROLES.ADMIN, ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE, ROLES.RETAILER],
   },
   {
     title: 'Reports',

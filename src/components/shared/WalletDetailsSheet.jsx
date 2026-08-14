@@ -71,7 +71,7 @@ export function WalletDetailsSheet({
             {formatCurrency(walletRow.availableBalance)}
           </p>
           <p className="mt-1 text-xs text-slate-400">
-            Available balance = opening float + funding activity (
+            Available Credits = opening inventory + credit activity (
             {formatCurrency(activityNet)})
           </p>
         </SheetHeader>
@@ -98,7 +98,7 @@ export function WalletDetailsSheet({
             </h3>
             {activity.length === 0 ? (
               <div className="rounded-xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-400">
-                No funding transfers yet for this wallet.
+                No credit releases yet for this wallet.
               </div>
             ) : (
               <div className="overflow-hidden rounded-xl border border-slate-200">

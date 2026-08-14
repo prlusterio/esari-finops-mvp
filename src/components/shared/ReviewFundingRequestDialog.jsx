@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, Download, FileImage, FileText } from 'lucide-react'
 import { FUNDING_STATUS } from '@/lib/constants'
 import { formatCurrency } from '@/lib/currency'
@@ -12,6 +13,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import {
+  formatDepositRatePercent,
+  getDepositRate,
+  getRequestCredits,
+  getRequestDepositAmount,
+  suggestCredits,
+} from '@/lib/internetCredits'
 import { cn } from '@/lib/utils'
 
 function DetailLabel({ children, className }) {
@@ -24,24 +32,56 @@ function SectionDivider() {
   return <div className="border-t border-slate-200" />
 }
 
-/**
- * Resolve the balance label/value for the current viewer.
- * - Approver (review / pending): current − amount (debit preview)
- * - Requester (pending): current + amount (credit preview)
- * - Otherwise (already settled / rejected): current wallet only
- */
 function getBalanceAfterDisplay({
   request,
   walletBalance,
   viewerOrganizationId,
   mode,
+  internetCredits = false,
+  releaseSource = 'mint',
+  creditsAmount,
 }) {
   const balance = Number(walletBalance ?? 0)
-  const amount = Number(request?.amount ?? 0)
+  const deposit = getRequestDepositAmount(request)
+  const credits =
+    creditsAmount != null
+      ? Number(creditsAmount)
+      : getRequestCredits(request) || deposit
   const isRequester = request?.organizationId === viewerOrganizationId
   const isApprover = request?.parentOrganizationId === viewerOrganizationId
   const isPending = request?.status === FUNDING_STATUS.PENDING
 
+  if (internetCredits) {
+    if (mode === 'review' || (isApprover && isPending)) {
+      if (releaseSource === 'balance') {
+        const balanceAfter = balance - credits
+        return {
+          label: 'Available Credits After Release',
+          value: balanceAfter,
+          insufficientFunds: balanceAfter < 0,
+        }
+      }
+      return {
+        label: 'Your Current Available Credits',
+        value: balance,
+        insufficientFunds: false,
+      }
+    }
+    if (isRequester && isPending) {
+      return {
+        label: 'Your Credits After Approval',
+        value: balance + credits,
+        insufficientFunds: false,
+      }
+    }
+    return {
+      label: 'Your Current Available Credits',
+      value: balance,
+      insufficientFunds: false,
+    }
+  }
+
+  const amount = Number(request?.amount ?? 0)
   if (mode === 'review' || (isApprover && isPending)) {
     const balanceAfter = balance - amount
     return {
@@ -79,8 +119,22 @@ export function ReviewFundingRequestDialog({
   mode = 'review',
   onReject,
   onApprove,
+  internetCredits = false,
+  releaseSource = 'mint',
 }) {
   if (!request) return null
+
+  const depositAmount = getRequestDepositAmount(request)
+  const depositRate =
+    Number(request.depositRate) ||
+    getDepositRate({
+      organizationId: request.organizationId,
+      requesterRole: request.requesterRole,
+    })
+  const suggestedCredits =
+    Number(request.suggestedCredits) ||
+    suggestCredits(depositAmount, depositRate)
+  const releasedCredits = Number(request.creditsReleased) || 0
 
   const {
     label: balanceLabel,
@@ -91,10 +145,20 @@ export function ReviewFundingRequestDialog({
     walletBalance,
     viewerOrganizationId,
     mode,
+    internetCredits,
+    releaseSource,
+    creditsAmount: suggestedCredits,
   })
+
   const proof = request.proofOfPayment
   const orgLabel =
-    request.requesterRole === 'franchisee' ? 'Franchisee Name' : 'Organization'
+    request.requesterRole === 'franchisee'
+      ? 'Franchisee Name'
+      : request.requesterRole === 'subfranchisee'
+        ? 'Sub-Franchisee Name'
+        : request.requesterRole === 'retailer'
+          ? 'Retailer Name'
+          : 'Organization'
   const isReview = mode === 'review'
 
   const handleDownload = () => {
@@ -115,7 +179,13 @@ export function ReviewFundingRequestDialog({
       >
         <SheetHeader className="border-b border-slate-200 px-6 py-5 pr-12">
           <SheetTitle className="text-xl font-semibold text-slate-900">
-            {isReview ? 'Review Funding Request' : 'Funding Request Details'}
+            {isReview
+              ? internetCredits
+                ? 'Review Credits Request'
+                : 'Review Funding Request'
+              : internetCredits
+                ? 'Credits Request Details'
+                : 'Funding Request Details'}
           </SheetTitle>
           <SheetDescription className="text-sm text-slate-400">
             #{request.id}
@@ -152,9 +222,11 @@ export function ReviewFundingRequestDialog({
 
             <div className="grid gap-4 px-4 py-4 sm:grid-cols-2">
               <div>
-                <DetailLabel>Requested Amount</DetailLabel>
+                <DetailLabel>
+                  {internetCredits ? 'Deposited Amount' : 'Requested Amount'}
+                </DetailLabel>
                 <div className="mt-1 text-2xl font-bold tracking-tight text-blue-600 sm:text-[1.75rem]">
-                  {formatCurrency(request.amount)}
+                  {formatCurrency(depositAmount)}
                 </div>
               </div>
               <div className="sm:text-right">
@@ -170,16 +242,53 @@ export function ReviewFundingRequestDialog({
               </div>
             </div>
 
+            {internetCredits ? (
+              <div className="grid gap-4 px-4 pb-4 sm:grid-cols-2">
+                <div>
+                  <DetailLabel>Deposit rate</DetailLabel>
+                  <div className="mt-1 text-sm font-semibold text-slate-900">
+                    {formatDepositRatePercent(depositRate)}
+                  </div>
+                </div>
+                <div className="sm:text-right">
+                  <DetailLabel>
+                    {releasedCredits > 0
+                      ? 'Credits released'
+                      : 'Suggested credits'}
+                  </DetailLabel>
+                  <div className="mt-1 text-sm font-semibold text-slate-900">
+                    {formatCurrency(
+                      releasedCredits > 0 ? releasedCredits : suggestedCredits,
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {request.paymentReferenceId ? (
+              <div className="px-4 pb-4">
+                <DetailLabel>Payment reference</DetailLabel>
+                <div className="mt-1 text-sm font-medium text-slate-900">
+                  {request.paymentReferenceId}
+                </div>
+              </div>
+            ) : null}
+
             {isReview && insufficientFunds ? (
               <div className="mx-4 mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                Insufficient wallet balance to approve and transfer this request.
+                {internetCredits
+                  ? 'Insufficient Available Credits to release this request.'
+                  : 'Insufficient wallet balance to approve and transfer this request.'}
               </div>
             ) : null}
 
             <div className="px-4 pb-4">
               <DetailLabel>Notes</DetailLabel>
               <div className="mt-2 rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm leading-relaxed text-slate-700">
-                {request.notes || 'No notes provided for this funding request.'}
+                {request.notes ||
+                  (internetCredits
+                    ? 'No notes provided for this credits request.'
+                    : 'No notes provided for this funding request.')}
               </div>
             </div>
           </div>
@@ -247,7 +356,7 @@ export function ReviewFundingRequestDialog({
               disabled={insufficientFunds}
             >
               <CheckCircle2 className="h-4 w-4" />
-              Approve & Transfer
+              {internetCredits ? 'Approve & Release' : 'Approve & Transfer'}
             </Button>
           </SheetFooter>
         ) : null}

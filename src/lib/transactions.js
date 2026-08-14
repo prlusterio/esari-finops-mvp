@@ -118,6 +118,7 @@ export function getTransactionCostBreakdown(tx) {
     platformProcessingFee,
     netWalletDeduction,
     distributable,
+    saleMargin: roundMoney(customerPayment - netWalletDeduction),
   }
 }
 
@@ -235,36 +236,44 @@ export function buildTransactionDistribution(
 export function getTransactionsPageConfig(role) {
   if (role === ROLES.ADMIN) {
     return {
-      subtitle: 'Platform Transaction History & Distributions',
+      subtitle:
+        'Platform transaction history with customer payment and credits consumed',
       searchLabel: 'Retailer / Franchisee',
       searchPlaceholder: 'Search by name or ID',
       showRetailerColumn: true,
+      showShareColumns: false,
     }
   }
 
   if (role === ROLES.SUBFRANCHISEE) {
     return {
-      subtitle: 'Sub-Franchisee Transaction History & Distributions',
+      subtitle:
+        'Network transaction history with customer payment and credits consumed',
       searchLabel: 'Retailer / Franchisee',
       searchPlaceholder: 'Search by name or ID',
       showRetailerColumn: true,
+      showShareColumns: false,
     }
   }
 
   if (role === ROLES.FRANCHISEE) {
     return {
-      subtitle: 'Franchisee Transaction History & Distributions',
+      subtitle:
+        'Retailer transaction history with customer payment and credits consumed',
       searchLabel: 'Retailer',
       searchPlaceholder: 'Search by name or ID',
       showRetailerColumn: true,
+      showShareColumns: false,
     }
   }
 
   return {
-    subtitle: 'Your Transaction History & Distributions',
+    subtitle:
+      'Your transaction history with customer payment, credits consumed, and sale margin',
     searchLabel: 'Reference',
     searchPlaceholder: 'Search by reference',
     showRetailerColumn: false,
+    showShareColumns: false,
   }
 }
 
@@ -358,17 +367,15 @@ export function transactionsToCsv(
   orgById = {},
   { revenueSharing = [] } = {},
 ) {
+  void revenueSharing
   const headers = [
     'Reference',
     'Date',
     'Retailer',
     'Retailer Code',
     'Customer Payment',
-    'Wallet Deduction',
-    'Distributable Revenue',
-    'Retailer',
-    'Franchisee',
-    'Sub-Franchisee',
+    'Credits Consumed',
+    'Sale Margin',
     'Status',
   ]
 
@@ -377,18 +384,6 @@ export function transactionsToCsv(
   const rows = sorted.map((tx) => {
     const retailer = orgById[tx.retailerOrganizationId]
     const costs = getTransactionCostBreakdown(tx)
-    const shares = resolveTransactionSharePercentages(tx, revenueSharing)
-    const retailerShare = roundMoney(
-      Number.isFinite(Number(tx.retailerShare))
-        ? Number(tx.retailerShare)
-        : (costs.distributable * shares.retailer) / 100,
-    )
-    const franchiseeShare = roundMoney(
-      (costs.distributable * shares.franchisee) / 100,
-    )
-    const subfranchiseeShare = roundMoney(
-      (costs.distributable * shares.subfranchisee) / 100,
-    )
     return [
       tx.reference || tx.id,
       tx.createdAt,
@@ -396,11 +391,8 @@ export function transactionsToCsv(
       tx.retailerCode || retailer?.code || '',
       costs.customerPayment,
       costs.netWalletDeduction,
-      costs.distributable,
-      retailerShare,
-      franchiseeShare,
-      subfranchiseeShare,
-      TRANSACTION_STATUS[tx.status?.toUpperCase()] ? tx.status : tx.status,
+      costs.saleMargin,
+      tx.status,
     ]
   })
 

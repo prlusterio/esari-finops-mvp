@@ -8,29 +8,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 
 /**
  * Confirmation dialog before funding mutations.
- *
- * @param {{
- *   open: boolean,
- *   onOpenChange: (open: boolean) => void,
- *   title: string,
- *   description?: string,
- *   rows?: Array<{ label: string, value: string, emphasize?: boolean }>,
- *   confirmLabel?: string,
- *   cancelLabel?: string,
- *   confirmVariant?: 'default' | 'destructive',
- *   busy?: boolean,
- *   error?: string,
- *   reasonEnabled?: boolean,
- *   reason?: string,
- *   onReasonChange?: (value: string) => void,
- *   reasonLabel?: string,
- *   onConfirm: () => void,
- * }} props
  */
 export function FundingConfirmDialog({
   open,
@@ -48,6 +31,13 @@ export function FundingConfirmDialog({
   onReasonChange,
   reasonLabel = 'Reason (optional)',
   onConfirm,
+  creditFieldsEnabled = false,
+  paymentReferenceId = '',
+  onPaymentReferenceChange,
+  creditsToRelease = '',
+  onCreditsToReleaseChange,
+  creditsHint = '',
+  duplicatePaymentWarning = '',
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -81,6 +71,43 @@ export function FundingConfirmDialog({
           </div>
         ) : null}
 
+        {creditFieldsEnabled ? (
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="funding-payment-ref">Payment reference ID</Label>
+              <Input
+                id="funding-payment-ref"
+                value={paymentReferenceId}
+                onChange={(event) =>
+                  onPaymentReferenceChange?.(event.target.value)
+                }
+                placeholder="Enter payment reference ID"
+                disabled={busy}
+              />
+              {duplicatePaymentWarning ? (
+                <p className="text-sm text-amber-700">{duplicatePaymentWarning}</p>
+              ) : null}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="funding-credits-release">Credits to release</Label>
+              <Input
+                id="funding-credits-release"
+                type="number"
+                min="0"
+                step="0.01"
+                value={creditsToRelease}
+                onChange={(event) =>
+                  onCreditsToReleaseChange?.(event.target.value)
+                }
+                disabled={busy}
+              />
+              {creditsHint ? (
+                <p className="text-xs text-muted-foreground">{creditsHint}</p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
         {reasonEnabled ? (
           <div className="space-y-2">
             <Label htmlFor="funding-reject-reason">{reasonLabel}</Label>
@@ -88,7 +115,7 @@ export function FundingConfirmDialog({
               id="funding-reject-reason"
               value={reason}
               onChange={(event) => onReasonChange?.(event.target.value)}
-              placeholder="Add a short rejection note..."
+              placeholder="Add a short note..."
               className="min-h-[88px] resize-none"
               disabled={busy}
             />
@@ -137,19 +164,21 @@ export function buildAmountConfirmRows({
   balanceAfter,
   counterpartyLabel,
   counterpartyName,
+  amountLabel = 'Amount',
+  balanceLabel = 'Wallet balance after',
 }) {
   const rows = []
   if (counterpartyLabel && counterpartyName) {
     rows.push({ label: counterpartyLabel, value: counterpartyName })
   }
   rows.push({
-    label: 'Amount',
+    label: amountLabel,
     value: formatCurrency(amount),
     emphasize: true,
   })
   if (balanceAfter !== undefined && balanceAfter !== null) {
     rows.push({
-      label: 'Wallet balance after',
+      label: balanceLabel,
       value: formatCurrency(balanceAfter),
     })
   }

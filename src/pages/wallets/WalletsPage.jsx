@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
   AlertTriangle,
-  ArrowLeftRight,
   Building2,
   Eye,
   Network,
@@ -11,7 +10,6 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { formatCurrency } from '@/lib/currency'
-import { getFundingWorkspaceConfig } from '@/lib/funding'
 import { DEFAULT_PAGE_SIZE, paginateItems } from '@/lib/pagination'
 import { getHomePathForRole } from '@/lib/permissions'
 import {
@@ -20,18 +18,11 @@ import {
   WALLET_BALANCE_STATUS,
   WALLET_BALANCE_STATUS_LABELS,
 } from '@/lib/wallets'
-import { executeWalletTransfer } from '@/services/fundingActions'
 import {
   getFundingTransfers,
   getOrganizations,
   getWallets,
 } from '@/services/storage'
-import {
-  buildAmountConfirmRows,
-  FundingConfirmDialog,
-} from '@/components/shared/FundingConfirmDialog'
-import { FundingSuccessDialog } from '@/components/shared/FundingSuccessDialog'
-import { DirectTransferSheet } from '@/components/shared/DirectTransferSheet'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { StatCard } from '@/components/shared/StatCard'
 import { TablePagination } from '@/components/shared/TablePagination'
@@ -91,20 +82,10 @@ function StatusBadge({ status }) {
 }
 
 export default function WalletsPage() {
-  const { user, dataVersion, bumpDataVersion } = useAuth()
+  const { user, dataVersion } = useAuth()
   const organizations = useMemo(() => getOrganizations(), [dataVersion])
   const wallets = useMemo(() => getWallets(), [dataVersion])
   const transfers = useMemo(() => getFundingTransfers(), [dataVersion])
-
-  const fundingConfig = useMemo(
-    () =>
-      getFundingWorkspaceConfig({
-        role: user?.role,
-        organizationId: user?.organizationId,
-        organizations,
-      }),
-    [user?.role, user?.organizationId, organizations],
-  )
 
   const directory = useMemo(
     () =>
@@ -119,12 +100,6 @@ export default function WalletsPage() {
   const [lowOnly, setLowOnly] = useState(false)
   const [page, setPage] = useState(0)
   const [selectedRow, setSelectedRow] = useState(null)
-  const [transferOpen, setTransferOpen] = useState(false)
-  const [initialRecipientId, setInitialRecipientId] = useState('')
-  const [confirmAction, setConfirmAction] = useState(null)
-  const [actionBusy, setActionBusy] = useState(false)
-  const [actionError, setActionError] = useState('')
-  const [successAction, setSuccessAction] = useState(null)
 
   const filteredRows = useMemo(() => {
     if (!lowOnly) return directory.rows
@@ -153,39 +128,11 @@ export default function WalletsPage() {
 
   const ownBalance = directory.kpis.operatingBalance
 
-  const openTransfer = (recipientId = '') => {
-    setInitialRecipientId(recipientId || '')
-    setTransferOpen(true)
-  }
-
-  const handleConfirmTransfer = () => {
-    if (!confirmAction) return
-    setActionBusy(true)
-    setActionError('')
-    try {
-      const result = executeWalletTransfer(confirmAction.payload)
-      setConfirmAction(null)
-      bumpDataVersion()
-      setSuccessAction({
-        title: 'Transfer completed',
-        message: 'Funds were transferred successfully.',
-        details: [
-          { label: 'Transfer', value: result.transfer.id },
-          { label: 'Amount', value: formatCurrency(result.transfer.amount) },
-        ],
-      })
-    } catch (error) {
-      setActionError(error.message || 'Unable to complete this transfer.')
-    } finally {
-      setActionBusy(false)
-    }
-  }
-
   return (
     <div>
       <PageHeader
         title="Wallets"
-        description="Monitor platform liquidity across sub-franchisees, franchisees, and retailers — including direct-to-admin downlines."
+        description="Monitor Available Credits across sub-franchisees, franchisees, and retailers. Credit loads go through Internet Credits (cash + proof)."
         breadcrumbs={[
           { label: 'Home', href: getHomePathForRole(user?.role) },
           { label: 'Wallets' },
@@ -196,7 +143,7 @@ export default function WalletsPage() {
         <Card>
           <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
             <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Master Wallet Balance
+              Platform Available Credits
             </CardTitle>
             <Wallet className="h-4 w-4 text-wallet" />
           </CardHeader>
@@ -205,7 +152,7 @@ export default function WalletsPage() {
               {formatCurrency(ownBalance)}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              Platform available operating balance
+              Platform credit inventory balance
             </p>
           </CardContent>
         </Card>
@@ -239,7 +186,7 @@ export default function WalletsPage() {
       <Card className="mb-4 overflow-hidden shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-border px-4 py-3">
           <CardTitle className="text-base font-semibold">
-            Wallet Directory
+            Credits Directory
           </CardTitle>
           <div className="flex items-center gap-2">
             <Button
@@ -259,14 +206,6 @@ export default function WalletsPage() {
               <AlertTriangle className="h-3.5 w-3.5" />
               {directory.kpis.lowBalanceCount} Low Balance
             </Button>
-            <Button
-              type="button"
-              className="bg-blue-600 text-white hover:bg-blue-700"
-              onClick={() => openTransfer()}
-            >
-              <ArrowLeftRight className="h-4 w-4" />
-              Transfer
-            </Button>
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -284,7 +223,7 @@ export default function WalletsPage() {
                     <TableRow className="bg-muted/50 hover:bg-muted/50">
                       <TableHead>Wallet Owner</TableHead>
                       <TableHead>Type</TableHead>
-                      <TableHead>Available Balance</TableHead>
+                      <TableHead>Available Credits</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -298,7 +237,7 @@ export default function WalletsPage() {
                           </div>
                           <div className="text-xs text-slate-400">
                             {row.isOwnWallet
-                              ? 'Platform master wallet'
+                              ? 'Platform credits inventory'
                               : row.parentName}
                           </div>
                         </TableCell>
@@ -326,18 +265,6 @@ export default function WalletsPage() {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            {row.canTransferTo ? (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                                onClick={() => openTransfer(row.organizationId)}
-                                aria-label={`Transfer to ${row.ownerName}`}
-                              >
-                                <ArrowLeftRight className="h-4 w-4" />
-                              </Button>
-                            ) : null}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -363,57 +290,6 @@ export default function WalletsPage() {
         }}
         walletRow={selectedRow}
         activity={selectedActivity}
-      />
-
-      <DirectTransferSheet
-        open={transferOpen}
-        onOpenChange={setTransferOpen}
-        user={user}
-        recipients={fundingConfig.recipients}
-        recipientLabel={fundingConfig.recipientLabel}
-        availableBalance={ownBalance}
-        initialRecipientId={initialRecipientId}
-        onConfirmIntent={(payload) => {
-          setActionError('')
-          setConfirmAction({ type: 'direct-transfer', payload })
-        }}
-      />
-
-      <FundingConfirmDialog
-        open={Boolean(confirmAction)}
-        onOpenChange={(open) => {
-          if (!open && !actionBusy) {
-            setConfirmAction(null)
-            setActionError('')
-          }
-        }}
-        title="Confirm direct transfer"
-        description="This will debit the platform wallet and credit the recipient."
-        rows={
-          confirmAction
-            ? buildAmountConfirmRows({
-                amount: confirmAction.payload.amount,
-                balanceAfter: confirmAction.payload.balanceAfter,
-                counterpartyLabel:
-                  confirmAction.payload.recipientLabel || 'Recipient',
-                counterpartyName: confirmAction.payload.recipientName,
-              })
-            : []
-        }
-        confirmLabel="Confirm Transfer"
-        busy={actionBusy}
-        error={actionError}
-        onConfirm={handleConfirmTransfer}
-      />
-
-      <FundingSuccessDialog
-        open={Boolean(successAction)}
-        onOpenChange={(open) => {
-          if (!open) setSuccessAction(null)
-        }}
-        title={successAction?.title}
-        message={successAction?.message || ''}
-        details={successAction?.details || []}
       />
     </div>
   )

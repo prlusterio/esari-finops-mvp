@@ -16,7 +16,7 @@ import WalletPage from '@/pages/wallet/WalletPage'
 import FundingPage from '@/pages/funding/FundingPage'
 import RequestFundingPage from '@/pages/request-funding/RequestFundingPage'
 import RevenuePage from '@/pages/revenue/RevenuePage'
-import CommissionSettingsPage from '@/pages/commission-settings/CommissionSettingsPage'
+import DepositRatesPage from '@/pages/deposit-rates/DepositRatesPage'
 import TransactionsPage from '@/pages/transactions/TransactionsPage'
 import ReportsPage from '@/pages/reports/ReportsPage'
 import RetailersPage from '@/pages/retailers/RetailersPage'
@@ -103,7 +103,11 @@ export default function AppRoutes() {
             <Route path="/request-funding" element={<RequestFundingPage />} />
           </Route>
 
-          <Route path="/revenue-sharing" element={<Navigate to="/commission-settings" replace />} />
+          <Route path="/revenue-sharing" element={<Navigate to="/deposit-rates" replace />} />
+          <Route
+            path="/commission-settings"
+            element={<Navigate to="/deposit-rates" replace />}
+          />
 
           <Route
             element={
@@ -119,7 +123,7 @@ export default function AppRoutes() {
           <Route
             element={
               <RoleRoute
-                roles={[ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE, ROLES.RETAILER]}
+                roles={[ROLES.ADMIN, ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE, ROLES.RETAILER]}
                 path="/revenue"
               />
             }
@@ -130,15 +134,12 @@ export default function AppRoutes() {
           <Route
             element={
               <RoleRoute
-                roles={[ROLES.ADMIN, ROLES.SUBFRANCHISEE]}
-                path="/commission-settings"
+                roles={[ROLES.ADMIN, ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE]}
+                path="/deposit-rates"
               />
             }
           >
-            <Route
-              path="/commission-settings"
-              element={<CommissionSettingsPage />}
-            />
+            <Route path="/deposit-rates" element={<DepositRatesPage />} />
           </Route>
 
           <Route

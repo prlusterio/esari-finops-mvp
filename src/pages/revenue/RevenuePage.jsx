@@ -1,32 +1,23 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Banknote, Eye, Filter, Wallet } from 'lucide-react'
+import { Banknote, Coins, Eye, Filter, Wallet } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { ROLES } from '@/lib/constants'
+import { buildCreditRevenueSnapshot } from '@/lib/creditEconomics'
 import { formatCurrency } from '@/lib/currency'
 import { formatReportPeriodLabel } from '@/lib/date'
+import { formatDepositRatePercent } from '@/lib/internetCredits'
 import { DEFAULT_PAGE_SIZE, paginateItems } from '@/lib/pagination'
-import { DateTimeCell } from '@/components/shared/DateTimeCell'
-import { SignedAmount } from '@/components/shared/SignedAmount'
-import { TablePagination } from '@/components/shared/TablePagination'
 import { getHomePathForRole } from '@/lib/permissions'
-import { getNetworkFilterOptions } from '@/lib/reports'
 import {
-  buildRevenueEntries,
-  filterRevenueEntries,
-  resolveCreditedRevenueBalance,
-  REVENUE_ENTRY_STATUS,
-  REVENUE_ENTRY_STATUS_LABELS,
-} from '@/lib/revenue'
-import { filterTransactionsForRole } from '@/lib/transactions'
-import {
+  getFundingRequests,
   getOrganizations,
-  getRevenueSharing,
   getTransactions,
 } from '@/services/storage'
+import { DateTimeCell } from '@/components/shared/DateTimeCell'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { StatCard } from '@/components/shared/StatCard'
+import { TablePagination } from '@/components/shared/TablePagination'
 import { TransactionDetailsDialog } from '@/components/shared/TransactionDetailsDialog'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -48,45 +39,20 @@ import {
 } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 
-function RevenueStatusBadge({ status }) {
-  const isCredited = status === REVENUE_ENTRY_STATUS.CREDITED
-  return (
-    <Badge
-      className={cn(
-        'rounded-full border-transparent px-2.5 py-1 font-medium',
-        isCredited
-          ? 'bg-emerald-50 text-emerald-700'
-          : 'bg-amber-50 text-amber-700',
-      )}
-    >
-      {REVENUE_ENTRY_STATUS_LABELS[status] || status}
-    </Badge>
-  )
-}
-
 export default function RevenuePage() {
   const { user, dataVersion } = useAuth()
-  const isRetailer = user?.role === ROLES.RETAILER
-  const canViewRevenue =
-    user?.role === ROLES.SUBFRANCHISEE ||
-    user?.role === ROLES.FRANCHISEE ||
-    user?.role === ROLES.RETAILER
-
   const organizations = useMemo(() => getOrganizations(), [dataVersion])
-  const revenueSharing = useMemo(() => getRevenueSharing(), [dataVersion])
+  const fundingRequests = useMemo(() => getFundingRequests(), [dataVersion])
   const transactions = useMemo(() => getTransactions(), [dataVersion])
 
   const [dateRange, setDateRange] = useState('all')
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
-  const [retailerId, setRetailerId] = useState('all')
   const [search, setSearch] = useState('')
   const [appliedFilters, setAppliedFilters] = useState({
     dateRange: 'all',
     customDateRange: null,
-    retailerId: 'all',
     search: '',
-    status: REVENUE_ENTRY_STATUS.CREDITED,
   })
   const [page, setPage] = useState(0)
   const [selectedTx, setSelectedTx] = useState(null)
@@ -96,140 +62,89 @@ export default function RevenuePage() {
     setDateRange('all')
     setCustomFrom('')
     setCustomTo('')
-    setRetailerId('all')
     setSearch('')
     setAppliedFilters({
       dateRange: 'all',
       customDateRange: null,
-      retailerId: 'all',
       search: '',
-      status: REVENUE_ENTRY_STATUS.CREDITED,
     })
   }, [user?.role])
 
-  const retailerOptions = useMemo(() => {
-    if (!user?.organizationId || isRetailer) return []
-    return getNetworkFilterOptions(organizations, user.organizationId)
-      .allRetailers
-  }, [organizations, user?.organizationId, isRetailer])
+  const customDateInvalid =
+    appliedFilters.dateRange === 'custom' &&
+    appliedFilters.customDateRange?.from &&
+    appliedFilters.customDateRange?.to &&
+    appliedFilters.customDateRange.from > appliedFilters.customDateRange.to
 
-  const scopedTransactions = useMemo(
+  const snapshot = useMemo(
     () =>
-      filterTransactionsForRole(transactions, {
+      buildCreditRevenueSnapshot({
         role: user?.role,
         organizationId: user?.organizationId,
-      }),
-    [transactions, user?.role, user?.organizationId],
-  )
-
-  const allEntries = useMemo(
-    () =>
-      buildRevenueEntries({
-        transactions: scopedTransactions,
         organizations,
-        role: user?.role,
-        revenueSharing,
-      }),
-    [scopedTransactions, organizations, user?.role, revenueSharing],
-  )
-
-  const filteredEntries = useMemo(
-    () => filterRevenueEntries(allEntries, appliedFilters),
-    [allEntries, appliedFilters],
-  )
-
-  // Same source as Wallet → Revenue Wallet card (all-time).
-  const creditedRevenueBalance = useMemo(
-    () =>
-      resolveCreditedRevenueBalance({
-        role: user?.role,
-        organizationId: user?.organizationId,
+        fundingRequests,
         transactions,
-        revenueSharing,
+        dateRange: appliedFilters.dateRange,
+        customDateRange: appliedFilters.customDateRange,
       }),
-    [user?.role, user?.organizationId, transactions, revenueSharing],
+    [
+      user?.role,
+      user?.organizationId,
+      organizations,
+      fundingRequests,
+      transactions,
+      appliedFilters,
+    ],
   )
 
-  const periodCreditedTotal = useMemo(
-    () =>
-      filteredEntries.reduce(
-        (sum, entry) => sum + (Number(entry.yourRevenue) || 0),
-        0,
-      ),
-    [filteredEntries],
-  )
-
-  const distributableTotal = useMemo(
-    () =>
-      filteredEntries.reduce(
-        (sum, entry) => sum + (Number(entry.distributableRevenue) || 0),
-        0,
-      ),
-    [filteredEntries],
-  )
-
-  const periodLabel = formatReportPeriodLabel(
-    appliedFilters.dateRange,
-    appliedFilters.customDateRange,
-  )
+  const filteredEntries = useMemo(() => {
+    const query = String(appliedFilters.search || '')
+      .trim()
+      .toLowerCase()
+    if (!query) return snapshot.entries
+    return snapshot.entries.filter((entry) => {
+      const haystack = [
+        entry.reference,
+        entry.counterpartyName,
+        entry.id,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+      return haystack.includes(query)
+    })
+  }, [snapshot.entries, appliedFilters.search])
 
   const {
     page: currentPage,
     items: paged,
   } = paginateItems(filteredEntries, page, DEFAULT_PAGE_SIZE)
 
-  const customDateInvalid =
-    dateRange === 'custom' &&
-    customFrom &&
-    customTo &&
-    new Date(customFrom) > new Date(customTo)
+  const periodLabel = formatReportPeriodLabel(
+    appliedFilters.dateRange,
+    appliedFilters.customDateRange,
+  )
 
-  const handleApplyFilters = () => {
-    if (dateRange === 'custom' && customFrom && customTo) {
-      if (customDateInvalid) return
-    }
+  const applyFilters = () => {
     setAppliedFilters({
       dateRange,
       customDateRange:
         dateRange === 'custom'
-          ? { from: customFrom, to: customTo }
+          ? { from: customFrom || null, to: customTo || null }
           : null,
-      retailerId: isRetailer ? 'all' : retailerId,
       search,
-      status: REVENUE_ENTRY_STATUS.CREDITED,
     })
     setPage(0)
   }
 
-  if (!canViewRevenue) {
-    return (
-      <div>
-        <PageHeader
-          title="Revenue"
-          description="Your revenue share and revenue wallet."
-          breadcrumbs={[
-            { label: 'Home', href: getHomePathForRole(user?.role) },
-            { label: 'Revenue' },
-          ]}
-        />
-        <Card>
-          <CardContent className="py-12 text-center text-sm text-muted-foreground">
-            Revenue for your role will be available in a later release.
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
+  const mode = snapshot.mode
+  const kpis = snapshot.kpis
 
   return (
     <div>
       <PageHeader
-        title="Revenue"
-        description={
-          isRetailer
-            ? 'Track distributable revenue and your credited share from your completed transactions.'
-            : 'Track distributable revenue and your credited share from completed transactions.'
-        }
+        title={snapshot.title}
+        description={snapshot.description}
         breadcrumbs={[
           { label: 'Home', href: getHomePathForRole(user?.role) },
           { label: 'Revenue' },
@@ -238,37 +153,35 @@ export default function RevenuePage() {
 
       <div className="mb-4 grid gap-4 sm:grid-cols-3">
         <StatCard
-          title="Distributable Revenue"
-          value={formatCurrency(distributableTotal)}
-          description={`Commission pool · ${periodLabel}`}
-          icon={Banknote}
-          accent="wallet"
-        />
-        <StatCard
-          title="Your Commission"
-          value={formatCurrency(periodCreditedTotal)}
-          description={`Credited in ${periodLabel}`}
+          title={kpis.primaryLabel}
+          value={formatCurrency(kpis.primaryValue)}
+          description={`For ${periodLabel}`}
+          descriptionBelowTitle
           icon={Banknote}
           accent="success"
         />
         <StatCard
-          title="Revenue Wallet"
-          value={formatCurrency(creditedRevenueBalance)}
-          description="All-time credited revenue share"
-          icon={Wallet}
-          accent="success"
+          title={kpis.secondaryLabel}
+          value={formatCurrency(kpis.secondaryValue)}
+          description={`For ${periodLabel}`}
+          descriptionBelowTitle
+          icon={mode === 'sale_margin' ? Wallet : Coins}
+        />
+        <StatCard
+          title={kpis.tertiaryLabel}
+          value={
+            kpis.tertiaryIsCount
+              ? String(kpis.tertiaryValue)
+              : formatCurrency(kpis.tertiaryValue)
+          }
+          description={`For ${periodLabel}`}
+          descriptionBelowTitle
+          icon={Coins}
         />
       </div>
 
       <Card className="mb-4 shadow-sm">
-        <CardContent
-          className={cn(
-            'grid gap-3 p-4 lg:items-end',
-            isRetailer
-              ? 'lg:grid-cols-[1fr_1fr_auto]'
-              : 'lg:grid-cols-[1fr_1fr_1fr_auto]',
-          )}
-        >
+        <CardContent className="grid gap-3 p-4 sm:grid-cols-[1fr_1fr_auto] lg:items-end">
           <div className="space-y-2">
             <Label className="text-xs text-slate-500">Date Range</Label>
             <Select value={dateRange} onValueChange={setDateRange}>
@@ -289,71 +202,37 @@ export default function RevenuePage() {
             </Select>
           </div>
 
-          {!isRetailer ? (
-            <div className="space-y-2">
-              <Label className="text-xs text-slate-500">Retailer</Label>
-              <Select value={retailerId} onValueChange={setRetailerId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Retailers" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Retailers</SelectItem>
-                  {retailerOptions.map((org) => (
-                    <SelectItem key={org.id} value={org.id}>
-                      {org.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : null}
-
           <div className="space-y-2">
-            <Label className="text-xs text-slate-500">Reference</Label>
+            <Label className="text-xs text-slate-500">Search</Label>
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search by reference"
+              placeholder="Reference or name"
             />
           </div>
 
           <Button
             type="button"
             className="bg-blue-600 text-white hover:bg-blue-700"
-            onClick={handleApplyFilters}
-            disabled={
-              customDateInvalid ||
-              (dateRange === 'custom' && (!customFrom || !customTo))
-            }
+            onClick={applyFilters}
           >
             <Filter className="h-4 w-4" />
-            Apply Filters
+            Apply
           </Button>
 
           {dateRange === 'custom' ? (
-            <div
-              className={cn(
-                'grid gap-3 sm:grid-cols-2',
-                isRetailer ? 'lg:col-span-3' : 'lg:col-span-4',
-              )}
-            >
+            <div className="grid gap-3 sm:col-span-2 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label className="text-xs text-slate-500" htmlFor="revenue-from">
-                  From
-                </Label>
+                <Label className="text-xs text-slate-500">From</Label>
                 <Input
-                  id="revenue-from"
                   type="date"
                   value={customFrom}
                   onChange={(event) => setCustomFrom(event.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs text-slate-500" htmlFor="revenue-to">
-                  To
-                </Label>
+                <Label className="text-xs text-slate-500">To</Label>
                 <Input
-                  id="revenue-to"
                   type="date"
                   value={customTo}
                   onChange={(event) => setCustomTo(event.target.value)}
@@ -369,11 +248,11 @@ export default function RevenuePage() {
         </CardContent>
       </Card>
 
-      <Card className="overflow-hidden shadow-sm">
+      <Card className="mb-4 overflow-hidden shadow-sm">
         <CardContent className="p-0">
           {paged.length === 0 ? (
             <div className="px-4 py-12 text-center text-sm text-muted-foreground">
-              No revenue entries match the current filters.
+              No revenue entries for the selected period.
             </div>
           ) : (
             <>
@@ -381,78 +260,138 @@ export default function RevenuePage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50 hover:bg-muted/50">
-                      <TableHead>Reference</TableHead>
                       <TableHead>Date</TableHead>
+                      <TableHead>Reference</TableHead>
                       <TableHead>
-                        {isRetailer ? 'Product / Service' : 'Retailer'}
+                        {mode === 'sale_margin' ? 'Product / Service' : 'Counterparty'}
                       </TableHead>
-                      <TableHead>Distributable Rev.</TableHead>
-                      <TableHead>Your Revenue</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
+                      {mode === 'platform_load' ? (
+                        <>
+                          <TableHead className="text-right">Cash in</TableHead>
+                          <TableHead className="text-right">Credits</TableHead>
+                          <TableHead className="text-right">Load revenue</TableHead>
+                        </>
+                      ) : null}
+                      {mode === 'credit_spread' ? (
+                        <>
+                          <TableHead className="text-right">Cash in</TableHead>
+                          <TableHead className="text-right">Credits</TableHead>
+                          <TableHead className="text-right">Cost basis</TableHead>
+                          <TableHead className="text-right">Spread</TableHead>
+                        </>
+                      ) : null}
+                      {mode === 'sale_margin' ? (
+                        <>
+                          <TableHead className="text-right">
+                            Customer payment
+                          </TableHead>
+                          <TableHead className="text-right">
+                            Credits consumed
+                          </TableHead>
+                          <TableHead className="text-right">Margin</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </>
+                      ) : null}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {paged.map((entry) => (
                       <TableRow key={entry.id}>
+                        <TableCell>
+                          <DateTimeCell value={entry.createdAt} />
+                        </TableCell>
                         <TableCell className="font-medium text-slate-900">
                           {entry.reference}
                         </TableCell>
                         <TableCell>
-                          <DateTimeCell value={entry.createdAt} />
-                        </TableCell>
-                        <TableCell>
-                          {isRetailer ? (
-                            <div className="max-w-[220px] truncate font-medium text-slate-900">
-                              {entry.transaction?.productService || '—'}
+                          <div className="font-semibold text-slate-900">
+                            {entry.counterpartyName}
+                          </div>
+                          {mode === 'credit_spread' && entry.buyRate ? (
+                            <div className="text-xs text-slate-400">
+                              Buy rate {formatDepositRatePercent(entry.buyRate)}
                             </div>
-                          ) : (
-                            <>
-                              <div className="font-semibold text-slate-900">
-                                {entry.retailerName}
-                              </div>
-                              {user?.role === ROLES.SUBFRANCHISEE &&
-                              entry.franchiseeName ? (
-                                <div className="text-xs text-slate-400">
-                                  {entry.franchiseeName}
-                                </div>
-                              ) : null}
-                            </>
-                          )}
+                          ) : null}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          <SignedAmount
-                            amount={entry.distributableRevenue}
-                            direction="credit"
-                          />
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          <SignedAmount
-                            amount={entry.yourRevenue}
-                            direction="credit"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <RevenueStatusBadge status={entry.status} />
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                            onClick={() => setSelectedTx(entry.transaction)}
-                            aria-label={`View ${entry.reference}`}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
+                        {mode === 'platform_load' ? (
+                          <>
+                            <TableCell className="text-right tabular-nums">
+                              {formatCurrency(entry.cashIn)}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {formatCurrency(entry.credits)}
+                            </TableCell>
+                            <TableCell
+                              className={cn(
+                                'text-right font-semibold tabular-nums text-emerald-700',
+                              )}
+                            >
+                              {formatCurrency(entry.revenue)}
+                            </TableCell>
+                          </>
+                        ) : null}
+                        {mode === 'credit_spread' ? (
+                          <>
+                            <TableCell className="text-right tabular-nums">
+                              {formatCurrency(entry.cashIn)}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {formatCurrency(entry.credits)}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums text-slate-600">
+                              {formatCurrency(entry.costBasis)}
+                            </TableCell>
+                            <TableCell
+                              className={cn(
+                                'text-right font-semibold tabular-nums',
+                                entry.spread >= 0
+                                  ? 'text-emerald-700'
+                                  : 'text-red-600',
+                              )}
+                            >
+                              {formatCurrency(entry.spread)}
+                            </TableCell>
+                          </>
+                        ) : null}
+                        {mode === 'sale_margin' ? (
+                          <>
+                            <TableCell className="text-right tabular-nums">
+                              {formatCurrency(entry.customerPayment)}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums text-slate-600">
+                              {formatCurrency(entry.creditsConsumed)}
+                            </TableCell>
+                            <TableCell
+                              className={cn(
+                                'text-right font-semibold tabular-nums',
+                                entry.margin >= 0
+                                  ? 'text-emerald-700'
+                                  : 'text-red-600',
+                              )}
+                            >
+                              {formatCurrency(entry.margin)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                                onClick={() =>
+                                  setSelectedTx(entry.transaction || null)
+                                }
+                                aria-label={`View ${entry.reference}`}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </>
+                        ) : null}
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </div>
-
               <TablePagination
                 page={currentPage}
                 pageSize={DEFAULT_PAGE_SIZE}

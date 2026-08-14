@@ -12,15 +12,12 @@ import { getHomePathForRole } from '@/lib/permissions'
 import {
   applyTransactionFilters,
   filterTransactionsForRole,
-  getActiveSharePercentages,
   getTransactionsPageConfig,
   sortTransactionsNewest,
   transactionsToCsv,
 } from '@/lib/transactions'
-import { getTransactionShareAmounts } from '@/lib/revenue'
 import {
   getOrganizations,
-  getRevenueSharing,
   getTransactions,
 } from '@/services/storage'
 import { PageHeader } from '@/components/shared/PageHeader'
@@ -165,11 +162,6 @@ export default function TransactionsPage() {
     [scopedTransactions, appliedFilters, organizations],
   )
 
-  const sharePercentages = useMemo(
-    () => getActiveSharePercentages(getRevenueSharing()),
-    [dataVersion],
-  )
-
   const {
     page: currentPage,
     items: paged,
@@ -199,9 +191,7 @@ export default function TransactionsPage() {
   }
 
   const handleExport = () => {
-    const csv = transactionsToCsv(filteredTransactions, orgById, {
-      revenueSharing: getRevenueSharing(),
-    })
+    const csv = transactionsToCsv(filteredTransactions, orgById)
     downloadCsv(`esarisari-transactions-${user?.role || 'export'}.csv`, csv)
   }
 
@@ -349,11 +339,8 @@ export default function TransactionsPage() {
                         <TableHead>Retailer</TableHead>
                       ) : null}
                       <TableHead>Customer Payment</TableHead>
-                      <TableHead>Wallet Deduction</TableHead>
-                      <TableHead>Distributable Rev.</TableHead>
-                      <TableHead>Retailer</TableHead>
-                      <TableHead>Franchisee</TableHead>
-                      <TableHead>Sub-Franchisee</TableHead>
+                      <TableHead>Credits Consumed</TableHead>
+                      <TableHead>Sale Margin</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -362,10 +349,9 @@ export default function TransactionsPage() {
                     {paged.map((tx) => {
                       const retailer =
                         orgById[tx.retailerOrganizationId] || null
-                      const shares = getTransactionShareAmounts(
-                        tx,
-                        sharePercentages,
-                      )
+                      const saleMargin =
+                        (Number(tx.customerPayment) || 0) -
+                        (Number(tx.walletDeduction) || 0)
                       return (
                         <TableRow key={tx.id}>
                           <TableCell className="font-medium text-slate-900">
@@ -399,28 +385,7 @@ export default function TransactionsPage() {
                           </TableCell>
                           <TableCell className="whitespace-nowrap">
                             <SignedAmount
-                              amount={shares.distributable}
-                              direction="credit"
-                              showSign={false}
-                            />
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            <SignedAmount
-                              amount={shares.retailer}
-                              direction="credit"
-                              showSign={false}
-                            />
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            <SignedAmount
-                              amount={shares.franchisee}
-                              direction="credit"
-                              showSign={false}
-                            />
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            <SignedAmount
-                              amount={shares.subfranchisee}
+                              amount={saleMargin}
                               direction="credit"
                               showSign={false}
                             />

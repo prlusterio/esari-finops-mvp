@@ -83,6 +83,7 @@ const revenueSharing = {
 }
 
 const commissionSettings = createCollectionHelpers(STORAGE_KEYS.COMMISSION_SETTINGS)
+const depositRates = createCollectionHelpers(STORAGE_KEYS.DEPOSIT_RATES)
 
 export function getUsers() {
   return users.get()
@@ -140,6 +141,14 @@ export function saveCommissionSettings(data) {
   commissionSettings.save(data)
 }
 
+export function getDepositRates() {
+  return depositRates.get()
+}
+
+export function saveDepositRates(data) {
+  depositRates.save(data)
+}
+
 export function getTransactions() {
   return transactions.get()
 }
@@ -181,6 +190,7 @@ export const BUSINESS_COLLECTIONS = {
   fundingTransfers,
   revenueSharing,
   commissionSettings,
+  depositRates,
   transactions,
   settlements,
 }
@@ -195,6 +205,7 @@ export function clearAllBusinessData() {
   localStorage.removeItem(STORAGE_KEYS.WALLET_LEDGER_VERSION)
   localStorage.removeItem(STORAGE_KEYS.TRANSACTIONS_SEED_VERSION)
   localStorage.removeItem(STORAGE_KEYS.COMMISSION_SETTINGS_SEED_VERSION)
+  localStorage.removeItem(STORAGE_KEYS.INTERNET_CREDITS_SEED_VERSION)
 }
 
 export function collectionNeedsSeed(name) {

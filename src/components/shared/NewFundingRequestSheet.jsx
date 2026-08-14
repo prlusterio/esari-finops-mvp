@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { CloudUpload, FileImage, Info, X } from 'lucide-react'
 import { ORG_IDS } from '@/lib/constants'
 import { formatCurrency } from '@/lib/currency'
+import {
+  formatDepositRatePercent,
+  suggestCredits,
+} from '@/lib/internetCredits'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -55,6 +59,8 @@ export function NewFundingRequestSheet({
   parentOrganizationId = ORG_IDS.PLATFORM,
   infoMessage = 'Submit this form to request additional wallet funds from the Central Admin. Ensure your bank transfer is completed before submitting.',
   onConfirmIntent,
+  depositRate = null,
+  internetCredits = false,
 }) {
   const fileInputRef = useRef(null)
   const [amount, setAmount] = useState('')
@@ -157,6 +163,7 @@ export function NewFundingRequestSheet({
         requesterRole: user.role,
         parentOrganizationId,
         amount: numericAmount,
+        depositRate: depositRate != null ? Number(depositRate) : undefined,
         notes: notes.trim(),
         proofOfPayment,
       })
@@ -173,7 +180,7 @@ export function NewFundingRequestSheet({
       <SheetContent side="right" className="w-full gap-0 p-0 sm:max-w-[28rem]">
         <SheetHeader className="border-b border-slate-200 px-6 py-5 pr-12">
           <SheetTitle className="text-xl font-semibold text-slate-900">
-            New Funding Request
+            {internetCredits ? 'New Credits Request' : 'New Funding Request'}
           </SheetTitle>
         </SheetHeader>
 
@@ -204,7 +211,11 @@ export function NewFundingRequestSheet({
               </div>
               {amount && !Number.isNaN(Number(amount)) && Number(amount) > 0 ? (
                 <p className="text-xs text-slate-400">
-                  Requesting {formatCurrency(amount)}
+                  {internetCredits && depositRate
+                    ? `Deposit ${formatCurrency(amount)} → suggested ${formatCurrency(
+                        suggestCredits(Number(amount), Number(depositRate)),
+                      )} credits (${formatDepositRatePercent(depositRate)} rate)`
+                    : `Requesting ${formatCurrency(amount)}`}
                 </p>
               ) : null}
             </div>

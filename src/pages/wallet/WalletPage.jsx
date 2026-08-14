@@ -11,7 +11,6 @@ import {
 import {
   getFundingTransfers,
   getOrganizations,
-  getRevenueSharing,
   getTransactions,
   getWallets,
 } from '@/services/storage'
@@ -61,7 +60,6 @@ export default function WalletPage() {
   const wallets = useMemo(() => getWallets(), [dataVersion])
   const transfers = useMemo(() => getFundingTransfers(), [dataVersion])
   const transactions = useMemo(() => getTransactions(), [dataVersion])
-  const revenueSharing = useMemo(() => getRevenueSharing(), [dataVersion])
 
   const view = useMemo(
     () =>
@@ -71,7 +69,6 @@ export default function WalletPage() {
         wallets,
         transfers,
         transactions,
-        revenueSharing,
         role: user?.role,
       }),
     [
@@ -81,19 +78,20 @@ export default function WalletPage() {
       wallets,
       transfers,
       transactions,
-      revenueSharing,
     ],
   )
+
+  const uplineLabel = view.parentTypeLabel || 'Franchisee'
+  const requestHint =
+    view.parentTypeLabel === 'CWPC Admin'
+      ? 'Request more via Internet Credits from CWPC Admin (cash + proof).'
+      : 'Request more via Internet Credits from your franchisee (cash + proof, 80% deposit rate).'
 
   return (
     <div>
       <PageHeader
         title="Wallet"
-        description={
-          view.parentTypeLabel === 'CWPC Admin'
-            ? 'Your operating and revenue wallets. Request token credits from CWPC Admin when you need float.'
-            : 'Your operating and revenue wallets. Request token credits from your franchisee when you need float.'
-        }
+        description={`Available Credits for internet sales, plus sale margin from customer payments. ${requestHint}`}
         breadcrumbs={[
           { label: 'Home', href: getHomePathForRole(user?.role) },
           { label: 'Wallet' },
@@ -104,7 +102,7 @@ export default function WalletPage() {
         <Card>
           <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
             <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Operating Wallet
+              Available Credits
             </CardTitle>
             <Wallet className="h-4 w-4 text-wallet" />
           </CardHeader>
@@ -116,21 +114,22 @@ export default function WalletPage() {
               <StatusBadge status={view.kpis.operatingStatus} />
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              Min. {formatCurrency(view.kpis.minimumBalance)}
+              Min. {formatCurrency(view.kpis.minimumBalance)} · burned on
+              internet sales
             </p>
           </CardContent>
         </Card>
         <StatCard
-          title="Revenue Wallet"
-          value={formatCurrency(view.kpis.revenueBalance)}
-          description="All-time credited revenue share"
+          title="Sale Margin"
+          value={formatCurrency(view.kpis.saleMargin ?? view.kpis.revenueBalance)}
+          description="Customer payment minus credits consumed · see Revenue for detail"
           icon={Banknote}
           accent="success"
         />
         <Card>
           <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
             <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {view.parentTypeLabel || 'Franchisee'}
+              {uplineLabel}
             </CardTitle>
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -142,7 +141,7 @@ export default function WalletPage() {
               {view.parent?.code ||
                 (view.parentTypeLabel === 'CWPC Admin'
                   ? 'Your upline platform admin'
-                  : 'Your upline franchisee')}
+                  : 'Your upline for Internet Credits requests')}
             </p>
           </CardContent>
         </Card>
@@ -151,13 +150,14 @@ export default function WalletPage() {
       <Card className="overflow-hidden shadow-sm">
         <CardHeader className="border-b border-border px-4 py-3">
           <CardTitle className="text-base font-semibold">
-            Recent Funding Activity
+            Recent Credits Activity
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {view.activity.length === 0 ? (
             <div className="px-4 py-12 text-center text-sm text-muted-foreground">
-              No funding transfers yet for your wallet.
+              No credit releases yet. Request Internet Credits when you need
+              inventory.
             </div>
           ) : (
             <div className="overflow-x-auto">

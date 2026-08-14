@@ -9,15 +9,21 @@ const STATUS_STYLES = {
     'border-transparent bg-success/10 text-success hover:bg-success/10',
   [FUNDING_STATUS.COMPLETED]:
     'border-transparent bg-wallet/10 text-wallet hover:bg-wallet/10',
+  [FUNDING_STATUS.RELEASED]:
+    'border-transparent bg-wallet/10 text-wallet hover:bg-wallet/10',
   [FUNDING_STATUS.REJECTED]:
     'border-transparent bg-danger/10 text-danger hover:bg-danger/10',
+  [FUNDING_STATUS.REVERSED]:
+    'border-transparent bg-slate-100 text-slate-600 hover:bg-slate-100',
 }
 
 const DOT_STYLES = {
   [FUNDING_STATUS.PENDING]: 'bg-amber-500',
   [FUNDING_STATUS.APPROVED]: 'bg-success',
   [FUNDING_STATUS.COMPLETED]: 'bg-wallet',
+  [FUNDING_STATUS.RELEASED]: 'bg-wallet',
   [FUNDING_STATUS.REJECTED]: 'bg-danger',
+  [FUNDING_STATUS.REVERSED]: 'bg-slate-500',
 }
 
 export function FundingStatusBadge({ status }) {

@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
   AlertTriangle,
-  ArrowLeftRight,
   Building2,
   Eye,
   Store,
@@ -11,7 +10,6 @@ import {
 import { useAuth } from '@/context/AuthContext'
 import { ROLES } from '@/lib/constants'
 import { formatCurrency } from '@/lib/currency'
-import { getFundingWorkspaceConfig } from '@/lib/funding'
 import { DEFAULT_PAGE_SIZE, paginateItems } from '@/lib/pagination'
 import { getHomePathForRole } from '@/lib/permissions'
 import {
@@ -21,15 +19,11 @@ import {
   WALLET_BALANCE_STATUS,
   WALLET_BALANCE_STATUS_LABELS,
 } from '@/lib/wallets'
-import { executeWalletTransfer } from '@/services/fundingActions'
 import {
   getFundingTransfers,
   getOrganizations,
   getWallets,
 } from '@/services/storage'
-import { buildAmountConfirmRows, FundingConfirmDialog } from '@/components/shared/FundingConfirmDialog'
-import { FundingSuccessDialog } from '@/components/shared/FundingSuccessDialog'
-import { DirectTransferSheet } from '@/components/shared/DirectTransferSheet'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { StatCard } from '@/components/shared/StatCard'
 import { TablePagination } from '@/components/shared/TablePagination'
@@ -88,21 +82,11 @@ function StatusBadge({ status }) {
 }
 
 export default function WalletManagementPage() {
-  const { user, dataVersion, bumpDataVersion } = useAuth()
+  const { user, dataVersion } = useAuth()
   const isFranchisee = user?.role === ROLES.FRANCHISEE
   const organizations = useMemo(() => getOrganizations(), [dataVersion])
   const wallets = useMemo(() => getWallets(), [dataVersion])
   const transfers = useMemo(() => getFundingTransfers(), [dataVersion])
-
-  const fundingConfig = useMemo(
-    () =>
-      getFundingWorkspaceConfig({
-        role: user?.role,
-        organizationId: user?.organizationId,
-        organizations,
-      }),
-    [user?.role, user?.organizationId, organizations],
-  )
 
   const directory = useMemo(() => {
     const args = {
@@ -118,12 +102,6 @@ export default function WalletManagementPage() {
   const [lowOnly, setLowOnly] = useState(false)
   const [page, setPage] = useState(0)
   const [selectedRow, setSelectedRow] = useState(null)
-  const [transferOpen, setTransferOpen] = useState(false)
-  const [initialRecipientId, setInitialRecipientId] = useState('')
-  const [confirmAction, setConfirmAction] = useState(null)
-  const [actionBusy, setActionBusy] = useState(false)
-  const [actionError, setActionError] = useState('')
-  const [successAction, setSuccessAction] = useState(null)
 
   const filteredRows = useMemo(() => {
     if (!lowOnly) return directory.rows
@@ -152,42 +130,14 @@ export default function WalletManagementPage() {
 
   const ownBalance = directory.kpis.operatingBalance
 
-  const openTransfer = (recipientId = '') => {
-    setInitialRecipientId(recipientId || '')
-    setTransferOpen(true)
-  }
-
-  const handleConfirmTransfer = () => {
-    if (!confirmAction) return
-    setActionBusy(true)
-    setActionError('')
-    try {
-      const result = executeWalletTransfer(confirmAction.payload)
-      setConfirmAction(null)
-      bumpDataVersion()
-      setSuccessAction({
-        title: 'Transfer completed',
-        message: 'Funds were transferred successfully.',
-        details: [
-          { label: 'Transfer', value: result.transfer.id },
-          { label: 'Amount', value: formatCurrency(result.transfer.amount) },
-        ],
-      })
-    } catch (error) {
-      setActionError(error.message || 'Unable to complete this transfer.')
-    } finally {
-      setActionBusy(false)
-    }
-  }
-
   return (
     <div>
       <PageHeader
         title="Wallet Management"
         description={
           isFranchisee
-            ? 'Monitor your operating wallet and manage liquidity for retailers under you.'
-            : 'Monitor and manage platform liquidity across your organizational hierarchy.'
+            ? 'Monitor Available Credits for you and your retailers. Credit loads go through Internet Credits (cash + proof).'
+            : 'Monitor Available Credits across your franchisees and retailers. Credit loads go through Internet Credits (cash + proof).'
         }
         breadcrumbs={[
           { label: 'Home', href: getHomePathForRole(user?.role) },
@@ -204,7 +154,7 @@ export default function WalletManagementPage() {
         <Card className="lg:col-span-1">
           <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
             <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Operating Wallet Balance
+              Your Available Credits
             </CardTitle>
             <Wallet className="h-4 w-4 text-wallet" />
           </CardHeader>
@@ -213,26 +163,26 @@ export default function WalletManagementPage() {
               {formatCurrency(ownBalance)}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              Your available operating balance
+              Credit inventory you can release to downlines
             </p>
           </CardContent>
         </Card>
         {!isFranchisee ? (
           <StatCard
-            title="Franchisee Total"
+            title="Franchisee Credits"
             value={formatCurrency(directory.kpis.franchiseeTotal)}
-            description={`${directory.kpis.franchiseeWalletCount} wallet${directory.kpis.franchiseeWalletCount === 1 ? '' : 's'}`}
+            description={`${directory.kpis.franchiseeWalletCount} franchisee${directory.kpis.franchiseeWalletCount === 1 ? '' : 's'}`}
             icon={Store}
           />
         ) : null}
         <StatCard
-          title="Retailer Total"
+          title="Retailer Credits"
           value={formatCurrency(directory.kpis.retailerTotal)}
-          description={`${directory.kpis.retailerWalletCount} wallet${directory.kpis.retailerWalletCount === 1 ? '' : 's'}`}
+          description={`${directory.kpis.retailerWalletCount} retailer${directory.kpis.retailerWalletCount === 1 ? '' : 's'}`}
           icon={isFranchisee ? Store : Users}
         />
         <StatCard
-          title={isFranchisee ? 'Managed Wallets' : 'Network Wallets'}
+          title={isFranchisee ? 'Managed Credits' : 'Network Credits'}
           value={directory.kpis.networkWalletCount}
           description={`${directory.kpis.lowBalanceCount} low / zero`}
           icon={Building2}
@@ -243,7 +193,7 @@ export default function WalletManagementPage() {
       <Card className="mb-4 overflow-hidden shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-border px-4 py-3">
           <CardTitle className="text-base font-semibold">
-            Wallet Directory
+            Credits Directory
           </CardTitle>
           <div className="flex items-center gap-2">
             <Button
@@ -262,14 +212,6 @@ export default function WalletManagementPage() {
             >
               <AlertTriangle className="h-3.5 w-3.5" />
               {directory.kpis.lowBalanceCount} Low Balance
-            </Button>
-            <Button
-              type="button"
-              className="bg-blue-600 text-white hover:bg-blue-700"
-              onClick={() => openTransfer()}
-            >
-              <ArrowLeftRight className="h-4 w-4" />
-              Transfer
             </Button>
           </div>
         </CardHeader>
@@ -290,7 +232,7 @@ export default function WalletManagementPage() {
                     <TableRow className="bg-muted/50 hover:bg-muted/50">
                       <TableHead>Wallet Owner</TableHead>
                       <TableHead>Type</TableHead>
-                      <TableHead>Available Balance</TableHead>
+                      <TableHead>Available Credits</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -303,7 +245,9 @@ export default function WalletManagementPage() {
                             {row.ownerName}
                           </div>
                           <div className="text-xs text-slate-400">
-                            {row.parentName}
+                            {row.isOwnWallet
+                              ? 'Your credits inventory'
+                              : row.parentName}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -330,18 +274,6 @@ export default function WalletManagementPage() {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            {row.canTransferTo ? (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                                onClick={() => openTransfer(row.organizationId)}
-                                aria-label={`Transfer to ${row.ownerName}`}
-                              >
-                                <ArrowLeftRight className="h-4 w-4" />
-                              </Button>
-                            ) : null}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -367,57 +299,6 @@ export default function WalletManagementPage() {
         }}
         walletRow={selectedRow}
         activity={selectedActivity}
-      />
-
-      <DirectTransferSheet
-        open={transferOpen}
-        onOpenChange={setTransferOpen}
-        user={user}
-        recipients={fundingConfig.recipients}
-        recipientLabel={fundingConfig.recipientLabel}
-        availableBalance={ownBalance}
-        initialRecipientId={initialRecipientId}
-        onConfirmIntent={(payload) => {
-          setActionError('')
-          setConfirmAction({ type: 'direct-transfer', payload })
-        }}
-      />
-
-      <FundingConfirmDialog
-        open={Boolean(confirmAction)}
-        onOpenChange={(open) => {
-          if (!open && !actionBusy) {
-            setConfirmAction(null)
-            setActionError('')
-          }
-        }}
-        title="Confirm direct transfer"
-        description="This will debit your wallet and credit the recipient."
-        rows={
-          confirmAction
-            ? buildAmountConfirmRows({
-                amount: confirmAction.payload.amount,
-                balanceAfter: confirmAction.payload.balanceAfter,
-                counterpartyLabel:
-                  confirmAction.payload.recipientLabel || 'Recipient',
-                counterpartyName: confirmAction.payload.recipientName,
-              })
-            : []
-        }
-        confirmLabel="Confirm Transfer"
-        busy={actionBusy}
-        error={actionError}
-        onConfirm={handleConfirmTransfer}
-      />
-
-      <FundingSuccessDialog
-        open={Boolean(successAction)}
-        onOpenChange={(open) => {
-          if (!open) setSuccessAction(null)
-        }}
-        title={successAction?.title}
-        message={successAction?.message || ''}
-        details={successAction?.details || []}
       />
     </div>
   )

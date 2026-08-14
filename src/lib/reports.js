@@ -28,66 +28,73 @@ function roundMoney(value) {
 export function getReportsPageConfig(role) {
   if (role === ROLES.ADMIN) {
     return {
-      subtitle: 'Platform commission and network earnings.',
-      walletLabel: 'Master Wallet',
+      subtitle:
+        'Internet Credits load cash, network sales volume, and credit inventory. Sale commission splits are retired.',
+      walletLabel: 'Available Credits',
       showFundingExports: true,
-      showRevenueExport: true,
+      showRevenueExport: false,
       showNetworkFilters: true,
       showRetailerFilter: false,
       showCustomDateRange: true,
-      showFranchiseeRevenueTable: true,
-      showRetailerRevenueTable: true,
+      showFranchiseeRevenueTable: false,
+      showRetailerRevenueTable: false,
       showNetworkEarningsHero: true,
-      showViewerCommissionColumn: true,
-      yourCommissionLabel: 'Platform Commission',
-      viewerCommissionLabel: 'Platform Commission',
+      showViewerCommissionColumn: false,
+      yourCommissionLabel: 'Load cash',
+      viewerCommissionLabel: 'Load cash',
+      earningsMode: 'platform_load',
       defaultDateRange: 'this_month',
     }
   }
 
   if (role === ROLES.SUBFRANCHISEE) {
     return {
-      subtitle: 'Your commission and downline earnings.',
-      walletLabel: 'Operating Wallet',
+      subtitle:
+        'Credit spread on downline releases and network sales volume. Sale commission splits are retired.',
+      walletLabel: 'Available Credits',
       showFundingExports: true,
-      showRevenueExport: true,
+      showRevenueExport: false,
       showNetworkFilters: true,
       showRetailerFilter: false,
       showCustomDateRange: true,
-      showFranchiseeRevenueTable: true,
-      showRetailerRevenueTable: true,
+      showFranchiseeRevenueTable: false,
+      showRetailerRevenueTable: false,
       showNetworkEarningsHero: true,
-      showViewerCommissionColumn: true,
-      yourCommissionLabel: 'Your Commission',
-      viewerCommissionLabel: 'Your Commission',
+      showViewerCommissionColumn: false,
+      yourCommissionLabel: 'Credit spread',
+      viewerCommissionLabel: 'Credit spread',
+      earningsMode: 'credit_spread',
       defaultDateRange: 'this_month',
     }
   }
 
   if (role === ROLES.FRANCHISEE) {
     return {
-      subtitle: 'Your commission and retailer earnings.',
-      walletLabel: 'Operating Wallet',
+      subtitle:
+        'Credit spread on retailer releases and sales volume. Sale commission splits are retired.',
+      walletLabel: 'Available Credits',
       showFundingExports: true,
-      showRevenueExport: true,
+      showRevenueExport: false,
       showNetworkFilters: false,
       showRetailerFilter: true,
       showCustomDateRange: true,
       showFranchiseeRevenueTable: false,
-      showRetailerRevenueTable: true,
+      showRetailerRevenueTable: false,
       showNetworkEarningsHero: true,
-      showViewerCommissionColumn: true,
-      yourCommissionLabel: 'Your Commission',
-      viewerCommissionLabel: 'Your Commission',
+      showViewerCommissionColumn: false,
+      yourCommissionLabel: 'Credit spread',
+      viewerCommissionLabel: 'Credit spread',
+      earningsMode: 'credit_spread',
       defaultDateRange: 'this_month',
     }
   }
 
   return {
-    subtitle: 'Your commission from retailer activity.',
-    walletLabel: 'Operating Wallet',
+    subtitle:
+      'Sale margin (customer payment minus credits consumed) and sales volume. Internet Credits loads stay on Wallet / Internet Credits.',
+    walletLabel: 'Available Credits',
     showFundingExports: true,
-    showRevenueExport: true,
+    showRevenueExport: false,
     showNetworkFilters: false,
     showRetailerFilter: false,
     showCustomDateRange: true,
@@ -95,8 +102,9 @@ export function getReportsPageConfig(role) {
     showRetailerRevenueTable: false,
     showNetworkEarningsHero: true,
     showViewerCommissionColumn: false,
-    yourCommissionLabel: 'Your Commission',
-    viewerCommissionLabel: 'Your Commission',
+    yourCommissionLabel: 'Sale margin',
+    viewerCommissionLabel: 'Sale margin',
+    earningsMode: 'sale_margin',
     defaultDateRange: 'this_month',
   }
 }
@@ -450,7 +458,11 @@ export function fundingRequestsToCsv(requests, orgById = {}) {
     'Request ID',
     'Organization',
     'Requester Role',
-    'Amount',
+    'Deposit Amount',
+    'Suggested Credits',
+    'Credits Released',
+    'Deposit Rate',
+    'Payment Reference',
     'Status',
     'Created At',
     'Updated At',
@@ -458,11 +470,29 @@ export function fundingRequestsToCsv(requests, orgById = {}) {
 
   const rows = requests.map((request) => {
     const org = orgById[request.organizationId]
+    const deposit =
+      Number(request.depositAmount) || Number(request.amount) || 0
+    const suggested =
+      Number(request.suggestedCredits) || Number(request.amount) || 0
+    const released =
+      Number(request.creditsReleased) ||
+      (request.status === FUNDING_STATUS.RELEASED ||
+      request.status === FUNDING_STATUS.APPROVED ||
+      request.status === FUNDING_STATUS.COMPLETED
+        ? suggested
+        : 0)
+    const rate =
+      Number(request.depositRate) ||
+      (suggested > 0 ? roundMoney(deposit / suggested) : '')
     return [
       request.id,
       org?.name || request.organizationId,
       request.requesterRole,
-      request.amount,
+      deposit,
+      suggested,
+      released || '',
+      rate,
+      request.paymentReferenceId || '',
       request.status,
       request.createdAt,
       request.updatedAt,
@@ -477,7 +507,11 @@ export function fundingTransfersToCsv(transfers, orgById = {}) {
     'Transfer ID',
     'From',
     'To',
-    'Amount',
+    'Credits Amount',
+    'Deposit Amount',
+    'Deposit Rate',
+    'Payment Reference',
+    'Release Source',
     'Status',
     'Funding Request',
     'Created At',
@@ -491,6 +525,10 @@ export function fundingTransfersToCsv(transfers, orgById = {}) {
       from?.name || transfer.fromOrganizationId,
       to?.name || transfer.toOrganizationId,
       transfer.amount,
+      transfer.depositAmount ?? '',
+      transfer.depositRate ?? '',
+      transfer.paymentReferenceId || '',
+      transfer.releaseSource || '',
       transfer.status,
       transfer.fundingRequestId || '',
       transfer.createdAt,
@@ -652,6 +690,36 @@ export function buildReportSnapshot({
       0,
     ),
   )
+  const cashDepositedTotal = roundMoney(
+    scopedFundingRequests.reduce((sum, request) => {
+      const deposit =
+        Number(request.depositAmount) || Number(request.amount) || 0
+      return sum + deposit
+    }, 0),
+  )
+  const creditsReleasedTotal = roundMoney(
+    scopedFundingRequests.reduce((sum, request) => {
+      const isReleased =
+        request.status === FUNDING_STATUS.RELEASED ||
+        request.status === FUNDING_STATUS.APPROVED ||
+        request.status === FUNDING_STATUS.COMPLETED
+      if (!isReleased) return sum
+      const credits =
+        Number(request.creditsReleased) ||
+        Number(request.suggestedCredits) ||
+        Number(request.amount) ||
+        0
+      return sum + credits
+    }, 0),
+  )
+  const pendingCreditsTotal = roundMoney(
+    scopedFundingRequests.reduce((sum, request) => {
+      if (request.status !== FUNDING_STATUS.PENDING) return sum
+      const credits =
+        Number(request.suggestedCredits) || Number(request.amount) || 0
+      return sum + credits
+    }, 0),
+  )
   const pendingFundingCount = scopedFundingRequests.filter(
     (request) => request.status === FUNDING_STATUS.PENDING,
   ).length
@@ -737,6 +805,9 @@ export function buildReportSnapshot({
       fundingRequestCount: scopedFundingRequests.length,
       pendingFundingCount,
       fundingAmountTotal,
+      cashDepositedTotal,
+      creditsReleasedTotal,
+      pendingCreditsTotal,
       transferCount: scopedTransfers.length,
       transferAmountTotal,
       pendingRevenue: revenueTotals.pending,

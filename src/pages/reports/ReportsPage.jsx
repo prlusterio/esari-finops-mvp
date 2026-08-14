@@ -3,9 +3,9 @@ import {
   Download,
   Eye,
   Banknote,
+  Coins,
   Receipt,
-  Store,
-  Users,
+  Wallet,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { ROLES, TRANSACTION_STATUS, TRANSACTION_STATUS_LABELS } from '@/lib/constants'
@@ -20,14 +20,15 @@ import {
   buildPartyRevenueDetailEntries,
   buildReportSnapshot,
   exportTransactionsCsv,
+  fundingRequestsToCsv,
+  fundingTransfersToCsv,
   getNetworkFilterOptions,
   getReportsPageConfig,
   partyRevenueDetailEntriesToCsv,
   revenueEntriesToCsv,
 } from '@/lib/reports'
-import { getTransactionShareAmounts } from '@/lib/revenue'
+import { buildCreditRevenueSnapshot } from '@/lib/creditEconomics'
 import {
-  getActiveSharePercentages,
   getTransactionsPageConfig,
   sortTransactionsNewest,
 } from '@/lib/transactions'
@@ -37,6 +38,7 @@ import {
   getOrganizations,
   getRevenueSharing,
   getTransactions,
+  getWallets,
 } from '@/services/storage'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { StatCard } from '@/components/shared/StatCard'
@@ -574,7 +576,7 @@ export default function ReportsPage() {
       transactions: getTransactions(),
       fundingRequests: getFundingRequests(),
       fundingTransfers: getFundingTransfers(),
-      wallets: [],
+      wallets: getWallets(),
       revenueSharing: getRevenueSharing(),
     })
   }, [
@@ -585,10 +587,36 @@ export default function ReportsPage() {
     dataVersion,
   ])
 
+  const creditRevenue = useMemo(
+    () =>
+      buildCreditRevenueSnapshot({
+        role: user?.role,
+        organizationId: user?.organizationId,
+        organizations,
+        fundingRequests: getFundingRequests(),
+        transactions: getTransactions(),
+        dateRange: appliedFilters.dateRange,
+        customDateRange: {
+          from: appliedFilters.customFrom,
+          to: appliedFilters.customTo,
+        },
+      }),
+    [
+      user?.role,
+      user?.organizationId,
+      organizations,
+      appliedFilters,
+      dataVersion,
+    ],
+  )
+
+  const earningsPrimary = creditRevenue.kpis?.primaryValue ?? 0
+
   const {
     kpis,
     datasets,
     orgById,
+    walletBalance,
     franchiseeRevenueRows = [],
     retailerRevenueRows = [],
     networkEarnings,
@@ -599,11 +627,6 @@ export default function ReportsPage() {
   const detailedTransactions = useMemo(
     () => sortTransactionsNewest(datasets.transactions),
     [datasets.transactions],
-  )
-
-  const activeSharePercentages = useMemo(
-    () => getActiveSharePercentages(getRevenueSharing()),
-    [dataVersion],
   )
 
   const {
@@ -818,42 +841,15 @@ export default function ReportsPage() {
       </Card>
 
       {config.showNetworkEarningsHero ? (
-        <div
-          className={cn(
-            'mb-4 grid gap-4 sm:grid-cols-2',
-            config.showFranchiseeRevenueTable
-              ? 'xl:grid-cols-4'
-              : config.showRetailerRevenueTable
-                ? 'xl:grid-cols-3'
-                : 'xl:grid-cols-2',
-          )}
-        >
+        <div className="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-2">
           <StatCard
-            title={config.yourCommissionLabel || 'Your Commission'}
-            value={formatCurrency(networkEarnings?.yourCommission ?? kpis.creditedRevenue)}
-            description={`For ${periodLabel}`}
+            title={config.yourCommissionLabel || 'Earnings'}
+            value={formatCurrency(earningsPrimary)}
+            description={`For ${periodLabel} · see Revenue for detail`}
             descriptionBelowTitle
             icon={Banknote}
             accent="success"
           />
-          {config.showFranchiseeRevenueTable ? (
-            <StatCard
-              title="Franchisee Commissions"
-              value={formatCurrency(networkEarnings?.franchiseeCommission ?? 0)}
-              description={`Network franchisees · ${periodLabel}`}
-              descriptionBelowTitle
-              icon={Users}
-            />
-          ) : null}
-          {config.showRetailerRevenueTable ? (
-            <StatCard
-              title="Retailer Commissions"
-              value={formatCurrency(networkEarnings?.retailerCommission ?? 0)}
-              description={`Network retailers · ${periodLabel}`}
-              descriptionBelowTitle
-              icon={Store}
-            />
-          ) : null}
           <StatCard
             title="Sales Volume"
             value={formatCurrency(networkEarnings?.salesVolume ?? kpis.customerPaymentTotal)}
@@ -894,18 +890,23 @@ export default function ReportsPage() {
                 </div>
                 <div className="pl-3">
                   <p className="truncate text-xs text-muted-foreground">
-                    Commission Pool
+                    Credits Consumed
                   </p>
                   <p className="mt-1 truncate text-lg font-semibold tabular-nums text-success">
-                    {formatCurrency(kpis.distributableTotal)}
+                    {formatCurrency(
+                      datasets.transactions.reduce(
+                        (sum, tx) => sum + (Number(tx.walletDeduction) || 0),
+                        0,
+                      ),
+                    )}
                   </p>
                 </div>
               </div>
             </CardContent>
           </Card>
           <StatCard
-            title={config.yourCommissionLabel || 'Your Commission'}
-            value={formatCurrency(kpis.creditedRevenue)}
+            title={config.yourCommissionLabel || 'Earnings'}
+            value={formatCurrency(earningsPrimary)}
             description={`For ${periodLabel}`}
             descriptionBelowTitle
             icon={Banknote}
@@ -913,6 +914,40 @@ export default function ReportsPage() {
           />
         </div>
       )}
+
+      {config.showFundingExports ? (
+        <div className="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            title="Cash Deposited"
+            value={formatCurrency(kpis.cashDepositedTotal ?? 0)}
+            description={`Internet Credits proofs · ${periodLabel}`}
+            descriptionBelowTitle
+            icon={Banknote}
+          />
+          <StatCard
+            title="Credits Released"
+            value={formatCurrency(kpis.creditsReleasedTotal ?? 0)}
+            description={`${kpis.transferCount} releases · ${periodLabel}`}
+            descriptionBelowTitle
+            icon={Coins}
+          />
+          <StatCard
+            title="Pending Credits"
+            value={formatCurrency(kpis.pendingCreditsTotal ?? 0)}
+            description={`${kpis.pendingFundingCount} pending request${kpis.pendingFundingCount === 1 ? '' : 's'}`}
+            descriptionBelowTitle
+            icon={Wallet}
+            accent={kpis.pendingFundingCount > 0 ? 'warning' : 'default'}
+          />
+          <StatCard
+            title={config.walletLabel || 'Available Credits'}
+            value={formatCurrency(walletBalance ?? 0)}
+            description="Your credit inventory balance"
+            descriptionBelowTitle
+            icon={Wallet}
+          />
+        </div>
+      ) : null}
 
       {config.showFranchiseeRevenueTable || config.showRetailerRevenueTable ? (
         <div className="mb-4 space-y-4">
@@ -983,11 +1018,8 @@ export default function ReportsPage() {
                         <TableHead>Retailer</TableHead>
                       ) : null}
                       <TableHead>Customer Payment</TableHead>
-                      <TableHead>Wallet Deduction</TableHead>
-                      <TableHead>Distributable Rev.</TableHead>
-                      <TableHead>Retailer</TableHead>
-                      <TableHead>Franchisee</TableHead>
-                      <TableHead>Sub-Franchisee</TableHead>
+                      <TableHead>Credits Consumed</TableHead>
+                      <TableHead>Sale Margin</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -995,10 +1027,9 @@ export default function ReportsPage() {
                   <TableBody>
                     {paged.map((tx) => {
                       const retailer = orgById[tx.retailerOrganizationId] || null
-                      const shares = getTransactionShareAmounts(
-                        tx,
-                        activeSharePercentages,
-                      )
+                      const saleMargin =
+                        (Number(tx.customerPayment) || 0) -
+                        (Number(tx.walletDeduction) || 0)
                       return (
                         <TableRow key={tx.id}>
                           <TableCell className="font-medium text-slate-900">
@@ -1032,28 +1063,7 @@ export default function ReportsPage() {
                           </TableCell>
                           <TableCell className="whitespace-nowrap">
                             <SignedAmount
-                              amount={shares.distributable}
-                              direction="credit"
-                              showSign={false}
-                            />
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            <SignedAmount
-                              amount={shares.retailer}
-                              direction="credit"
-                              showSign={false}
-                            />
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            <SignedAmount
-                              amount={shares.franchisee}
-                              direction="credit"
-                              showSign={false}
-                            />
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            <SignedAmount
-                              amount={shares.subfranchisee}
+                              amount={saleMargin}
                               direction="credit"
                               showSign={false}
                             />
@@ -1098,7 +1108,7 @@ export default function ReportsPage() {
         <div className="grid gap-4 md:grid-cols-2">
           <ExportCard
             title="Transactions"
-            description="Sales volume and commission shares for your scope."
+            description="Sales volume, credits consumed, and sale margin for your scope."
             count={datasets.transactions.length}
             onExport={() =>
               downloadCsv(
@@ -1121,6 +1131,32 @@ export default function ReportsPage() {
                 )
               }
             />
+          ) : null}
+          {config.showFundingExports ? (
+            <>
+              <ExportCard
+                title="Internet Credits Requests"
+                description="Deposit cash, suggested/released credits, rate, and payment refs."
+                count={datasets.fundingRequests.length}
+                onExport={() =>
+                  downloadCsv(
+                    `esarisari-internet-credits-requests-${roleSlug}.csv`,
+                    fundingRequestsToCsv(datasets.fundingRequests, orgById),
+                  )
+                }
+              />
+              <ExportCard
+                title="Internet Credits Releases"
+                description="Credit release ledger with deposit, rate, and payment reference."
+                count={datasets.transfers.length}
+                onExport={() =>
+                  downloadCsv(
+                    `esarisari-internet-credits-releases-${roleSlug}.csv`,
+                    fundingTransfersToCsv(datasets.transfers, orgById),
+                  )
+                }
+              />
+            </>
           ) : null}
         </div>
       </div>
