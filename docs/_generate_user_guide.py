@@ -621,9 +621,15 @@ def build():
             "Click Internet Credits.",
             "Note the cards: Pending Deposits (cash from franchisees not yet released), Pending Credits, Credits Released, My Pending Requests, Available Credits.",
             "Click the My Credits Request tab.",
-            "Click + New Credits Request at the top right.",
-            "Enter Deposited amount (₱) — the cash you already sent to Admin. The form shows suggested credits using credits = deposit ÷ your 60% rate. Example: ₱30,000 → ₱50,000 credits.",
-            "Optionally upload proof of payment (SVG, PNG, JPG, or PDF, max 5MB). Add notes if you have a bank reference.",
+            "Click + New Credits Request at the top right. The New Credits Request sheet opens on the right.",
+        ],
+    )
+    shot(doc, "sub-credits-new-request.png", "Figure 4. New Credits Request — deposit to Admin, suggested credits at 60%.")
+    steps(
+        doc,
+        [
+            "Enter Amount (PHP) — the cash you already sent to Admin. The form shows suggested credits using credits = deposit ÷ your 60% rate. Example: ₱30,000 → ₱50,000 credits.",
+            "Optionally upload proof of payment (SVG, PNG, JPG, or PDF, max 5MB). Add notes if you have a bank reference. Proof is optional in the demo.",
             "Click Continue, then confirm. The row appears as Pending on My Credits Request. Type is Request.",
             "While it is still Pending, you can Update (amount, notes, proof) or Delete. Update reapplies the live deposit rate, not the original snapshot.",
             "When Admin releases, status becomes Released and Available Credits goes up. Open Released / History to see completed loads. There is no separate Transfer History tab.",
@@ -640,7 +646,7 @@ def build():
         doc,
         "Franchisees deposit cash to you and submit a request. You check proof, then release credits from your Available Credits. Default sell rate is 70% (₱700 cash → 1,000 credits). That 10-point gap vs your 60% buy rate is your Internet Credits earnings.",
     )
-    shot(doc, "sub-credits-downlines.png", "Figure 4. Downlines Credits Request — pending franchisee deposits.")
+    shot(doc, "sub-credits-downlines.png", "Figure 5. Downlines Credits Request — pending franchisee deposits.")
     steps(
         doc,
         [
@@ -657,17 +663,27 @@ def build():
     heading(doc, "Direct Release (skip the pending queue)", 3)
     add_para(
         doc,
-        "Use this when the franchisee already paid and you do not need them to file a request first. Same economics: deposit ÷ rate, optional proof, payment reference required.",
+        "Use this when the franchisee already paid and you do not need them to file a request first. Same economics: deposit ÷ rate, optional proof, payment reference required. The sheet is titled Direct Credits Release.",
     )
     steps(
         doc,
         [
-            "On Internet Credits, click Direct Release (top right).",
-            "Pick the franchisee, enter cash deposited, confirm suggested credits, attach proof if you have it, enter Payment reference ID.",
-            "Confirm. Credits move immediately. The row appears on Released / History and on the franchisee’s My Credits Request with Type = Direct Release.",
+            "On Internet Credits, click Direct Release (top right). The Direct Credits Release sheet opens on the right.",
         ],
     )
-    shot(doc, "sub-credits-released.png", "Figure 5. Released / History — completed loads in and out, including Direct Release.")
+    shot(
+        doc,
+        "sub-credits-direct-release.png",
+        "Figure 6. Direct Credits Release — pick a franchisee, enter cash deposited, see suggested credits.",
+    )
+    steps(
+        doc,
+        [
+            "Pick the franchisee. Enter cash deposited. Confirm suggested credits (deposit ÷ that franchisee’s rate). Attach proof if you have it. Add a note if useful.",
+            "Click Continue, then enter Payment reference ID and confirm. Credits move immediately. The row appears on Released / History and on the franchisee’s My Credits Request with Type = Direct Release.",
+        ],
+    )
+    shot(doc, "sub-credits-released.png", "Figure 7. Released / History — completed loads in and out, including Direct Release.")
     add_para(
         doc,
         "Open Released / History to audit past releases (requests and Direct Releases). View is read-only. Reverse after release is not available in this version.",
@@ -687,7 +703,7 @@ def build():
         doc,
         "This rate card is only for Internet Credits loads to franchisees. It does not change sale commissions. Demo starts with hop defaults only (no custom overrides).",
     )
-    shot(doc, "sub-deposit-rates.png", "Figure 6. Deposit Rates — Sub-Franchisee → Franchisee default 70%.")
+    shot(doc, "sub-deposit-rates.png", "Figure 8. Deposit Rates — Sub-Franchisee → Franchisee default 70%.")
     steps(
         doc,
         [
@@ -704,7 +720,7 @@ def build():
         doc,
         "This is the other pricing surface. For each retailer: Retailer %, Franchisee %, Your Share % (remainder), Platform Fee % (40% in the demo). Total must be 100%. These % are stamped on each sale — changing a row later does not rewrite completed sales.",
     )
-    shot(doc, "sub-commission-settings.png", "Figure 7. Commission Settings — per-retailer sale splits.")
+    shot(doc, "sub-commission-settings.png", "Figure 9. Commission Settings — per-retailer sale splits.")
     steps(
         doc,
         [
@@ -722,7 +738,7 @@ def build():
         doc,
         "This ledger is completed internet sales only. It is not the credit-load list. The demo starts empty — a retailer must Record demo sale before rows appear.",
     )
-    shot(doc, "sub-transactions.png", "Figure 8. Sub-Franchisee Transactions Ledger.")
+    shot(doc, "sub-transactions.png", "Figure 10. Sub-Franchisee Transactions Ledger.")
     steps(
         doc,
         [
@@ -740,7 +756,7 @@ def build():
         doc,
         "This page answers “what did I earn?” It adds the two streams for the selected period.",
     )
-    shot(doc, "sub-revenue.png", "Figure 9. Sub-Franchisee Revenue — Internet Credits earnings + Sales Commission.")
+    shot(doc, "sub-revenue.png", "Figure 11. Sub-Franchisee Revenue — Internet Credits earnings + Sales Commission.")
     steps(
         doc,
         [
@@ -758,7 +774,7 @@ def build():
     )
 
     heading(doc, "3.8 Reports — period snapshot and CSV exports", 2)
-    shot(doc, "sub-reports.png", "Figure 10. Sub-Franchisee Reports.")
+    shot(doc, "sub-reports.png", "Figure 12. Sub-Franchisee Reports.")
     steps(
         doc,
         [
@@ -772,7 +788,7 @@ def build():
             "Scroll to Export Reports at the bottom of the page for the CSV cards.",
         ],
     )
-    shot(doc, "sub-reports-export.png", "Figure 11. Sub-Franchisee Export Reports — CSV downloads for the selected period.")
+    shot(doc, "sub-reports-export.png", "Figure 13. Sub-Franchisee Export Reports — CSV downloads for the selected period.")
     add_para(
         doc,
         "Each card uses the same Date Range / Franchisee / Retailer filters as the rest of Reports. The count is how many rows will be in the file. Export CSV is disabled when the count is 0.",
@@ -835,7 +851,7 @@ def build():
     )
 
     heading(doc, "4.1 Wallets — you and your retailers", 2)
-    shot(doc, "fran-wallets.png", "Figure 12. Franchisee Wallet Management.")
+    shot(doc, "fran-wallets.png", "Figure 14. Franchisee Wallet Management.")
     steps(
         doc,
         [
@@ -846,7 +862,7 @@ def build():
             "Click the eye on a retailer to see Available Credits, parent (you), and recent credits received. There is no Minimum Balance card.",
         ],
     )
-    shot(doc, "fran-wallet-details.png", "Figure 13. Wallet details — Available Credits and recent activity.")
+    shot(doc, "fran-wallet-details.png", "Figure 15. Wallet details — Available Credits and recent activity.")
     add_para(
         doc,
         "A Low Balance badge means Available Credits is at or below ₱5,000. It does not move money by itself. The retailer must deposit cash and you release from Internet Credits (or you Direct Release after they paid).",
@@ -857,14 +873,24 @@ def build():
         doc,
         "Same buy pattern as the Sub-Franchisee, one hop down. You deposit cash to Northern Mindanao Sub-Franchisee and wait for them to release. Default: ₱700 cash → 1,000 credits. Their bell will show your request.",
     )
-    shot(doc, "fran-credits-mine.png", "Figure 14. Franchisee My Credits Request — buys from the Sub-Franchisee.")
+    shot(doc, "fran-credits-mine.png", "Figure 16. Franchisee My Credits Request — buys from the Sub-Franchisee.")
     steps(
         doc,
         [
             "Click Internet Credits.",
             "Cards: Pending Deposits (retailer cash waiting on you), Pending Credits, Credits Released, My Pending Requests, Available Credits.",
             "Click My Credits Request.",
-            "Click + New Credits Request.",
+            "Click + New Credits Request. The New Credits Request sheet opens on the right.",
+        ],
+    )
+    shot(
+        doc,
+        "fran-credits-new-request.png",
+        "Figure 17. New Credits Request — deposit to the Sub-Franchisee, suggested credits at 70%.",
+    )
+    steps(
+        doc,
+        [
             "Enter the cash you deposited to the Sub-Franchisee. Suggested credits = deposit ÷ your buy rate (70% unless overridden).",
             "Optionally attach proof and notes → Continue → confirm.",
             "While Pending, you may Update or Delete. When Released (or when you receive a Direct Release), your Available Credits increases. Type shows Request or Direct Release.",
@@ -876,7 +902,7 @@ def build():
         doc,
         "Retailers deposit cash to you. You release from Available Credits at the per-retailer deposit rate (default 80%). Your Internet Credits earnings are sell-rate cash minus your 70% cost.",
     )
-    shot(doc, "fran-credits-retailers.png", "Figure 15. Retailers Credits Request — pending retailer deposits.")
+    shot(doc, "fran-credits-retailers.png", "Figure 18. Retailers Credits Request — pending retailer deposits.")
     steps(
         doc,
         [
@@ -884,11 +910,22 @@ def build():
             "Open a Pending row with Review. Check Deposited Amount, deposit rate, suggested credits, and Available Credits After Release.",
             "Match Proof of Payment. Reject with a reason if the proof is wrong.",
             "Click Approve & Release. Enter Payment reference ID. Confirm Credits to release. Save.",
-            "Or click Direct Release to load a retailer immediately after they paid, without a pending row.",
+            "Or click Direct Release to load a retailer immediately after they paid, without a pending row. The Direct Credits Release sheet opens on the right.",
+        ],
+    )
+    shot(
+        doc,
+        "fran-credits-direct-release.png",
+        "Figure 19. Direct Credits Release — pick a retailer, enter cash deposited, see suggested credits at 80%.",
+    )
+    steps(
+        doc,
+        [
+            "Pick the retailer, enter cash deposited, confirm suggested credits, then Continue → Payment reference ID → confirm.",
             "Credits leave your inventory and appear on the retailer’s Wallet / Internet Credits.",
         ],
     )
-    shot(doc, "fran-credits-released.png", "Figure 16. Franchisee Released / History.")
+    shot(doc, "fran-credits-released.png", "Figure 20. Franchisee Released / History.")
     add_para(doc, "Internet Credits earnings check on 1,000 credits sold to a retailer at 80%:")
     bullets(
         doc,
@@ -900,7 +937,7 @@ def build():
     )
 
     heading(doc, "4.4 Deposit Rates — what retailers pay you", 2)
-    shot(doc, "fran-deposit-rates.png", "Figure 17. Franchisee Deposit Rates — default 80%.")
+    shot(doc, "fran-deposit-rates.png", "Figure 21. Franchisee Deposit Rates — default 80%.")
     steps(
         doc,
         [
@@ -912,7 +949,7 @@ def build():
     )
 
     heading(doc, "4.5 Transactions — retailer sales and your share", 2)
-    shot(doc, "fran-transactions.png", "Figure 18. Franchisee Transactions Ledger.")
+    shot(doc, "fran-transactions.png", "Figure 22. Franchisee Transactions Ledger.")
     steps(
         doc,
         [
@@ -922,14 +959,14 @@ def build():
             "Click the eye on a row for the full split.",
         ],
     )
-    shot(doc, "fran-transaction-details.png", "Figure 19. Transaction Details — commission pool split across the chain.")
+    shot(doc, "fran-transaction-details.png", "Figure 23. Transaction Details — commission pool split across the chain.")
     add_para(
         doc,
         "On a ₱1,000 Retailer A sale you should see: customer ₱1,000, credits −₱970, sale margin / pool ₱30. Your commission is ₱6.00 (20%). Retailer ₱7.50, Sub-Franchisee ₱4.50, platform ₱12.00. Optional: Download Receipt, then Close.",
     )
 
     heading(doc, "4.6 Revenue and Reports", 2)
-    shot(doc, "fran-revenue.png", "Figure 20. Franchisee Revenue — loads to retailers plus sales commission.")
+    shot(doc, "fran-revenue.png", "Figure 24. Franchisee Revenue — loads to retailers plus sales commission.")
     steps(
         doc,
         [
@@ -940,8 +977,8 @@ def build():
             "Scroll to Export Reports for CSV downloads (same filters as the cards above).",
         ],
     )
-    shot(doc, "fran-reports.png", "Figure 21. Franchisee Reports.")
-    shot(doc, "fran-reports-export.png", "Figure 22. Franchisee Export Reports — same CSV cards, scoped to your retailers.")
+    shot(doc, "fran-reports.png", "Figure 25. Franchisee Reports.")
+    shot(doc, "fran-reports-export.png", "Figure 26. Franchisee Export Reports — same CSV cards, scoped to your retailers.")
     add_para(
         doc,
         "Same files as the Sub-Franchisee: Transactions, Sales Commission, Internet Credits earnings, Requests, and Releases. Counts and rows are only your network (your restock from the Sub plus loads to Retailer A / B, and sales under you). Click Export CSV; the filename includes franchisee.",
@@ -968,7 +1005,7 @@ def build():
     )
 
     heading(doc, "5.1 Wallet — inventory for sales", 2)
-    shot(doc, "ret-wallet.png", "Figure 23. Retailer Wallet — Available Credits, sale margin, and upline.")
+    shot(doc, "ret-wallet.png", "Figure 27. Retailer Wallet — Available Credits, sale margin, and upline.")
     steps(
         doc,
         [
@@ -982,7 +1019,7 @@ def build():
     shot(
         doc,
         "ret-wallet-low-balance.png",
-        "Figure 24. Retailer B Wallet — Low Balance banner with New Credits Request.",
+        "Figure 28. Retailer B Wallet — Low Balance banner with New Credits Request.",
     )
     add_para(
         doc,
@@ -1002,21 +1039,31 @@ def build():
         doc,
         "There is no downline tab and no Direct Release. You only request. Credits = deposit ÷ your rate. At 80%, ₱800 cash → 1,000 credits. Your franchisee’s bell will show the request.",
     )
-    shot(doc, "ret-credits-mine.png", "Figure 25. Retailer My Credits Request.")
+    shot(doc, "ret-credits-mine.png", "Figure 29. Retailer My Credits Request.")
     steps(
         doc,
         [
             "Click Internet Credits.",
             "My Pending Requests is cash you sent that is not released yet. Available Credits is live inventory.",
-            "Click + New Credits Request.",
-            "Enter Deposited amount (₱) you already sent to Franchisee A. The calculator shows suggested credits at your deposit rate.",
+            "Click + New Credits Request. The New Credits Request sheet opens on the right.",
+        ],
+    )
+    shot(
+        doc,
+        "ret-credits-new-request.png",
+        "Figure 30. New Credits Request — deposit to Franchisee A, suggested credits at 80%.",
+    )
+    steps(
+        doc,
+        [
+            "Enter Amount (PHP) you already sent to Franchisee A. The calculator shows suggested credits at your deposit rate.",
             "Optionally upload proof and notes → Continue → confirm.",
             "While Pending, you may Update or Delete. Update reapplies the live rate.",
             "When the franchisee releases (or Direct Releases), status becomes Released and Wallet Available Credits goes up. Type shows Request or Direct Release.",
             "Click Released / History to see completed loads.",
         ],
     )
-    shot(doc, "ret-credits-released.png", "Figure 26. Retailer Released / History.")
+    shot(doc, "ret-credits-released.png", "Figure 31. Retailer Released / History.")
     callout(
         doc,
         "Your cash on a load is a purchase of inventory",
@@ -1029,7 +1076,7 @@ def build():
         doc,
         "This is the only role that can create a sale in the demo. Record demo sale burns Available Credits and stamps commission shares for the whole chain.",
     )
-    shot(doc, "ret-transactions.png", "Figure 27. Retailer Transactions Ledger.")
+    shot(doc, "ret-transactions.png", "Figure 32. Retailer Transactions Ledger.")
     steps(
         doc,
         [
@@ -1041,7 +1088,7 @@ def build():
             "Optional: Download Receipt, then Close. Export CSV if you need a file.",
         ],
     )
-    shot(doc, "ret-transaction-details.png", "Figure 28. Retailer view of a sale — you earn your % of the pool.")
+    shot(doc, "ret-transaction-details.png", "Figure 33. Retailer view of a sale — you earn your % of the pool.")
     add_para(doc, "Same ₱1,000 sale, retailer reading:")
     bullets(
         doc,
@@ -1057,7 +1104,7 @@ def build():
         doc,
         "Retailers do not have an Internet Credits earnings table. You do not earn a credit spread — you buy at the franchisee’s rate and sell to customers.",
     )
-    shot(doc, "ret-revenue.png", "Figure 29. Retailer Revenue — commission, sales volume, credits consumed.")
+    shot(doc, "ret-revenue.png", "Figure 34. Retailer Revenue — commission, sales volume, credits consumed.")
     steps(
         doc,
         [
@@ -1070,7 +1117,7 @@ def build():
     )
 
     heading(doc, "5.5 Reports", 2)
-    shot(doc, "ret-reports.png", "Figure 30. Retailer Reports.")
+    shot(doc, "ret-reports.png", "Figure 35. Retailer Reports.")
     steps(
         doc,
         [
@@ -1080,7 +1127,7 @@ def build():
             "Scroll to Export Reports. You do not get an Internet Credits earnings CSV (you have no load-spread stream).",
         ],
     )
-    shot(doc, "ret-reports-export.png", "Figure 31. Retailer Export Reports — Transactions, Sales Commission, Requests, and Releases.")
+    shot(doc, "ret-reports-export.png", "Figure 36. Retailer Export Reports — Transactions, Sales Commission, Requests, and Releases.")
     add_para(
         doc,
         "Four CSVs: Transactions (your sales), Sales Commission (your % of each pool), Internet Credits Requests (your buys from the franchisee), and Internet Credits Releases (credits that landed in your Wallet). Same rule as other roles: filters first, then Export CSV. Filename includes retailer.",
