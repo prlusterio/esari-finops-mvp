@@ -4,6 +4,7 @@ import { ORG_IDS } from '@/lib/constants'
 import { formatCurrency } from '@/lib/currency'
 import {
   formatDepositRatePercent,
+  getRequestDepositAmount,
   suggestCredits,
 } from '@/lib/internetCredits'
 import { Button } from '@/components/ui/button'
@@ -52,6 +53,12 @@ function isAcceptedFile(file) {
   return ACCEPTED_EXTENSIONS.some((ext) => lowerName.endsWith(ext))
 }
 
+function amountToInputValue(value) {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric) || numeric <= 0) return ''
+  return Number.isInteger(numeric) ? String(numeric) : numeric.toFixed(2)
+}
+
 export function NewFundingRequestSheet({
   open,
   onOpenChange,
@@ -61,26 +68,33 @@ export function NewFundingRequestSheet({
   onConfirmIntent,
   depositRate = null,
   internetCredits = false,
+  initialRequest = null,
 }) {
   const fileInputRef = useRef(null)
   const [amount, setAmount] = useState('')
   const [notes, setNotes] = useState('')
   const [proofFile, setProofFile] = useState(null)
   const [proofPreviewUrl, setProofPreviewUrl] = useState('')
+  const [existingProof, setExistingProof] = useState(null)
   const [dragActive, setDragActive] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const isEditing = Boolean(initialRequest?.id)
 
   useEffect(() => {
     if (!open) return
-    setAmount('')
-    setNotes('')
+    const deposit = initialRequest
+      ? getRequestDepositAmount(initialRequest)
+      : 0
+    setAmount(amountToInputValue(deposit))
+    setNotes(initialRequest?.notes || '')
     setProofFile(null)
-    setProofPreviewUrl('')
+    setExistingProof(initialRequest?.proofOfPayment || null)
+    setProofPreviewUrl(initialRequest?.proofOfPayment?.url || '')
     setError('')
     setSubmitting(false)
     setDragActive(false)
-  }, [open])
+  }, [open, initialRequest])
 
   useEffect(() => {
     return () => {
@@ -95,6 +109,7 @@ export function NewFundingRequestSheet({
       URL.revokeObjectURL(proofPreviewUrl)
     }
     setProofFile(null)
+    setExistingProof(null)
     setProofPreviewUrl('')
   }
 
@@ -117,6 +132,7 @@ export function NewFundingRequestSheet({
 
     setError('')
     setProofFile(file)
+    setExistingProof(null)
     setProofPreviewUrl(URL.createObjectURL(file))
   }
 
@@ -149,7 +165,7 @@ export function NewFundingRequestSheet({
     setSubmitting(true)
 
     try {
-      let proofOfPayment = null
+      let proofOfPayment = existingProof || null
       if (proofFile) {
         const dataUrl = await readFileAsDataUrl(proofFile)
         proofOfPayment = {
@@ -166,6 +182,7 @@ export function NewFundingRequestSheet({
         depositRate: depositRate != null ? Number(depositRate) : undefined,
         notes: notes.trim(),
         proofOfPayment,
+        requestId: initialRequest?.id,
       })
       onOpenChange(false)
     } catch (submitError) {
@@ -175,12 +192,35 @@ export function NewFundingRequestSheet({
     }
   }
 
+  const proofName = proofFile?.name || existingProof?.fileName || ''
+  const proofSizeLabel = proofFile
+    ? formatFileSize(proofFile.size)
+    : existingProof?.fileSize || ''
+  const proofIsImage = proofFile
+    ? proofFile.type.startsWith('image/')
+    : Boolean(
+        existingProof?.url &&
+          !String(existingProof.fileName || '')
+            .toLowerCase()
+            .endsWith('.pdf'),
+      )
+  const hasProof = Boolean(proofFile || existingProof)
+  const editInfoMessage = internetCredits
+    ? 'You can change the deposit, notes, or proof while this request is still pending. Your upline will see the updated details.'
+    : 'You can change this request while it is still pending. Your parent organization will see the updated details.'
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full gap-0 p-0 sm:max-w-[28rem]">
         <SheetHeader className="border-b border-slate-200 px-6 py-5 pr-12">
           <SheetTitle className="text-xl font-semibold text-slate-900">
-            {internetCredits ? 'New Credits Request' : 'New Funding Request'}
+            {isEditing
+              ? internetCredits
+                ? 'Update Credits Request'
+                : 'Update Funding Request'
+              : internetCredits
+                ? 'New Credits Request'
+                : 'New Funding Request'}
           </SheetTitle>
         </SheetHeader>
 
@@ -188,7 +228,7 @@ export function NewFundingRequestSheet({
           <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
             <div className="flex gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-slate-700">
               <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
-              <p>{infoMessage}</p>
+              <p>{isEditing ? editInfoMessage : infoMessage}</p>
             </div>
 
             <div className="space-y-2">
@@ -233,7 +273,7 @@ export function NewFundingRequestSheet({
                 </span>
               </p>
 
-              {!proofFile ? (
+              {!hasProof ? (
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
@@ -271,12 +311,12 @@ export function NewFundingRequestSheet({
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-medium text-slate-900">
-                        {proofFile.name}
+                        {proofName}
                       </div>
                       <div className="text-xs text-slate-400">
-                        {formatFileSize(proofFile.size)}
+                        {proofSizeLabel}
                       </div>
-                      {proofFile.type.startsWith('image/') && proofPreviewUrl ? (
+                      {proofIsImage && proofPreviewUrl ? (
                         <img
                           src={proofPreviewUrl}
                           alt="Proof of payment preview"

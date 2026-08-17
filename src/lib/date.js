@@ -58,6 +58,59 @@ export function formatDateLong(isoDate) {
   }).format(date)
 }
 
+export const REPORT_PERIOD_KEYS = [
+  'all',
+  'this_month',
+  '7d',
+  '30d',
+  '90d',
+  '3m',
+  '6m',
+  'this_year',
+  'last_year',
+  'custom',
+]
+
+/**
+ * Deep-link to Revenue with the same period as Reports.
+ * Hash targets the Internet Credits line-item table.
+ */
+export function buildRevenuePageHref({
+  dateRange = 'this_month',
+  customFrom = '',
+  customTo = '',
+  hash = 'internet-credits',
+} = {}) {
+  const params = new URLSearchParams()
+  params.set('range', dateRange || 'this_month')
+  if (dateRange === 'custom') {
+    if (customFrom) params.set('from', customFrom)
+    if (customTo) params.set('to', customTo)
+  }
+  const suffix = hash ? `#${String(hash).replace(/^#/, '')}` : ''
+  return `/revenue?${params.toString()}${suffix}`
+}
+
+/**
+ * Read a Revenue/Reports period from URL search params.
+ * Returns null when `range` is missing or unknown.
+ */
+export function parseRevenuePeriodSearch(searchParams) {
+  const params =
+    searchParams instanceof URLSearchParams
+      ? searchParams
+      : new URLSearchParams(searchParams || '')
+  const range = params.get('range')
+  if (!range || !REPORT_PERIOD_KEYS.includes(range)) return null
+  const from = params.get('from') || ''
+  const to = params.get('to') || ''
+  return {
+    dateRange: range,
+    customFrom: range === 'custom' ? from : '',
+    customTo: range === 'custom' ? to : '',
+  }
+}
+
 /**
  * Human-readable label for report/revenue date-range filters.
  * e.g. "Last 7 days", "Jan 1 – Mar 12, 2026", "All time"

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>eSariSari User Guide</title>
+  <style>
+    :root {
+      --navy: #0f172a;
+      --blue: #1d4ed8;
+      --muted: #475569;
+      --line: #e2e8f0;
+      --bg: #f8fafc;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: Calibri, "Segoe UI", system-ui, sans-serif;
+      color: var(--navy);
+      background: var(--bg);
+      line-height: 1.5;
+    }
+    .wrap {
+      display: grid;
+      grid-template-columns: 16rem minmax(0, 48rem);
+      gap: 2rem;
+      max-width: 72rem;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 4rem;
+    }
+    nav {
+      position: sticky;
+      top: 1rem;
+      align-self: start;
+      max-height: calc(100vh - 2rem);
+      overflow: auto;
+      padding-right: 0.5rem;
+    }
+    nav .label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+    nav a {
+      display: block;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      padding: 0.2rem 0;
+    }
+    nav a:hover { color: var(--blue); }
+    nav .toc-h1 { font-weight: 700; color: var(--navy); margin-top: 0.6rem; }
+    nav .toc-h2 { padding-left: 0.75rem; font-size: 0.8rem; }
+    article {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      padding: 2rem 1.75rem 3rem;
+    }
+    .kicker { color: var(--blue); font-weight: 700; margin: 0; }
+    .lede { color: var(--muted); margin: 0 0 0.5rem; }
+    h1.cover { font-size: 2.25rem; margin: 0.25rem 0 0.5rem; }
+    h1 { font-size: 1.55rem; margin: 2rem 0 0.6rem; }
+    h2 { font-size: 1.2rem; margin: 1.5rem 0 0.5rem; }
+    h3 { font-size: 1.05rem; margin: 1.25rem 0 0.4rem; }
+    p { margin: 0 0 0.85rem; }
+    p.muted { color: var(--muted); font-style: italic; }
+    ol, ul { margin: 0 0 1rem; padding-left: 1.25rem; }
+    li { margin: 0.25rem 0; }
+    ol li::marker { color: var(--blue); font-weight: 700; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      margin: 0 0 1.1rem;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 0.45rem 0.55rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: var(--navy); color: #fff; font-size: 0.78rem; }
+    tr:nth-child(even) td { background: #f8fafc; }
+    .callout {
+      border: 1px solid #c7d2fe;
+      border-radius: 0.75rem;
+      padding: 0.85rem 1rem;
+      margin: 0 0 1rem;
+    }
+    .callout strong { color: var(--blue); display: block; margin-bottom: 0.25rem; }
+    figure { margin: 1rem 0 1.25rem; text-align: center; }
+    figure img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid var(--line);
+      border-radius: 0.5rem;
+    }
+    figcaption { color: var(--muted); font-size: 0.85rem; font-style: italic; margin-top: 0.4rem; }
+    .missing { color: #b45309; font-style: italic; }
+    .download { font-size: 0.9rem; margin: 0 0 1.25rem; }
+    .download a { color: var(--blue); }
+    @media (max-width: 860px) {
+      .wrap { grid-template-columns: 1fr; }
+      nav { position: static; max-height: none; }
+    }
+    @media print {
+      nav { display: none; }
+      .wrap { display: block; max-width: none; padding: 0; }
+      article { border: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav>
+      <div class="label">Contents</div>
+      <a class="toc-h1" href="#1-how-the-money-works-read-this-first">1. How the money works (read this first)</a>
+<a class="toc-h2" href="#two-different-earning-streams">Two different earning streams</a>
+<a class="toc-h2" href="#credit-loads-cash-in-credits-out">Credit loads — cash in, credits out</a>
+<a class="toc-h2" href="#internet-sales-customer-payment-then-a-split">Internet sales — customer payment, then a split</a>
+<a class="toc-h1" href="#2-sign-in">2. Sign in</a>
+<a class="toc-h1" href="#3-sub-franchisee">3. Sub-Franchisee</a>
+<a class="toc-h2" href="#3-1-wallets-see-inventory-across-your-network">3.1 Wallets — see inventory across your network</a>
+<a class="toc-h2" href="#3-2-internet-credits-buy-from-admin">3.2 Internet Credits — buy from Admin</a>
+<a class="toc-h2" href="#3-3-internet-credits-sell-release-to-franchisees">3.3 Internet Credits — sell / release to franchisees</a>
+<a class="toc-h2" href="#3-4-deposit-rates-price-the-credit-load">3.4 Deposit Rates — price the credit load</a>
+<a class="toc-h2" href="#3-5-commission-settings-split-each-internet-sale">3.5 Commission Settings — split each internet sale</a>
+<a class="toc-h2" href="#3-6-transactions-see-sales-in-your-network">3.6 Transactions — see sales in your network</a>
+<a class="toc-h2" href="#3-7-revenue-internet-credits-earnings-plus-sales-commission">3.7 Revenue — Internet Credits earnings plus sales commission</a>
+<a class="toc-h2" href="#3-8-reports-period-snapshot-and-csv-exports">3.8 Reports — period snapshot and CSV exports</a>
+<a class="toc-h1" href="#4-franchisee">4. Franchisee</a>
+<a class="toc-h2" href="#4-1-wallets-you-and-your-retailers">4.1 Wallets — you and your retailers</a>
+<a class="toc-h2" href="#4-2-internet-credits-buy-from-your-sub-franchisee">4.2 Internet Credits — buy from your Sub-Franchisee</a>
+<a class="toc-h2" href="#4-3-internet-credits-sell-release-to-retailers">4.3 Internet Credits — sell / release to retailers</a>
+<a class="toc-h2" href="#4-4-deposit-rates-what-retailers-pay-you">4.4 Deposit Rates — what retailers pay you</a>
+<a class="toc-h2" href="#4-5-transactions-retailer-sales-and-your-share">4.5 Transactions — retailer sales and your share</a>
+<a class="toc-h2" href="#4-6-revenue-and-reports">4.6 Revenue and Reports</a>
+<a class="toc-h1" href="#5-retailer">5. Retailer</a>
+<a class="toc-h2" href="#5-1-wallet-inventory-for-sales">5.1 Wallet — inventory for sales</a>
+<a class="toc-h2" href="#5-2-internet-credits-request-stock-from-the-franchisee">5.2 Internet Credits — request stock from the Franchisee</a>
+<a class="toc-h2" href="#5-3-transactions-record-and-read-each-customer-sale">5.3 Transactions — record and read each customer sale</a>
+<a class="toc-h2" href="#5-4-revenue-your-commission-only">5.4 Revenue — your commission only</a>
+<a class="toc-h2" href="#5-5-reports">5.5 Reports</a>
+<a class="toc-h1" href="#6-end-to-end-flow-all-three-roles">6. End-to-end flow (all three roles)</a>
+<a class="toc-h2" href="#a-restock-credits-cash-up-the-chain-credits-down">A. Restock credits (cash up the chain, credits down)</a>
+<a class="toc-h2" href="#b-one-internet-sale-customer-cash-then-the-split">B. One internet sale (customer cash, then the split)</a>
+<a class="toc-h1" href="#7-field-meanings-quick-reference">7. Field meanings (quick reference)</a>
+<a class="toc-h1" href="#8-common-mistakes">8. Common mistakes</a>
+<a class="toc-h1" href="#9-logout">9. Logout</a>
+    </nav>
+    <article>
+      <p class="kicker" style="font-weight:700">eSariSari</p>
+<p class="lede">Franchise financial operations platform</p>
+<h1 class="cover">User Guide</h1>
+<p class="kicker" style="font-weight:600">Sub-Franchisee · Franchisee · Retailer</p>
+<p>A click-by-click walkthrough of how to buy Internet Credits, release them down the chain (request or Direct Release), record a customer sale, and read both earnings streams on Revenue and Reports. Admin is not covered in this version.</p>
+<p class="muted">18 August 2026  ·  Demo environment</p>
+<p class="download"><a href="user-guide.docx">Download Word copy</a></p>
+<div class="callout" style="background:#eef2ff"><strong>About this demo (version 1)</strong>This is the first walkthrough of the franchise operations demo. Sales and Internet Credits history start empty. Franchisees and retailers start at ₱0 Available Credits — restock with a request or Direct Release. There are two earnings streams: Internet Credits earnings and Sales Commission (from customer sales). The bell alerts the upline to pending downline credit requests and to low or zero balances. Screenshots show layout; numbers change as you walk the demo.</div>
+<h1 id="1-how-the-money-works-read-this-first">1. How the money works (read this first)</h1>
+<p>Every role in this guide is part of one chain. Credits move down. Cash for loads moves up. Customer cash for internet sales is split after each sale.</p>
+<table><thead><tr><th>Who</th><th>Buys credits from</th><th>Sells / uses credits</th><th>Typical deposit rate</th></tr></thead><tbody><tr><td>Sub-Franchisee</td><td>Admin / platform</td><td>Franchisees</td><td>Buys at 60%, sells at 70%</td></tr><tr><td>Franchisee</td><td>Sub-Franchisee</td><td>Retailers</td><td>Buys at 70%, sells at 80%</td></tr><tr><td>Retailer</td><td>Franchisee</td><td>End customers (internet sales)</td><td>Buys at 80%</td></tr></tbody></table>
+<h2 id="two-different-earning-streams">Two different earning streams</h2>
+<p>Do not mix these up. The app prices them on different screens, and they show up as different numbers on Revenue and Reports.</p>
+<table><thead><tr><th>Stream</th><th>When it happens</th><th>What you earn</th><th>Where you set it</th></tr></thead><tbody><tr><td>Internet Credits earnings</td><td>A downline deposits cash and you release credits (request or Direct Release)</td><td>Admin: cash collected. Sub/Fran: cash in minus what those credits cost you</td><td>Deposit Rates</td></tr><tr><td>Sales Commission</td><td>A retailer sells internet to a customer</td><td>Your % of the commission pool (customer payment − credits consumed)</td><td>Commission Settings (Sub-Franchisee / Admin)</td></tr></tbody></table>
+<h2 id="credit-loads-cash-in-credits-out">Credit loads — cash in, credits out</h2>
+<p>A deposit rate is the cash paid divided by the credit face value. Formula: credits = deposit ÷ rate. Example at 70%: ₱7,000 cash buys 10,000 credits.</p>
+<p>Worked example on 1,000 credits (1 credit face = ₱1 for display):</p>
+<table><thead><tr><th>Hop</th><th>Cash paid</th><th>Credits received</th><th>Spread for the seller</th></tr></thead><tbody><tr><td>Admin → Sub-Franchisee @ 60%</td><td>₱600</td><td>1,000</td><td>Admin collects load cash</td></tr><tr><td>Sub-Franchisee → Franchisee @ 70%</td><td>₱700</td><td>1,000</td><td>Sub earns ₱100 Internet Credits earnings</td></tr><tr><td>Franchisee → Retailer @ 80%</td><td>₱800</td><td>1,000</td><td>Franchisee earns ₱100 Internet Credits earnings</td></tr></tbody></table>
+<div class="callout" style="background:#eef2ff"><strong>Cash vs credits</strong>Available Credits are inventory, not cash in the bank. When you release credits, your inventory goes down. The cash from the downline’s deposit stays with you as the collector for that hop. Always match proof of payment before you release. Direct Release uses the same formula and proof rules — it just skips the pending queue.</div>
+<h2 id="internet-sales-customer-payment-then-a-split">Internet sales — customer payment, then a split</h2>
+<p>In this demo, the retailer records a sale from Transactions → Record demo sale. Credits consumed are 97% of the customer payment (95% product + 2% processing). The remaining 3% is the commission pool.</p>
+<ul><li>Customer payment — what the customer paid (example ₱1,000).</li><li>Credits consumed — inventory burned from the retailer’s Available Credits (example ₱970).</li><li>Commission pool (also labeled Sale Margin on Transactions) — customer payment minus credits consumed (example ₱30). This is not one party’s profit.</li></ul>
+<p>That pool is split by the percentages stamped on the sale. After a ₱1,000 demo sale on Retailer A (demo settings 25% / 20% / 15% / 40%):</p>
+<table><thead><tr><th>Party</th><th>Share of the ₱30 pool</th><th>Amount</th></tr></thead><tbody><tr><td>Retailer A</td><td>25%</td><td>₱7.50</td></tr><tr><td>Franchisee A</td><td>20%</td><td>₱6.00</td></tr><tr><td>Northern Mindanao Sub-Franchisee</td><td>15%</td><td>₱4.50</td></tr><tr><td>eSariSari platform</td><td>40%</td><td>₱12.00</td></tr><tr><td>Total</td><td>100%</td><td>₱30.00</td></tr></tbody></table>
+<div class="callout" style="background:#ecfdf5"><strong>Retailer does not keep the full sale margin</strong>If the customer paid ₱1,000 and credits of ₱970 were used, the ₱30 gap is shared. The retailer’s earning is their % of that ₱30, not the whole ₱30 and not the ₱1,000. Wallet’s Sale Margin card is the pool (all-time), not take-home.</div>
+<h1 id="2-sign-in">2. Sign in</h1>
+<p>Open the app and use the Sign In card. Demo accounts sit under the form.</p>
+<figure><img src="user-guide-assets/login.png" alt="Figure 1. Sign In screen with demo accounts." /><figcaption>Figure 1. Sign In screen with demo accounts.</figcaption></figure>
+<ol><li>Open the app: https://prlusterio.github.io/esari-finops-mvp/login</li><li>Under Demo Accounts, click Sub-Franchisee, Franchisee A, or Retailer A. That fills the email only — not the password.</li><li>Type the shared demo password: password123. (Admin is marked Restricted and is not used in this guide.)</li><li>Click Sign In.</li><li>You land on that role’s home page: Wallets for Sub-Franchisee and Franchisee, Wallet for Retailer.</li></ol>
+<table><thead><tr><th>Role</th><th>Demo email</th><th>Password</th><th>Home screen</th><th>Opening Available Credits</th></tr></thead><tbody><tr><td>Sub-Franchisee</td><td>subfranchisee@esarisari.local</td><td>password123</td><td>Wallets</td><td>₱135,000</td></tr><tr><td>Franchisee A</td><td>franchisee-a@esarisari.local</td><td>password123</td><td>Wallets</td><td>₱0 — request or receive a Direct Release</td></tr><tr><td>Franchisee B</td><td>franchisee-b@esarisari.local</td><td>password123</td><td>Wallets</td><td>₱0</td></tr><tr><td>Retailer A (under Fran A)</td><td>retailer-a@esarisari.local</td><td>password123</td><td>Wallet</td><td>₱0</td></tr><tr><td>Retailer B (under Fran A)</td><td>retailer-b@esarisari.local</td><td>password123</td><td>Wallet</td><td>₱0</td></tr><tr><td>Retailer C (under Fran B)</td><td>retailer-c@esarisari.local</td><td>password123</td><td>Wallet</td><td>₱0</td></tr></tbody></table>
+<p class="muted">Use Franchisee A + Retailer A for the main walkthrough (same chain). The bell in the header shows pending Internet Credits requests from your downlines and low/zero Available Credits (≤ ₱5,000). Click an alert to jump to Internet Credits or Wallets. To switch roles: name at the top right → Logout → another demo account. Do not click Reset Demo Data unless you intend to wipe what you just walked.</p>
+<h1 id="3-sub-franchisee">3. Sub-Franchisee</h1>
+<p>You sit between Admin and Franchisees. You buy Internet Credits from Admin, hold them as Available Credits, then release them to franchisees after they deposit cash (or via Direct Release). You also earn a share of every internet sale in your network.</p>
+<ul><li>Left menu you will use: Wallets, Internet Credits, Deposit Rates, Commission Settings, Transactions, Revenue, Reports.</li><li>Dashboard and Franchisees appear in the menu but are not clickable in this demo.</li><li>Your org in the sample data is Northern Mindanao Sub-Franchisee. Downlines: Franchisee A and Franchisee B.</li></ul>
+<h2 id="3-1-wallets-see-inventory-across-your-network">3.1 Wallets — see inventory across your network</h2>
+<p>After sign-in you land here. This is a monitor, not a place to move money. Credit loads still go through Internet Credits (cash + proof).</p>
+<figure><img src="user-guide-assets/sub-wallets.png" alt="Figure 2. Sub-Franchisee Wallets — your inventory and every downline balance." /><figcaption>Figure 2. Sub-Franchisee Wallets — your inventory and every downline balance.</figcaption></figure>
+<ol><li>Click Wallets in the left menu (or stay here after login).</li><li>Read Your Available Credits. That is stock you can still release to franchisees. After Reset Demo Data this is ₱135,000.00.</li><li>Read Franchisee Credits and Retailer Credits. Those are balances already sitting with downlines, not your cash. Franchisees and retailers start at ₱0.</li><li>Network Credits shows how many wallets you manage and how many are Low / Zero. Low means Available Credits ≤ ₱5,000.</li><li>Optional: click the Low Balance chip above the table to show only wallets that need a top-up.</li><li>If Your Available Credits is Low (≤ ₱5,000) or Zero, a warning/danger banner appears on this page (same idea as the bell). New Credits Request opens Internet Credits with the request sheet already open.</li><li>Click the eye icon on a row to open that wallet’s details (Available Credits, parent, recent credit activity). There is no Minimum Balance card on this modal.</li><li>If a franchisee is low, go to Internet Credits. You can wait for their request (your bell will ping) or use Direct Release after they have paid.</li></ol>
+<h2 id="3-2-internet-credits-buy-from-admin">3.2 Internet Credits — buy from Admin</h2>
+<p>This is how you restock. You deposit cash to Admin, attach proof, and wait for Admin to release credits into your Available Credits. Default buy rate is 60% (₱600 cash → 1,000 credits).</p>
+<figure><img src="user-guide-assets/sub-credits-mine.png" alt="Figure 3. My Credits Request — your buys from Admin." /><figcaption>Figure 3. My Credits Request — your buys from Admin.</figcaption></figure>
+<ol><li>Click Internet Credits.</li><li>Note the cards: Pending Deposits (cash from franchisees not yet released), Pending Credits, Credits Released, My Pending Requests, Available Credits.</li><li>Click the My Credits Request tab.</li><li>Click + New Credits Request at the top right.</li><li>Enter Deposited amount (₱) — the cash you already sent to Admin. The form shows suggested credits using credits = deposit ÷ your 60% rate. Example: ₱30,000 → ₱50,000 credits.</li><li>Optionally upload proof of payment (SVG, PNG, JPG, or PDF, max 5MB). Add notes if you have a bank reference.</li><li>Click Continue, then confirm. The row appears as Pending on My Credits Request. Type is Request.</li><li>While it is still Pending, you can Update (amount, notes, proof) or Delete. Update reapplies the live deposit rate, not the original snapshot.</li><li>When Admin releases, status becomes Released and Available Credits goes up. Open Released / History to see completed loads. There is no separate Transfer History tab.</li></ol>
+<div class="callout" style="background:#eef2ff"><strong>What happens to cash here</strong>You pay cash to Admin. Until Admin releases, that cash is a pending deposit — not yet inventory. After release, you hold credits (an asset you can sell). You have not earned Internet Credits earnings yet; that happens only when a franchisee buys from you.</div>
+<h2 id="3-3-internet-credits-sell-release-to-franchisees">3.3 Internet Credits — sell / release to franchisees</h2>
+<p>Franchisees deposit cash to you and submit a request. You check proof, then release credits from your Available Credits. Default sell rate is 70% (₱700 cash → 1,000 credits). That 10-point gap vs your 60% buy rate is your Internet Credits earnings.</p>
+<figure><img src="user-guide-assets/sub-credits-downlines.png" alt="Figure 4. Downlines Credits Request — pending franchisee deposits." /><figcaption>Figure 4. Downlines Credits Request — pending franchisee deposits.</figcaption></figure>
+<ol><li>Stay on Internet Credits. When a franchisee submits a request, the bell shows “{name} requested Internet Credits.” Click it to open this page.</li><li>Click Downlines Credits Request. This tab lists pending requests only. Direct Release never queues here.</li><li>Find a row with Status Pending. Deposit (PHP) is the cash they claim they sent. Credits may show ₱0.00 until you release.</li><li>Click Review. Check name, deposited amount, deposit rate, suggested credits, and Available Credits After Release. If the after-release figure is red, buy from Admin first.</li><li>Open Proof of Payment and match it to the deposited amount.</li><li>To refuse, click Reject, enter a reason, and confirm. No credits move.</li><li>To accept, click Approve &amp; Release. Enter Payment reference ID. Confirm or edit Credits to release (pre-filled from deposit ÷ rate). Click Approve &amp; Release.</li><li>Credits leave your Available Credits and land in the franchisee’s wallet. Status becomes Released. Type stays Request.</li></ol>
+<h3 id="direct-release-skip-the-pending-queue">Direct Release (skip the pending queue)</h3>
+<p>Use this when the franchisee already paid and you do not need them to file a request first. Same economics: deposit ÷ rate, optional proof, payment reference required.</p>
+<ol><li>On Internet Credits, click Direct Release (top right).</li><li>Pick the franchisee, enter cash deposited, confirm suggested credits, attach proof if you have it, enter Payment reference ID.</li><li>Confirm. Credits move immediately. The row appears on Released / History and on the franchisee’s My Credits Request with Type = Direct Release.</li></ol>
+<figure><img src="user-guide-assets/sub-credits-released.png" alt="Figure 5. Released / History — completed loads in and out, including Direct Release." /><figcaption>Figure 5. Released / History — completed loads in and out, including Direct Release.</figcaption></figure>
+<p>Open Released / History to audit past releases (requests and Direct Releases). View is read-only. Reverse after release is not available in this version.</p>
+<p>Internet Credits earnings check on 1,000 credits sold to a franchisee at 70%:</p>
+<ul><li>Cash in from franchisee: ₱700.</li><li>Your cost (what you paid Admin at 60%): ₱600.</li><li>Internet Credits earnings: ₱100. Same as 1,000 × (70% − 60%). This is inventory markup, not sale commission.</li></ul>
+<h2 id="3-4-deposit-rates-price-the-credit-load">3.4 Deposit Rates — price the credit load</h2>
+<p>This rate card is only for Internet Credits loads to franchisees. It does not change sale commissions. Demo starts with hop defaults only (no custom overrides).</p>
+<figure><img src="user-guide-assets/sub-deposit-rates.png" alt="Figure 6. Deposit Rates — Sub-Franchisee → Franchisee default 70%." /><figcaption>Figure 6. Deposit Rates — Sub-Franchisee → Franchisee default 70%.</figcaption></figure>
+<ol><li>Click Deposit Rates.</li><li>The big card is your sell-hop default: Sub-Franchisee → Franchisee at 70%.</li><li>Your downlines lists each franchisee. Source Default means they use 70%. Custom means you overrode that one account.</li><li>To change one franchisee, click the pencil. Enter the new rate and a reason. Save. If you type the default 70% again, the override is cleared.</li><li>New requests after the change use the new rate. If the requester Updates a still-pending request, the live rate is reapplied.</li></ol>
+<h2 id="3-5-commission-settings-split-each-internet-sale">3.5 Commission Settings — split each internet sale</h2>
+<p>This is the other pricing surface. For each retailer: Retailer %, Franchisee %, Your Share % (remainder), Platform Fee % (40% in the demo). Total must be 100%. These % are stamped on each sale — changing a row later does not rewrite completed sales.</p>
+<figure><img src="user-guide-assets/sub-commission-settings.png" alt="Figure 7. Commission Settings — per-retailer sale splits." /><figcaption>Figure 7. Commission Settings — per-retailer sale splits.</figcaption></figure>
+<ol><li>Click Commission Settings.</li><li>Optional: filter by Franchisee, Retailer, or Status, then Apply.</li><li>Read a row. Demo seed: Retailer A and Retailer C use 25% / 20% / 15% / 40%. Retailer B uses 30% / 15% / 15% / 40%.</li><li>To change an existing row, click the pencil, edit the percentages, set the effective date, and save.</li><li>To add a retailer that has no row yet, click + Add Commission Settings, pick the retailer, enter the shares, and save. Saving Active inactivates the previous Active row for that retailer.</li><li>These % apply to the commission pool of each completed internet sale, not to the customer’s full payment and not to credit loads.</li></ol>
+<h2 id="3-6-transactions-see-sales-in-your-network">3.6 Transactions — see sales in your network</h2>
+<p>This ledger is completed internet sales only. It is not the credit-load list. The demo starts empty — a retailer must Record demo sale before rows appear.</p>
+<figure><img src="user-guide-assets/sub-transactions.png" alt="Figure 8. Sub-Franchisee Transactions Ledger." /><figcaption>Figure 8. Sub-Franchisee Transactions Ledger.</figcaption></figure>
+<ol><li>Click Transactions.</li><li>Optional: set Date Range, pick a Retailer, or search by name / ID, then Apply Filters.</li><li>Read a row left to right: Customer Payment → Credits Consumed (red) → Sale Margin (the pool) → Your Share (your commission).</li><li>After a ₱1,000 sale on Retailer A: customer ₱1,000, credits −₱970, margin ₱30, your share ₱4.50 (15% of ₱30).</li><li>Click the eye icon to open Transaction Details. Confirm product, parties, and Commission Distribution. Close when done.</li><li>Optional: Export CSV for a spreadsheet.</li></ol>
+<h2 id="3-7-revenue-internet-credits-earnings-plus-sales-commission">3.7 Revenue — Internet Credits earnings plus sales commission</h2>
+<p>This page answers “what did I earn?” It adds the two streams for the selected period.</p>
+<figure><img src="user-guide-assets/sub-revenue.png" alt="Figure 9. Sub-Franchisee Revenue — Internet Credits earnings + Sales Commission." /><figcaption>Figure 9. Sub-Franchisee Revenue — Internet Credits earnings + Sales Commission.</figcaption></figure>
+<ol><li>Click Revenue.</li><li>Read the three cards: Internet Credits earnings (spread on credits you released), Sales Commission (your % of sale pools), Total earnings (the sum).</li><li>Change Date Range if needed (This Month is the default) and click Apply.</li><li>Internet Credits table: each released downline load, with Cash in, Credits, and Earnings. Click the ⓘ next to an amount to see the formula (cash − cost, or credits × rate gap).</li><li>Sales Commission table: each sale, with Commission pool, Your share %, and Your commission. Click the eye to open the same transaction detail.</li></ol>
+<div class="callout" style="background:#eef2ff"><strong>How to read an Internet Credits earnings row</strong>If Franchisee A deposited ₱14,000 and received ₱20,000 credits at 70%, cash-in is ₱14,000. Your cost for those credits is ₱20,000 × your 60% buy rate = ₱12,000. Earnings = ₱2,000. That is inventory margin, not customer-sale commission.</div>
+<h2 id="3-8-reports-period-snapshot-and-csv-exports">3.8 Reports — period snapshot and CSV exports</h2>
+<figure><img src="user-guide-assets/sub-reports.png" alt="Figure 10. Sub-Franchisee Reports." /><figcaption>Figure 10. Sub-Franchisee Reports.</figcaption></figure>
+<ol><li>Click Reports.</li><li>Set Date Range, Franchisee, and/or Retailer. Cards refresh for that period.</li><li>Card order: Internet Credits earnings → Sales Commission → Total earnings → Sales Volume.</li><li>Click the Internet Credits earnings card to open Revenue with the same period, scrolled to the line-item table (each release + ⓘ).</li><li>Internet Credits by downline is a rollup of those same entries (downline, cash in, credits, earnings) — not a copy of the Revenue table.</li><li>Franchisee Commissions / Retailer Commissions use Commission pool (sale margin), not “% of yours.”</li><li>Downline Credit Statement: pick a franchisee or retailer and read + / − movements like a bank statement. Download becomes available after you select a downline (CSV of + / − and running balance).</li><li>Scroll to Export Reports at the bottom of the page for the CSV cards.</li></ol>
+<figure><img src="user-guide-assets/sub-reports-export.png" alt="Figure 11. Sub-Franchisee Export Reports — CSV downloads for the selected period." /><figcaption>Figure 11. Sub-Franchisee Export Reports — CSV downloads for the selected period.</figcaption></figure>
+<p>Each card uses the same Date Range / Franchisee / Retailer filters as the rest of Reports. The count is how many rows will be in the file. Export CSV is disabled when the count is 0.</p>
+<table><thead><tr><th>CSV</th><th>What’s in the file</th></tr></thead><tbody><tr><td>Transactions</td><td>Each sale in your scope: customer payment, credits consumed, commission pool, split %, and your share.</td></tr><tr><td>Sales Commission</td><td>Each sale: commission pool, your share %, your commission, status.</td></tr><tr><td>Internet Credits earnings</td><td>Each released downline load: cash in, credits, earnings, buy rate, sell rate.</td></tr><tr><td>Internet Credits Requests</td><td>Requests you can see: deposit, suggested/released credits, rate, payment ref, status (includes Direct Release).</td></tr><tr><td>Internet Credits Releases</td><td>Credit release ledger: deposit, rate, and payment reference.</td></tr></tbody></table>
+<ol><li>Set filters first (This Month is the default), then scroll to Export Reports.</li><li>Click Export CSV on the card you need. The browser downloads a file named like esarisari-transactions-report-subfranchisee.csv.</li><li>Open it in Excel, Google Sheets, or Numbers. Amounts are unformatted numbers so you can sum them.</li><li>On Franchisee Commissions / Retailer Commissions tables, the download icon on a row exports that party’s sale lines only.</li></ol>
+<div class="callout" style="background:#eef2ff"><strong>Exports follow the filters</strong>If you set Date Range to Last 7 Days and Franchisee to Franchisee A, every Export CSV card (and the statement Download) uses that slice. Change filters, then export again for a new file.</div>
+<h1 id="4-franchisee">4. Franchisee</h1>
+<p>You sit between the Sub-Franchisee and retailers. You buy credits from your Sub-Franchisee (demo buy rate 70%), hold Available Credits, then release to retailers (demo sell rate 80%). You also earn a share of each retailer sale. Sign in as Franchisee A for this walkthrough.</p>
+<ul><li>Left menu: Wallets, Internet Credits, Deposit Rates, Transactions, Revenue, Reports.</li><li>You do not have Commission Settings — sale splits are set by the Sub-Franchisee / Admin.</li><li>Dashboard and Retailers appear but are not clickable in this demo.</li><li>Franchisee A’s retailers are Retailer A and Retailer B. You start at ₱0 Available Credits.</li></ul>
+<h2 id="4-1-wallets-you-and-your-retailers">4.1 Wallets — you and your retailers</h2>
+<figure><img src="user-guide-assets/fran-wallets.png" alt="Figure 12. Franchisee Wallet Management." /><figcaption>Figure 12. Franchisee Wallet Management.</figcaption></figure>
+<ol><li>Sign in as Franchisee A, or click Wallets.</li><li>Your Available Credits is stock you can still release to retailers. After a fresh demo this is ₱0 — restock via Internet Credits first. A Zero (red) or Low (amber) banner on this page also appears when your own inventory is at or below ₱5,000; New Credits Request opens the request sheet to your Sub-Franchisee.</li><li>Retailer Credits is inventory already with your retailers. Managed Credits counts wallets and flags low / zero (≤ ₱5,000).</li><li>Click Low Balance to filter retailers who need a top-up.</li><li>Click the eye on a retailer to see Available Credits, parent (you), and recent credits received. There is no Minimum Balance card.</li></ol>
+<figure><img src="user-guide-assets/fran-wallet-details.png" alt="Figure 13. Wallet details — Available Credits and recent activity." /><figcaption>Figure 13. Wallet details — Available Credits and recent activity.</figcaption></figure>
+<p>A Low Balance badge means Available Credits is at or below ₱5,000. It does not move money by itself. The retailer must deposit cash and you release from Internet Credits (or you Direct Release after they paid).</p>
+<h2 id="4-2-internet-credits-buy-from-your-sub-franchisee">4.2 Internet Credits — buy from your Sub-Franchisee</h2>
+<p>Same buy pattern as the Sub-Franchisee, one hop down. You deposit cash to Northern Mindanao Sub-Franchisee and wait for them to release. Default: ₱700 cash → 1,000 credits. Their bell will show your request.</p>
+<figure><img src="user-guide-assets/fran-credits-mine.png" alt="Figure 14. Franchisee My Credits Request — buys from the Sub-Franchisee." /><figcaption>Figure 14. Franchisee My Credits Request — buys from the Sub-Franchisee.</figcaption></figure>
+<ol><li>Click Internet Credits.</li><li>Cards: Pending Deposits (retailer cash waiting on you), Pending Credits, Credits Released, My Pending Requests, Available Credits.</li><li>Click My Credits Request.</li><li>Click + New Credits Request.</li><li>Enter the cash you deposited to the Sub-Franchisee. Suggested credits = deposit ÷ your buy rate (70% unless overridden).</li><li>Optionally attach proof and notes → Continue → confirm.</li><li>While Pending, you may Update or Delete. When Released (or when you receive a Direct Release), your Available Credits increases. Type shows Request or Direct Release.</li></ol>
+<h2 id="4-3-internet-credits-sell-release-to-retailers">4.3 Internet Credits — sell / release to retailers</h2>
+<p>Retailers deposit cash to you. You release from Available Credits at the per-retailer deposit rate (default 80%). Your Internet Credits earnings are sell-rate cash minus your 70% cost.</p>
+<figure><img src="user-guide-assets/fran-credits-retailers.png" alt="Figure 15. Retailers Credits Request — pending retailer deposits." /><figcaption>Figure 15. Retailers Credits Request — pending retailer deposits.</figcaption></figure>
+<ol><li>The bell alerts you when a retailer requests credits. Click it, or open Internet Credits → Retailers Credits Request.</li><li>Open a Pending row with Review. Check Deposited Amount, deposit rate, suggested credits, and Available Credits After Release.</li><li>Match Proof of Payment. Reject with a reason if the proof is wrong.</li><li>Click Approve &amp; Release. Enter Payment reference ID. Confirm Credits to release. Save.</li><li>Or click Direct Release to load a retailer immediately after they paid, without a pending row.</li><li>Credits leave your inventory and appear on the retailer’s Wallet / Internet Credits.</li></ol>
+<figure><img src="user-guide-assets/fran-credits-released.png" alt="Figure 16. Franchisee Released / History." /><figcaption>Figure 16. Franchisee Released / History.</figcaption></figure>
+<p>Internet Credits earnings check on 1,000 credits sold to a retailer at 80%:</p>
+<ul><li>Cash in from retailer: ₱800.</li><li>Your cost (paid to Sub-Franchisee at 70%): ₱700.</li><li>Internet Credits earnings: ₱100. If you sold at 70%, spread would be ₱0 — that is why Deposit Rates matter.</li></ul>
+<h2 id="4-4-deposit-rates-what-retailers-pay-you">4.4 Deposit Rates — what retailers pay you</h2>
+<figure><img src="user-guide-assets/fran-deposit-rates.png" alt="Figure 17. Franchisee Deposit Rates — default 80%." /><figcaption>Figure 17. Franchisee Deposit Rates — default 80%.</figcaption></figure>
+<ol><li>Click Deposit Rates.</li><li>Default hop is Franchisee → Retailer at 80%. Demo starts with Default on every retailer.</li><li>Edit a retailer with the pencil to set a custom rate (and a reason). Resetting to 80% removes the custom flag.</li><li>Internet Credits earnings on Revenue use this rate card. Sale commissions still use the distribution % on each sale.</li></ol>
+<h2 id="4-5-transactions-retailer-sales-and-your-share">4.5 Transactions — retailer sales and your share</h2>
+<figure><img src="user-guide-assets/fran-transactions.png" alt="Figure 18. Franchisee Transactions Ledger." /><figcaption>Figure 18. Franchisee Transactions Ledger.</figcaption></figure>
+<ol><li>Click Transactions. The list is empty until a retailer records a demo sale.</li><li>Filter by Date Range or Retailer, search, then Apply Filters.</li><li>Your Share is your commission from that sale’s pool, not the full customer payment.</li><li>Click the eye on a row for the full split.</li></ol>
+<figure><img src="user-guide-assets/fran-transaction-details.png" alt="Figure 19. Transaction Details — commission pool split across the chain." /><figcaption>Figure 19. Transaction Details — commission pool split across the chain.</figcaption></figure>
+<p>On a ₱1,000 Retailer A sale you should see: customer ₱1,000, credits −₱970, sale margin / pool ₱30. Your commission is ₱6.00 (20%). Retailer ₱7.50, Sub-Franchisee ₱4.50, platform ₱12.00. Optional: Download Receipt, then Close.</p>
+<h2 id="4-6-revenue-and-reports">4.6 Revenue and Reports</h2>
+<figure><img src="user-guide-assets/fran-revenue.png" alt="Figure 20. Franchisee Revenue — loads to retailers plus sales commission." /><figcaption>Figure 20. Franchisee Revenue — loads to retailers plus sales commission.</figcaption></figure>
+<ol><li>Click Revenue. Internet Credits earnings = spread on credits you released to retailers. Sales Commission = your % of sale pools. Total earnings = both.</li><li>Internet Credits table lists each retailer load (Cash in, Credits, Earnings) with ⓘ on the amount. Sales Commission lists each sale.</li><li>Click Reports. Same period cards plus Sales Volume. Click the Internet Credits earnings card to open Revenue for that period.</li><li>Internet Credits by downline rolls up cash in, credits, and earnings per retailer. Retailer Commissions uses Commission pool.</li><li>Scroll to Export Reports for CSV downloads (same filters as the cards above).</li></ol>
+<figure><img src="user-guide-assets/fran-reports.png" alt="Figure 21. Franchisee Reports." /><figcaption>Figure 21. Franchisee Reports.</figcaption></figure>
+<figure><img src="user-guide-assets/fran-reports-export.png" alt="Figure 22. Franchisee Export Reports — same CSV cards, scoped to your retailers." /><figcaption>Figure 22. Franchisee Export Reports — same CSV cards, scoped to your retailers.</figcaption></figure>
+<p>Same files as the Sub-Franchisee: Transactions, Sales Commission, Internet Credits earnings, Requests, and Releases. Counts and rows are only your network (your restock from the Sub plus loads to Retailer A / B, and sales under you). Click Export CSV; the filename includes franchisee.</p>
+<div class="callout" style="background:#fff7ed"><strong>Pending loads are not earnings</strong>Internet Credits earnings only count released downline loads (request or Direct Release). A pending My Credits Request to the Sub-Franchisee is not yet earned. Your own restock is a purchase of inventory, not revenue.</div>
+<h1 id="5-retailer">5. Retailer</h1>
+<p>You are the end of the credit chain and the start of customer sales. You only buy credits (you have no downline to approve). You deposit cash to your Franchisee, receive Available Credits, then burn those credits when you record a demo sale. You keep your % of each sale’s pool — not the full customer payment. Use Retailer A under Franchisee A.</p>
+<ul><li>Left menu: Wallet, Internet Credits, Transactions, Revenue, Reports.</li><li>No Deposit Rates, Commission Settings, or Direct Release — those sit above you.</li><li>You start at ₱0 Available Credits. Demo buy rate is 80% unless your franchisee set a custom rate.</li></ul>
+<h2 id="5-1-wallet-inventory-for-sales">5.1 Wallet — inventory for sales</h2>
+<figure><img src="user-guide-assets/ret-wallet.png" alt="Figure 23. Retailer Wallet — Available Credits, sale margin, and upline." /><figcaption>Figure 23. Retailer Wallet — Available Credits, sale margin, and upline.</figcaption></figure>
+<ol><li>Sign in as Retailer A. You land on Wallet. The page tells you to request more via Internet Credits from your franchisee.</li><li>Available Credits is what you can still sell. Status Low / Zero (≤ ₱5,000, or ₱0) means restock soon. After a fresh demo you are at ₱0.</li><li>Sale Margin is customer payment minus credits consumed (all-time). That is the commission pool, not your take-home. Filter by period on Revenue.</li><li>Franchisee shows who you buy from (Franchisee A).</li><li>Recent Credits Activity lists credits received after the franchisee released your request or Direct Release.</li></ol>
+<figure><img src="user-guide-assets/ret-wallet-low-balance.png" alt="Figure 24. Retailer B Wallet — Low Balance banner with New Credits Request." /><figcaption>Figure 24. Retailer B Wallet — Low Balance banner with New Credits Request.</figcaption></figure>
+<p>Sign in as Retailer B to see the on-page alert. In this demo Retailer B has ₱2,500 Available Credits, which is ₱5,000 or less, so Wallet shows an amber Low Balance banner in addition to the bell. Zero Balance uses a red danger banner instead.</p>
+<ol><li>Read the banner: it shows the live Available Credits and that we alert when the balance is ₱5,000 or less.</li><li>Click New Credits Request on the banner. That opens Internet Credits with the New Credits Request sheet already open — you do not have to hunt for + New Credits Request.</li><li>Complete the request (deposit, optional proof) the same way as section 5.2. The franchisee’s bell will show it.</li></ol>
+<h2 id="5-2-internet-credits-request-stock-from-the-franchisee">5.2 Internet Credits — request stock from the Franchisee</h2>
+<p>There is no downline tab and no Direct Release. You only request. Credits = deposit ÷ your rate. At 80%, ₱800 cash → 1,000 credits. Your franchisee’s bell will show the request.</p>
+<figure><img src="user-guide-assets/ret-credits-mine.png" alt="Figure 25. Retailer My Credits Request." /><figcaption>Figure 25. Retailer My Credits Request.</figcaption></figure>
+<ol><li>Click Internet Credits.</li><li>My Pending Requests is cash you sent that is not released yet. Available Credits is live inventory.</li><li>Click + New Credits Request.</li><li>Enter Deposited amount (₱) you already sent to Franchisee A. The calculator shows suggested credits at your deposit rate.</li><li>Optionally upload proof and notes → Continue → confirm.</li><li>While Pending, you may Update or Delete. Update reapplies the live rate.</li><li>When the franchisee releases (or Direct Releases), status becomes Released and Wallet Available Credits goes up. Type shows Request or Direct Release.</li><li>Click Released / History to see completed loads.</li></ol>
+<figure><img src="user-guide-assets/ret-credits-released.png" alt="Figure 26. Retailer Released / History." /><figcaption>Figure 26. Retailer Released / History.</figcaption></figure>
+<div class="callout" style="background:#ecfdf5"><strong>Your cash on a load is a purchase of inventory</strong>₱1,600 cash for ₱2,000 credits is not “profit.” You spent cash to buy stock. Profit from customers shows later as Your Commission on each sale, after credits are consumed.</div>
+<h2 id="5-3-transactions-record-and-read-each-customer-sale">5.3 Transactions — record and read each customer sale</h2>
+<p>This is the only role that can create a sale in the demo. Record demo sale burns Available Credits and stamps commission shares for the whole chain.</p>
+<figure><img src="user-guide-assets/ret-transactions.png" alt="Figure 27. Retailer Transactions Ledger." /><figcaption>Figure 27. Retailer Transactions Ledger.</figcaption></figure>
+<ol><li>Click Transactions.</li><li>Click Record demo sale. Pick a product/service (or type one) and enter the customer payment. The preview shows credits that will be consumed (97% of payment) and remaining Available Credits.</li><li>If credits required are more than your Available Credits, restock first. Submit to post a completed sale.</li><li>Read Customer Payment, Credits Consumed, Sale Margin (the pool), then Your Share (your commission).</li><li>Click the eye. Transaction Details shows product, the chain, and Commission Distribution with You highlighted.</li><li>Optional: Download Receipt, then Close. Export CSV if you need a file.</li></ol>
+<figure><img src="user-guide-assets/ret-transaction-details.png" alt="Figure 28. Retailer view of a sale — you earn your % of the pool." /><figcaption>Figure 28. Retailer view of a sale — you earn your % of the pool.</figcaption></figure>
+<p>Same ₱1,000 sale, retailer reading:</p>
+<ul><li>Customer paid ₱1,000. That cash is collected at the store. It is not all yours.</li><li>₱970 of credits left your Wallet. That is the cost of the product.</li><li>₱30 is the pool. Your 25% on Retailer A = ₱7.50. The rest goes to franchisee, sub-franchisee, and platform.</li></ul>
+<h2 id="5-4-revenue-your-commission-only">5.4 Revenue — your commission only</h2>
+<p>Retailers do not have an Internet Credits earnings table. You do not earn a credit spread — you buy at the franchisee’s rate and sell to customers.</p>
+<figure><img src="user-guide-assets/ret-revenue.png" alt="Figure 29. Retailer Revenue — commission, sales volume, credits consumed." /><figcaption>Figure 29. Retailer Revenue — commission, sales volume, credits consumed.</figcaption></figure>
+<ol><li>Click Revenue.</li><li>Your Commission is the sum of your sale shares for the period.</li><li>Sales volume is customer payments. Credits consumed is inventory burned. The gap is the pool; you only keep your %.</li><li>Change Date Range / search and Apply as needed.</li><li>Sales Commission table lists each sale: Commission pool, Your share %, Your commission, Status. Click the eye for details.</li></ol>
+<h2 id="5-5-reports">5.5 Reports</h2>
+<figure><img src="user-guide-assets/ret-reports.png" alt="Figure 30. Retailer Reports." /><figcaption>Figure 30. Retailer Reports.</figcaption></figure>
+<ol><li>Click Reports.</li><li>You see Sales Commission and Sales Volume only — no Internet Credits earnings card and no by-downline rollup (you have no load-spread stream).</li><li>Downline Credit Statement on this role is your own statement — opening balance, + releases, − sales, ending balance. Download exports that statement as CSV.</li><li>Scroll to Export Reports. You do not get an Internet Credits earnings CSV (you have no load-spread stream).</li></ol>
+<figure><img src="user-guide-assets/ret-reports-export.png" alt="Figure 31. Retailer Export Reports — Transactions, Sales Commission, Requests, and Releases." /><figcaption>Figure 31. Retailer Export Reports — Transactions, Sales Commission, Requests, and Releases.</figcaption></figure>
+<p>Four CSVs: Transactions (your sales), Sales Commission (your % of each pool), Internet Credits Requests (your buys from the franchisee), and Internet Credits Releases (credits that landed in your Wallet). Same rule as other roles: filters first, then Export CSV. Filename includes retailer.</p>
+<h1 id="6-end-to-end-flow-all-three-roles">6. End-to-end flow (all three roles)</h1>
+<p>Use this when training a new operator. Reset Demo Data first so everyone starts empty except the Sub-Franchisee’s ₱135,000 stock.</p>
+<h2 id="a-restock-credits-cash-up-the-chain-credits-down">A. Restock credits (cash up the chain, credits down)</h2>
+<ol><li>Retailer A deposits cash to Franchisee A and submits Internet Credits → + New Credits Request with proof. Franchisee A’s bell shows the request.</li><li>Franchisee A cannot release yet (₱0 stock). Franchisee A submits My Credits Request to the Sub-Franchisee (or the Sub uses Direct Release after cash is confirmed).</li><li>Sub-Franchisee opens the bell or Downlines Credits Request → Review → Approve &amp; Release (payment ref + credits). Sub Available Credits down; Franchisee A up.</li><li>Franchisee A opens Retailers Credits Request (or Direct Release) → Approve &amp; Release. Franchisee Available Credits down; Retailer Wallet up.</li><li>When the Sub-Franchisee is low, they submit My Credits Request to Admin (not covered in this guide) and wait for release.</li></ol>
+<h2 id="b-one-internet-sale-customer-cash-then-the-split">B. One internet sale (customer cash, then the split)</h2>
+<ol><li>Retailer A opens Transactions → Record demo sale (example Smart load ₱1,000). Wallet burns ₱970 credits if stock is enough.</li><li>Commission pool ₱30 is stamped with Commission Settings: retailer / franchisee / sub-franchisee / platform.</li><li>Each role opens Transactions → eye icon to see their line. Revenue / Reports add those lines for the month. Sub and Fran also see Internet Credits earnings from the restock in step A.</li></ol>
+<h1 id="7-field-meanings-quick-reference">7. Field meanings (quick reference)</h1>
+<table><thead><tr><th>You see</th><th>It means</th><th>It is not</th></tr></thead><tbody><tr><td>Available Credits</td><td>Credit inventory you can sell or release</td><td>Cash in your bank</td></tr><tr><td>Pending Deposits</td><td>Cash claimed, not yet released</td><td>Already earned revenue</td></tr><tr><td>Direct Release</td><td>Same load as a request, no pending queue</td><td>A free transfer without cash / proof / payment ref</td></tr><tr><td>Internet Credits earnings</td><td>Spread (or Admin cash) on credits you sold to a downline</td><td>Customer-sale commission</td></tr><tr><td>Sales Commission / Your Share</td><td>Your % of the commission pool</td><td>The full customer payment</td></tr><tr><td>Sale Margin / Commission pool</td><td>Customer payment − credits consumed</td><td>Anyone’s take-home by itself</td></tr><tr><td>Low Balance</td><td>Available Credits ≤ ₱5,000</td><td>A second wallet or a cash account</td></tr><tr><td>Credits Consumed</td><td>Inventory burned on a sale</td><td>Your commission</td></tr></tbody></table>
+<h1 id="8-common-mistakes">8. Common mistakes</h1>
+<ul><li>Releasing credits without matching proof of payment — cash and inventory will not reconcile.</li><li>Releasing when Available Credits After Release is negative — restock from your upline first (Franchisee A starts at ₱0).</li><li>Treating sale margin as retailer profit — only the retailer % of the pool is theirs.</li><li>Changing Deposit Rates and expecting sale commissions to move — they are separate.</li><li>Calling Internet Credits earnings “Load earnings” or mixing it with Sales Commission on Reports.</li><li>Expecting Reverse after a mistaken release — that action is not in the UI.</li><li>Using Reset Demo Data during training — it wipes balances, requests, and sales back to the empty demo.</li></ul>
+<h1 id="9-logout">9. Logout</h1>
+<ol><li>Click your name at the top right.</li><li>Click Logout.</li><li>Sign in with the next demo account if you are walking another role.</li></ol>
+<p class="muted">This guide matches the eSariSari demo build as of 18 August 2026. Admin screens are omitted on purpose. Screenshots are layout references; live numbers depend on the walkthrough you just ran.</p>
+    </article>
+  </div>
+</body>
+</html>

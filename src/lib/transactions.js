@@ -8,8 +8,48 @@ export const DEFAULT_SHARE_PERCENTAGES = {
   company: 40,
 }
 
+/** Demo sale cost mix: 95% product cost + 2% processing = 97% credits consumed. */
+export const DEMO_SALE_BASE_COST_RATE = 0.95
+export const DEMO_SALE_PROCESSING_FEE_RATE = 0.02
+
+export const DEMO_PRODUCT_CATALOG = [
+  'Mobile Load - Globe',
+  'Mobile Load - Smart',
+  'Mobile Load - TNT',
+  'Bills Payment - Meralco',
+  'Bills Payment - Maynilad',
+  'E-Wallet Cash-in - GCash',
+  'E-Wallet Cash-in - Maya',
+  'Gaming Credits - Steam',
+]
+
 function roundMoney(value) {
   return Math.round((Number(value) + Number.EPSILON) * 100) / 100
+}
+
+export function pickRandomDemoProduct() {
+  const index = Math.floor(Math.random() * DEMO_PRODUCT_CATALOG.length)
+  return DEMO_PRODUCT_CATALOG[index]
+}
+
+/**
+ * Credits consumed and sale margin for a retailer demo sale.
+ * Matches the historical seed mix so Revenue / Reports stay comparable.
+ */
+export function estimateDemoSaleCosts(customerPayment) {
+  const payment = roundMoney(Number(customerPayment) || 0)
+  const baseCost = roundMoney(payment * DEMO_SALE_BASE_COST_RATE)
+  const platformProcessingFee = roundMoney(
+    payment * DEMO_SALE_PROCESSING_FEE_RATE,
+  )
+  const walletDeduction = roundMoney(baseCost + platformProcessingFee)
+  return {
+    customerPayment: payment,
+    baseCost,
+    platformProcessingFee,
+    walletDeduction,
+    saleMargin: roundMoney(payment - walletDeduction),
+  }
 }
 
 function formatPaymentLabel(amount) {
@@ -399,7 +439,7 @@ export function transactionsToCsv(
     'Retailer Code',
     'Customer Payment',
     'Credits Consumed',
-    'Sale Margin',
+    'Commission Pool',
     'Retailer %',
     'Franchisee %',
     'Sub-Franchisee %',

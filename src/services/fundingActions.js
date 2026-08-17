@@ -65,6 +65,7 @@ export function executeWalletTransfer({
   fundingRequestId,
   notes = '',
   proofOfPayment = null,
+  transferKind = 'direct_credit_transfer',
 }) {
   const numericAmount = Number(amount)
   if (!fromOrganizationId || !toOrganizationId) {
@@ -118,6 +119,7 @@ export function executeWalletTransfer({
     fundingRequestId: fundingRequestId || undefined,
     notes: String(notes || '').trim(),
     proofOfPayment: proofOfPayment || undefined,
+    transferKind,
     createdAt: now,
     updatedAt: now,
   }
@@ -539,6 +541,103 @@ export function rejectFundingRequest(request, options = {}) {
 }
 
 /**
+ * Update a pending funding request (amount, notes, proof). Same request ID.
+ *
+ * @param {object} request
+ * @param {{
+ *   organizationId?: string,
+ *   amount: number,
+ *   notes?: string,
+ *   proofOfPayment?: object | null,
+ *   depositRate?: number,
+ *   depositHop?: string,
+ *   requesterRole?: string,
+ * }} payload
+ */
+export function updatePendingFundingRequest(request, payload = {}) {
+  if (!request?.id) {
+    throw new Error('Funding request is required.')
+  }
+
+  const existing = getFundingRequests()
+  const current = existing.find((item) => item.id === request.id)
+  if (!current) {
+    throw new Error('Funding request was not found.')
+  }
+  if (current.status !== FUNDING_STATUS.PENDING) {
+    throw new Error('Only pending requests can be updated.')
+  }
+  if (
+    payload.organizationId &&
+    payload.organizationId !== current.organizationId
+  ) {
+    throw new Error('You can only update your own pending requests.')
+  }
+
+  const numericAmount = Number(payload.amount)
+  if (Number.isNaN(numericAmount) || numericAmount <= 0) {
+    throw new Error('Enter a valid amount greater than 0.')
+  }
+
+  const depositRate =
+    Number(payload.depositRate) ||
+    getDepositRate({
+      organizationId: current.organizationId,
+      parentOrganizationId: current.parentOrganizationId,
+      requesterRole: payload.requesterRole || current.requesterRole,
+      hop: payload.depositHop,
+    })
+  const suggestedCredits = suggestCredits(numericAmount, depositRate)
+
+  const updatedRequest = {
+    ...current,
+    amount: numericAmount,
+    depositAmount: numericAmount,
+    depositRate,
+    suggestedCredits,
+    notes: String(payload.notes || '').trim(),
+    proofOfPayment: payload.proofOfPayment || undefined,
+    updatedAt: new Date().toISOString(),
+  }
+
+  saveFundingRequests(
+    existing.map((item) => (item.id === current.id ? updatedRequest : item)),
+  )
+
+  return { request: updatedRequest }
+}
+
+/**
+ * Delete a pending funding request owned by the requester. No wallet movement.
+ *
+ * @param {object} request
+ * @param {{ organizationId?: string }} [payload]
+ */
+export function deletePendingFundingRequest(request, payload = {}) {
+  if (!request?.id) {
+    throw new Error('Funding request is required.')
+  }
+
+  const existing = getFundingRequests()
+  const current = existing.find((item) => item.id === request.id)
+  if (!current) {
+    throw new Error('Funding request was not found.')
+  }
+  if (current.status !== FUNDING_STATUS.PENDING) {
+    throw new Error('Only pending requests can be deleted.')
+  }
+  if (
+    payload.organizationId &&
+    payload.organizationId !== current.organizationId
+  ) {
+    throw new Error('You can only delete your own pending requests.')
+  }
+
+  saveFundingRequests(existing.filter((item) => item.id !== current.id))
+  return { request: current }
+}
+
+/**
  * Create a new pending funding request.
  *
  * @param {{
@@ -584,10 +683,54 @@ export function createFundingRequest(payload) {
     status: FUNDING_STATUS.PENDING,
     notes: String(payload.notes || '').trim(),
     proofOfPayment: payload.proofOfPayment || undefined,
+    directTransfer: Boolean(payload.directTransfer),
     createdAt: now,
     updatedAt: now,
   }
 
   saveFundingRequests([request, ...existing])
   return { request }
+}
+
+/**
+ * Same economics as a credits request + release, without a pending queue.
+ * Upline records deposit + rate and releases credits immediately.
+ */
+export function directReleaseInternetCredits({
+  fromOrganizationId,
+  toOrganizationId,
+  requesterRole,
+  depositHop,
+  amount,
+  depositRate,
+  notes = '',
+  proofOfPayment = null,
+  paymentReferenceId,
+  creditsToRelease,
+  source = 'balance',
+  actorUserId,
+}) {
+  if (!fromOrganizationId || !toOrganizationId) {
+    throw new Error('Sender and recipient organizations are required.')
+  }
+
+  const { request } = createFundingRequest({
+    organizationId: toOrganizationId,
+    parentOrganizationId: fromOrganizationId,
+    requesterRole,
+    amount,
+    depositRate,
+    depositHop,
+    notes: notes || 'Direct credit release (no request)',
+    proofOfPayment,
+    directTransfer: true,
+  })
+
+  return releaseInternetCredits(request, {
+    actorOrganizationId: fromOrganizationId,
+    actorUserId,
+    paymentReferenceId,
+    creditsToRelease,
+    source,
+  })
 }

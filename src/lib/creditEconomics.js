@@ -173,6 +173,37 @@ export function sumCreditEconomyField(entries, field) {
 }
 
 /**
+ * Reports rollup: one row per downline from Internet Credits earnings entries.
+ * Earnings uses `revenue` (Admin cash in, Sub/Fran spread).
+ */
+export function rollupCreditEarningsByDownline(entries = []) {
+  const byId = new Map()
+
+  ;(entries || []).forEach((entry) => {
+    const id = entry.counterpartyId || entry.counterpartyName || 'unknown'
+    const current = byId.get(id) || {
+      id,
+      name: entry.counterpartyName || id,
+      cashIn: 0,
+      credits: 0,
+      earnings: 0,
+      releaseCount: 0,
+    }
+    current.cashIn = roundMoney(current.cashIn + (Number(entry.cashIn) || 0))
+    current.credits = roundMoney(current.credits + (Number(entry.credits) || 0))
+    current.earnings = roundMoney(current.earnings + (Number(entry.revenue) || 0))
+    current.releaseCount += 1
+    if (entry.counterpartyName) current.name = entry.counterpartyName
+    byId.set(id, current)
+  })
+
+  return [...byId.values()].sort((left, right) => {
+    if (right.earnings !== left.earnings) return right.earnings - left.earnings
+    return String(left.name).localeCompare(String(right.name))
+  })
+}
+
+/**
  * Role-scoped revenue snapshot for the Revenue page.
  */
 export function buildCreditRevenueSnapshot({
@@ -200,7 +231,7 @@ export function buildCreditRevenueSnapshot({
         'Cash collected when you release Internet Credits to downlines. Sale commissions are listed separately.',
       entries,
       kpis: {
-        primaryLabel: 'Load earnings',
+        primaryLabel: 'Internet Credits earnings',
         primaryValue: sumCreditEconomyField(entries, 'cashIn'),
         secondaryLabel: 'Credits released',
         secondaryValue: sumCreditEconomyField(entries, 'credits'),
@@ -227,7 +258,7 @@ export function buildCreditRevenueSnapshot({
         'What you earned when downlines bought Internet Credits from you. Sale commissions are listed separately.',
       entries,
       kpis: {
-        primaryLabel: 'Load earnings',
+        primaryLabel: 'Internet Credits earnings',
         primaryValue: sumCreditEconomyField(entries, 'spread'),
         secondaryLabel: 'Cash from downlines',
         secondaryValue: sumCreditEconomyField(entries, 'cashIn'),

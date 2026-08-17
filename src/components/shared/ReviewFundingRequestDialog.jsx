@@ -183,9 +183,11 @@ export function ReviewFundingRequestDialog({
               ? internetCredits
                 ? 'Review Credits Request'
                 : 'Review Funding Request'
-              : internetCredits
-                ? 'Credits Request Details'
-                : 'Funding Request Details'}
+              : request.directTransfer
+                ? 'Direct Release Details'
+                : internetCredits
+                  ? 'Credits Request Details'
+                  : 'Funding Request Details'}
           </SheetTitle>
           <SheetDescription className="text-sm text-slate-400">
             #{request.id}
@@ -199,6 +201,17 @@ export function ReviewFundingRequestDialog({
                 Status
               </DetailLabel>
               <FundingStatusBadge status={request.status} />
+            </div>
+
+            <SectionDivider />
+
+            <div className="flex items-center justify-between gap-3 px-4 py-3.5">
+              <DetailLabel className="font-medium uppercase tracking-wide">
+                Type
+              </DetailLabel>
+              <div className="text-sm font-semibold text-slate-900">
+                {request.directTransfer ? 'Direct Release' : 'Request'}
+              </div>
             </div>
 
             <SectionDivider />

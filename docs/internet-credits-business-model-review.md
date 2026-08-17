@@ -1,8 +1,12 @@
 # Internet Credits — Business Model Review
 
-**Status:** Living product lock (Internet Credits + Deposit Rates built; sale distribution % restored 2026-08-17)  
+**Status:** Living product lock (Internet Credits + Deposit Rates built; sale distribution % restored 2026-08-17; ops updates 2026-08-18)  
 **Source:** FigJam / mockups — eSarisari Internet Credits Initial Mockup  
-**Last updated:** 2026-08-17
+**Last updated:** 2026-08-18
+
+**Whole app (all modules, all roles):** [app-modules.md](./app-modules.md). This file stays the Internet Credits / deposit-rate lock.
+
+Current v1 Internet Credits behavior is in [§11](#11-shipped-updates-2026-08-18--verified). Sections 2–8 are the original mock review; several gaps there are now closed or deferred in §11.
 
 This document captures the finance/process review of the **token / internet credits** business model across portals, plus the later product lock that **sale commission splits run alongside deposit rates** (they are not a replacement for each other).
 
@@ -20,6 +24,7 @@ This document captures the finance/process review of the **token / internet cred
 8. [Priority recommendations](#8-priority-recommendations)
 9. [Decision checklist](#9-decision-checklist) — product lock (D3 restored 2026-08-17)
 10. [Other pages — change impact](#10-other-pages--change-impact-current-app-vs-locked-model)
+11. [Shipped updates (2026-08-18) — verified](#11-shipped-updates-2026-08-18--verified)
 
 ---
 
@@ -684,8 +689,8 @@ Example at 80%: ₱800 deposit → 1,000 credits. Never “deposit + X%”.
   - [x] Yes *(recommended — Admin is source of credits)*
   - [ ] No
 - [ ] **B4** Pure credit transfer downline **without** new cash?
-  - [ ] Allowed
-  - [x] Not in v1 *(recommended — cash + proof only)*
+  - [x] Allowed as **Direct Release** — same deposit ÷ rate as a request, no pending queue
+  - [ ] 1:1 cashless inventory move *(not used)*
 - [ ] **B5** Who owns mid-tier collected cash (Sub/Fran bank)?
   - [x] Partner’s own account
   - [ ] Company collection account
@@ -707,8 +712,8 @@ Example at 80%: ₱800 deposit → 1,000 credits. Never “deposit + X%”.
   - [ ] No
 - [ ] **C3** Reverse after release?
   - [ ] Yes — Admin only + reason *(recommended for v1)*
-  - [x] Yes — any upline
-  - [ ] No in v1
+  - [ ] Yes — any upline
+  - [x] No in v1 *(UI removed 2026-08-18; clawback helper still in code, unused)*
 - [ ] **C4** Hold / clarification status?
   - [ ] Yes
   - [x] No in v1 *(recommended — reject is enough)*
@@ -763,7 +768,7 @@ Example at 80%: ₱800 deposit → 1,000 credits. Never “deposit + X%”.
 
 ### Suggested default lock (if product wants a one-liner)
 
-> Tier deposit rates **60% / 70% / 80%**; snapshot on submit; `credits = deposit ÷ rate`; Admin mints; Sub/Fran release only from Available Credits; statuses `pending|released|rejected|reversed`; reject+reason required; payment ref required on release; no cashless transfer in v1; **two earnings streams** — (1) Admin load cash + mid-tier credit spread from deposit rates, (2) per-sale commission from distribution % of sale margin (`customer payment − credits consumed`).
+> Tier deposit rates **60% / 70% / 80%**; snapshot on submit *(live rate reapplied if the requester updates a still-pending request)*; `credits = deposit ÷ rate`; Admin mints; Sub/Fran release from Available Credits; Direct Release is the same load (deposit ÷ rate, proof, payment ref) without a pending queue — history lives on **My Credits Request** and **Released / History** (no Transfer History tab); statuses `pending|released|rejected` in the UI (`reversed` unused); reject+reason required; payment ref required on release; requester may **update or delete** while pending; **two earnings streams** — (1) **Internet Credits earnings** (Admin load cash + mid-tier credit spread from deposit rates), (2) **Sales Commission** from distribution % of the commission pool (`customer payment − credits consumed`).
 
 - [ ] Accept suggested default lock as-is *(superseded — D3 restored)*
 - [x] Accept with exceptions noted below: **D3 reversed 2026-08-17** — sale distribution % is in product again; deposit rates stay as-is.
@@ -778,13 +783,13 @@ Example at 80%: ₱800 deposit → 1,000 credits. Never “deposit + X%”.
 
 | Priority | Page / area | Current | Needed for locked Internet Credits |
 |----------|-------------|---------|-------------------------------------|
-| P0 | **Token Credits** (`/funding`, `/request-funding`) | Incoming / Mine / Approved / Transfers; 1:1 approve→wallet transfer | Rebuild toward mock: buy tab + downline approve tab; deposit vs credits; calculator; margin; payment ref; statuses `pending/released/rejected/reversed`; reverse by any upline; block short balance |
-| P0 | **Direct Transfer** (in funding + wallets) | Cashless transfer to downline | **Remove or disable for v1** (B4: cash + proof only) |
+| P0 | **Internet Credits** (`/funding`, `/request-funding`) | Incoming / Mine / Released-History | Buy tab + downline approve tab; deposit vs credits; calculator; payment ref; statuses `pending/released/rejected`; **no Reverse in UI**; block short balance |
+| P0 | **Direct Release** (in funding) | Upline-initiated load | **Enabled** for Admin / Sub / Franchisee — same deposit ÷ rate, proof, and payment ref as a request; skips the pending queue; listed on existing tabs with Type = Direct Release |
 | P0 | **New request / Approve dialogs** | Amount + proof; approve/reject | Deposit + proof on submit; approve: payment ref + editable credits + suggested formula + rate snapshot; reject reason |
 | P0 | **Data model** (`FundingRequest` / transfer / wallet) | Single `amount` | Split `depositAmount`, `suggestedCredits`, `creditsReleased`, `depositRate`, `paymentReferenceId`, override reason; credit balance vs cash |
 | P1 | **Wallets** (`/wallets`, `/wallet-management`, `/wallet`) | Operating / revenue / master balances | Clarify **Available Credits** vs operating/revenue wallets; show credit inventory; activity from credit release/consume; stop treating funding approve as plain 1:1 peso transfer (or dual-post cash vs credits) |
 | P1 | **Transactions** | `walletDeduction` from operating float | **D4:** internet sale **burns retailer Available Credits**; show Credits Consumed + Sale Margin **and** Your Share / 4-tier distribution % |
-| P1 | **Reports** | Funding CSV/KPIs treat amount as cash=credits | Split KPIs: cash deposited, credits released, pending liability, effective rate; hero = **sales commission** + load cash / spread + sales volume; mid-tier spread ops report (D2); CSV includes share % and Your Share |
+| P1 | **Reports** | Funding CSV/KPIs treat amount as cash=credits | Hero = **Internet Credits earnings** (links to Revenue, same period) + **Sales Commission** + **Total earnings** + sales volume; **Internet Credits by downline** rollup (not a copy of Revenue’s line-item table); commission tables use **Commission pool**; CSVs include share % and Your Share |
 | P2 | **Revenue** | Dual ledger | Keep Deposit Rates stream (Admin load cash; Sub/Fran credit spread) **and** Sales Commission stream (each role’s % of sale margin). Combined earnings = both. Retailer primary KPI = commission share, not full margin. |
 | P2 | **Commission Settings** | Per-retailer transaction % shares | **In nav** for Admin + Sub-Franchisee. Separate from Deposit Rates. Snapshot % onto each sale. |
 | P2 | **Deposit Rates** | Rate card | Global 60/70/80 + per-downline override — pricing for **credit loads only** (unchanged) |
@@ -799,13 +804,14 @@ Example at 80%: ₱800 deposit → 1,000 credits. Never “deposit + X%”.
 - Rename tabs to match role mocks (e.g. Downlines / My Credits; Retailers / My Credits).
 - KPIs: pending deposits (₱), pending credits, credits released, **Available Credits** (mid-tier).
 - Table: Deposited, Credits, Margin %, Status, Proof, Name, Action.
-- Remove or hide **Transfers** tab if it only serves cashless direct transfer (B4).
+- Do **not** use a separate Transfer History tab. Direct Release and approved requests both appear on **Released / History** (upline) and **My Credits Request** (downline), with a **Type** column (`Request` vs `Direct Release`).
+- New Credits Request and Direct Release share deposit ÷ rate; Direct Release skips the pending request.
 - Status vocabulary: map UI “Approved” → stored `released`.
 
 #### Wallets pages
 - Decide product rule: is **Available Credits** the operating wallet renamed, a new wallet type, or a separate balance field?
 - Recommendation for v1: add `creditBalance` (or walletType `credits`) distinct from revenue wallet; funding release credits **that** balance; internet sale debits it.
-- Direct transfer from wallet pages: same B4 rule — disable for credit float in v1.
+- Direct Release from Internet Credits: allowed in v1 — same economics as a request, no pending queue.
 
 #### Transactions
 - On internet sale: debit retailer credits (D4).
@@ -815,16 +821,18 @@ Example at 80%: ₱800 deposit → 1,000 credits. Never “deposit + X%”.
 #### Revenue + Deposit Rates + Commission Settings
 - Deposit Rates = pricing for credit loads (60/70/80 + overrides). Unchanged.
 - Commission Settings = per-retailer sale splits (Admin + Sub-Franchisee). Do not redirect to Deposit Rates.
-- Revenue page: Internet Credits table (load cash / spread) **plus** Sales Commission table (viewer’s % of sale margin). Combined earnings = both streams. Retailer KPI = commission share, not full sale margin.
+- Revenue page: **Internet Credits earnings** table (load cash / spread) **plus** Sales Commission table (viewer’s % of the commission pool). Combined earnings = both streams. Retailer KPI = commission share, not full sale margin.
 
 #### Reports
-- Export columns: deposit ₱, credits, rate, payment ref, status, suggested vs actual credits; transactions export includes share % and Your Share.
-- KPIs: sales commission + credit-load earnings + sales volume; cash collected vs credits released; pending aging; override count; mid-tier spread (cash in − cash out for same credit face).
-- E5: mid-tier CSV export still **decide later**.
+- KPIs: **Internet Credits earnings** + **Sales Commission** + **Total earnings** + sales volume.
+- Internet Credits earnings **card links to Revenue** with the same period (`?range=` + `#internet-credits`). Do **not** copy Revenue’s per-release table (with ⓘ) onto Reports.
+- **Internet Credits by downline** rollup on Reports: downline, cash in, credits, earnings (Admin / Sub / Fran). Line items stay on Revenue.
+- Commission tables use **Commission pool** (sale margin), not “% of yours”.
+- Exports: Transactions (commission pool), Sales Commission (pool + share % + your commission), Internet Credits earnings, Internet Credits requests (includes Type), Internet Credits releases.
 
 ### 10.3 Explicit non-goals for v1 (from checklist)
-- Cashless downline credit transfer (B4)
 - Hold/clarification status (C4)
+- Reverse after release in the UI (C3) — clawback helper remains unused
 - Buyer-submitted payment reference (C6)
 - Merging credit loads into the sale commission share engine (keep D3 **separate** — deposit rates do not feed the split)
 - Full accounting ledger for mid-tier spread (D2 = ops report only)
@@ -834,10 +842,103 @@ Example at 80%: ₱800 deposit → 1,000 credits. Never “deposit + X%”.
 2. Extend funding request/transfer model + seed
 3. Rebuild Token Credits UI (request + approve) per role
 4. Wire Available Credits balance + block on short release (B2, E4)
-5. Disable direct transfer for credits (B4)
+5. Direct Release (same as request + approve, no pending queue)
 6. Transactions: burn credits on internet sale (D4) **and** show stamped distribution %
 7. Reports/KPIs split cash vs credits + mid-tier spread ops view (D2) **and** sales commission
 8. Copy/nav rename + calculator rate label (E1–E3); keep Commission Settings beside Deposit Rates
+
+---
+
+## 11. Shipped updates (2026-08-18) — verified
+
+Checked against the current app (`src/lib`, `src/pages`, `src/services`, `src/data/seed.js`). This is the v1 product as of 2026-08-18.
+
+### 11.1 Demo network
+
+| Login | Org | Parent | Opening Available Credits |
+|---|---|---|---|
+| `admin@esarisari.local` (restricted) | Platform | — | ₱500,000 |
+| `subfranchisee@esarisari.local` | Northern Mindanao Sub-Franchisee | Platform | ₱135,000 |
+| `franchisee-a@esarisari.local` | Franchisee A | Sub | ₱0 |
+| `franchisee-b@esarisari.local` | Franchisee B | Sub | ₱0 |
+| `retailer-a@esarisari.local` | Retailer A (`RT-00001`) | Franchisee A | ₱0 |
+| `retailer-b@esarisari.local` | Retailer B (`RT-00002`) | Franchisee A | ₱0 |
+| `retailer-c@esarisari.local` | Retailer C (`RT-00003`) | Franchisee B | ₱0 |
+
+Non-admin password: `password123`. Franchisees and retailers start empty so they must request or receive a Direct Release. Admin and Sub keep mock opening float so they can release.
+
+Low-balance threshold is still ₱5,000 internally (notifications). The **Minimum Balance** card was removed from the wallet details modal.
+
+The header bell also alerts the **direct upline** when a downline submits a pending Internet Credits request (deposit + suggested credits). Direct Release does not notify. Clicking opens Internet Credits. The alert clears when the request leaves pending (released / rejected / deleted); updating a pending request marks it unread again.
+
+### 11.2 Internet Credits workspace
+
+**Roles that can Direct Release:** Admin, Sub-Franchisee, Franchisee. Retailer is request-only.
+
+| Tab | Who sees it | What it lists |
+|---|---|---|
+| Incoming (Downlines / Retailers Credits Request) | Upline | **Pending requests only** — Direct Release never queues here |
+| My Credits Request | Requester / recipient | Own requests **and** Direct Releases received |
+| Released / History | Both sides | Released (and rejected) requests **and** Direct Releases |
+
+No **Transfer History** tab. Direct Release creates a funding row with `directTransfer: true`, then releases immediately (same `credits = deposit ÷ rate`, optional proof, payment ref required). Type badge: **Request** vs **Direct Release**.
+
+**Pending requester actions:** Update (amount, notes, proof) and Delete. Both blocked once status is not pending. Update re-reads the **live** deposit rate (not the original snapshot).
+
+**Reverse:** Hidden in the UI. `reverseInternetCredits` still exists in code but is unused.
+
+**Approve:** Still requires payment reference; Sub/Fran cannot release more than Available Credits; Admin mints.
+
+### 11.3 Two earnings streams (copy lock)
+
+Do **not** call the deposit-rate spread “Load earnings”. Use **Internet Credits earnings** so it matches the Internet Credits page.
+
+| Stream | Event | Formula | Where |
+|---|---|---|---|
+| **Internet Credits earnings** | Upline releases credits to a downline (request or Direct Release) | Admin: cash collected. Sub/Fran: `cash in − (credits × viewer buy rate)` = `credits × (sell rate − buy rate)` | Revenue **line-item** table + ⓘ; Reports **KPI** (links to Revenue, same period) + **by-downline rollup** + CSV |
+| **Sales Commission** | Retailer sells internet to a customer | Viewer’s % of **commission pool** (`customer payment − credits consumed`) | Revenue Sales Commission table; Reports tables + CSV |
+| **Total earnings** | Both | Internet Credits earnings + Sales Commission | Revenue and Reports KPI cards (not Retailer) |
+
+Worked Sub/Fran example (Franchisee selling to Retailer at 80%, buying from Sub at 70%):
+
+- Cash in ₱6,000 for ₱7,500 credits
+- Cost = ₱7,500 × 70% = ₱5,250
+- Internet Credits earnings = ₱6,000 − ₱5,250 = ₱750
+- Same as ₱7,500 × (80% − 70%) = ₱750
+- This is inventory markup from deposit rates, **not** sale commission
+
+Reports **Retailer / Franchisee Commissions** tables use **Commission pool**, aligned with Revenue. “% of yours” was removed (it was share-of-viewer-total, not a commission rate).
+
+Reports card order: Internet Credits earnings → Sales Commission → Total earnings → Sales Volume.
+
+**Reports vs Revenue for Internet Credits (locked 2026-08-18):**
+
+- Revenue = per-release ledger (date, reference, downline, cash in, credits, earnings + ⓘ).
+- Reports = period snapshot. The Internet Credits earnings card opens Revenue at `#internet-credits` with `?range=` (and `from`/`to` if custom) so the period matches.
+- Reports also shows **Internet Credits by downline** (rollup of those same entries). Not a copy of the Revenue table. Retailer does not see this block.
+
+### 11.4 Exports (Reports)
+
+| Card | CSV contents |
+|---|---|
+| Transactions | Payment, credits consumed, **Commission pool**, split %, your share |
+| Sales Commission | Date, retailer, **Commission pool**, **Your share %**, your commission, status |
+| Internet Credits earnings | Date, downline, cash in, credits, earnings, buy/sell rate, cost basis (Admin / Sub / Fran only) |
+| Internet Credits Requests | Includes **Type** (Request vs Direct Release), deposit, credits, rate, payment ref, status |
+| Internet Credits Releases | Credit-release ledger (deposit, rate, payment ref) |
+
+### 11.5 Double-check notes (left as-is on purpose)
+
+| Item | Status |
+|---|---|
+| User guide `.docx` | Regenerated 2026-08-18 from `docs/_generate_user_guide.py`. Screenshots are layout references and may show older sample rows. |
+| Reverse clawback | Code remains; UI off |
+| Direct Release Transfer History tab | Still off; history is on existing tabs |
+| A5 rate snapshot | Submit snapshots the rate; **Update pending** reapplies the live rate |
+| Wallet `minimumBalance` | Still ₱5,000 for low-balance alerts; not shown on the details modal |
+| Revenue vs Reports transactions table | Reports transactions header is **Commission pool**; the standalone Transactions page may still say Sale Margin (same number) |
+| Revenue Internet Credits table on Reports | Not copied. Reports uses KPI → Revenue link + by-downline rollup |
+| Sections 2–5 of this MD | Original mock gaps (bank matching, override reason codes, etc.) — not all closed in v1 |
 
 ---
 

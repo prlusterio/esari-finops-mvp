@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Download, Eye, Filter } from 'lucide-react'
+import { Download, Eye, Filter, Plus } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { ROLES, TRANSACTION_STATUS, TRANSACTION_STATUS_LABELS } from '@/lib/constants'
 import { formatCurrency } from '@/lib/currency'
@@ -23,6 +23,7 @@ import {
   getTransactions,
 } from '@/services/storage'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { DummyTransactionDialog } from '@/components/shared/DummyTransactionDialog'
 import { TransactionDetailsDialog } from '@/components/shared/TransactionDetailsDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -75,7 +76,7 @@ function downloadCsv(filename, content) {
 }
 
 export default function TransactionsPage() {
-  const { user, dataVersion } = useAuth()
+  const { user, dataVersion, bumpDataVersion } = useAuth()
   const config = useMemo(
     () => getTransactionsPageConfig(user?.role),
     [user?.role],
@@ -101,6 +102,8 @@ export default function TransactionsPage() {
   })
   const [page, setPage] = useState(0)
   const [selectedTx, setSelectedTx] = useState(null)
+  const [demoSaleOpen, setDemoSaleOpen] = useState(false)
+  const canRecordDemoSale = user?.role === ROLES.RETAILER
 
   useEffect(() => {
     setPage(0)
@@ -212,10 +215,22 @@ export default function TransactionsPage() {
           { label: 'Transactions' },
         ]}
         actions={
-          <Button type="button" variant="outline" onClick={handleExport}>
-            <Download className="h-4 w-4" />
-            Export CSV
-          </Button>
+          <>
+            {canRecordDemoSale ? (
+              <Button
+                type="button"
+                className="bg-blue-600 text-white hover:bg-blue-700"
+                onClick={() => setDemoSaleOpen(true)}
+              >
+                <Plus className="h-4 w-4" />
+                Record demo sale
+              </Button>
+            ) : null}
+            <Button type="button" variant="outline" onClick={handleExport}>
+              <Download className="h-4 w-4" />
+              Export CSV
+            </Button>
+          </>
         }
       />
 
@@ -332,7 +347,11 @@ export default function TransactionsPage() {
         <CardContent className="p-0">
           {paged.length === 0 ? (
             <div className="px-4 py-12 text-center text-sm text-muted-foreground">
-              No transactions match the current filters.
+              {scopedTransactions.length === 0
+                ? canRecordDemoSale
+                  ? 'No sales yet. Record a demo sale to walk it through Revenue and Reports.'
+                  : 'No sales in this network yet. Retailers can record a demo sale from their Transactions page.'
+                : 'No transactions match the current filters.'}
             </div>
           ) : (
             <>
@@ -446,6 +465,25 @@ export default function TransactionsPage() {
           )}
         </CardContent>
       </Card>
+
+      <DummyTransactionDialog
+        open={demoSaleOpen}
+        onOpenChange={setDemoSaleOpen}
+        organizationId={user?.organizationId}
+        onCreated={(transaction) => {
+          bumpDataVersion()
+          setSelectedTx(transaction)
+          setDateRange('all')
+          setAppliedFilters((current) => ({
+            ...current,
+            dateRange: 'all',
+            customDateRange: null,
+            search: '',
+            status: TRANSACTION_STATUS.COMPLETED,
+          }))
+          setPage(0)
+        }}
+      />
 
       <TransactionDetailsDialog
         open={Boolean(selectedTx)}

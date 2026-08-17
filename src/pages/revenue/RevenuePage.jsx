@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useLocation, useSearchParams } from 'react-router-dom'
 import { Banknote, Coins, Eye, Filter, PieChart, Wallet } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { ROLES } from '@/lib/constants'
+import { ROLE_LABELS, ROLES } from '@/lib/constants'
 import { buildCreditRevenueSnapshot } from '@/lib/creditEconomics'
 import { formatCurrency } from '@/lib/currency'
-import { formatReportPeriodLabel } from '@/lib/date'
+import { formatReportPeriodLabel, parseRevenuePeriodSearch } from '@/lib/date'
+import { getParentOrganization } from '@/lib/funding'
 import { DEFAULT_PAGE_SIZE, paginateItems } from '@/lib/pagination'
 import { getHomePathForRole } from '@/lib/permissions'
 import {
@@ -22,6 +24,7 @@ import {
   getTransactions,
 } from '@/services/storage'
 import { DateTimeCell } from '@/components/shared/DateTimeCell'
+import { InfoTooltip } from '@/components/shared/InfoTooltip'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { StatCard } from '@/components/shared/StatCard'
 import { TablePagination } from '@/components/shared/TablePagination'
@@ -48,8 +51,89 @@ import {
 } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 
+function formatRatePercent(rate) {
+  if (rate == null || Number.isNaN(Number(rate))) return null
+  return `${Math.round(Number(rate) * 100)}%`
+}
+
+function uplineRoleLabel(parentOrg) {
+  if (!parentOrg) return 'your upline'
+  if (parentOrg.type === 'platform') return ROLE_LABELS[ROLES.ADMIN]
+  return ROLE_LABELS[parentOrg.type] || parentOrg.name || 'your upline'
+}
+
+function LoadEarningsExplanation({ entry, viewerName, uplineLabel }) {
+  if (entry?.kind === 'credit_spread' && entry.buyRate != null) {
+    const buyPct = formatRatePercent(entry.buyRate)
+    const sellPct = formatRatePercent(entry.sellRate)
+    const credits = formatCurrency(entry.credits)
+    const cashIn = formatCurrency(entry.cashIn)
+    const cost = formatCurrency(entry.costBasis)
+    const earnings = formatCurrency(entry.revenue)
+    const buyer = viewerName || 'you'
+
+    return (
+      <div className="space-y-2">
+        <p>
+          Those {credits} credits cost {buyer}{' '}
+          <strong className="font-semibold text-slate-800">
+            {credits} × {buyPct} = {cost}
+          </strong>{' '}
+          to buy from the {uplineLabel}.
+        </p>
+        <p>
+          Cash collected − replacement cost = Internet Credits earnings:
+          <span className="mt-1 block font-semibold tabular-nums text-slate-800">
+            {cashIn} − {cost} = {earnings}
+          </span>
+        </p>
+        {sellPct ? (
+          <p>
+            Same result as the rate gap:{' '}
+            <strong className="font-semibold text-slate-800">
+              {credits} × ({sellPct} − {buyPct}) = {earnings}
+            </strong>
+            .
+          </p>
+        ) : null}
+        <p>
+          That {earnings} is inventory markup from deposit rates. It is
+          separate from sale commission, which only appears when a retailer
+          sells internet to a customer.
+        </p>
+      </div>
+    )
+  }
+
+  if (entry?.kind === 'platform_load') {
+    const rate = formatRatePercent(entry.depositRate)
+    const cashIn = formatCurrency(entry.cashIn)
+    const credits = formatCurrency(entry.credits)
+    return (
+      <div className="space-y-2">
+        <p>
+          Internet Credits earnings are the cash collected when you released{' '}
+          {credits}{' '}
+          credits{rate ? ` at ${rate}` : ''}:
+          <span className="mt-1 block font-semibold tabular-nums text-slate-800">
+            {cashIn}
+          </span>
+        </p>
+        <p>
+          This is separate from sale commission, which only appears when a
+          retailer sells internet to a customer.
+        </p>
+      </div>
+    )
+  }
+
+  return null
+}
+
 export default function RevenuePage() {
   const { user, dataVersion } = useAuth()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
   const organizations = useMemo(() => getOrganizations(), [dataVersion])
   const fundingRequests = useMemo(() => getFundingRequests(), [dataVersion])
   const transactions = useMemo(() => getTransactions(), [dataVersion])
@@ -67,19 +151,41 @@ export default function RevenuePage() {
   const [commissionPage, setCommissionPage] = useState(0)
   const [selectedTx, setSelectedTx] = useState(null)
 
+  const periodQuery = searchParams.toString()
+
   useEffect(() => {
+    const fromUrl = parseRevenuePeriodSearch(periodQuery)
+    const nextRange = fromUrl?.dateRange || 'this_month'
+    const nextFrom = fromUrl?.customFrom || ''
+    const nextTo = fromUrl?.customTo || ''
     setPage(0)
     setCommissionPage(0)
-    setDateRange('this_month')
-    setCustomFrom('')
-    setCustomTo('')
+    setDateRange(nextRange)
+    setCustomFrom(nextFrom)
+    setCustomTo(nextTo)
     setSearch('')
     setAppliedFilters({
-      dateRange: 'this_month',
-      customDateRange: null,
+      dateRange: nextRange,
+      customDateRange:
+        nextRange === 'custom'
+          ? { from: nextFrom || null, to: nextTo || null }
+          : null,
       search: '',
     })
-  }, [user?.role])
+  }, [user?.role, periodQuery])
+
+  const viewerOrgName = useMemo(() => {
+    const org = organizations.find((item) => item.id === user?.organizationId)
+    return org?.name || ROLE_LABELS[user?.role] || 'you'
+  }, [organizations, user?.organizationId, user?.role])
+
+  const viewerUplineLabel = useMemo(
+    () =>
+      uplineRoleLabel(
+        getParentOrganization(organizations, user?.organizationId),
+      ),
+    [organizations, user?.organizationId],
+  )
 
   const customDateInvalid =
     appliedFilters.dateRange === 'custom' &&
@@ -197,6 +303,13 @@ export default function RevenuePage() {
     ? 'Your commission from each internet sale.'
     : 'Earnings from loading Internet Credits to downlines, plus your commission from sales.'
 
+  useEffect(() => {
+    if (location.hash !== '#internet-credits' || !showCreditTable) return
+    const node = document.getElementById('internet-credits')
+    if (!node) return
+    node.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [location.hash, showCreditTable, appliedFilters.dateRange])
+
   return (
     <div>
       <PageHeader
@@ -237,7 +350,7 @@ export default function RevenuePage() {
         ) : (
           <>
             <StatCard
-              title="Load earnings"
+              title="Internet Credits earnings"
               value={formatCurrency(kpis.primaryValue)}
               description={`For ${periodLabel}`}
               descriptionBelowTitle
@@ -254,7 +367,7 @@ export default function RevenuePage() {
             <StatCard
               title="Total earnings"
               value={formatCurrency(combinedEarnings)}
-              description={`Loads + sales · ${periodLabel}`}
+              description={`Internet Credits + sales · ${periodLabel}`}
               descriptionBelowTitle
               icon={Coins}
             />
@@ -331,7 +444,10 @@ export default function RevenuePage() {
       </Card>
 
       {showCreditTable ? (
-        <Card className="mb-4 overflow-hidden shadow-sm">
+        <Card
+          id="internet-credits"
+          className="mb-4 scroll-mt-20 overflow-hidden shadow-sm"
+        >
           <CardHeader className="border-b border-border px-4 py-3">
             <CardTitle className="text-base font-semibold">
               Internet Credits
@@ -343,7 +459,7 @@ export default function RevenuePage() {
           <CardContent className="p-0">
             {paged.length === 0 ? (
               <div className="px-4 py-12 text-center text-sm text-muted-foreground">
-                No credit-load entries for the selected period.
+                No Internet Credits earnings for the selected period.
               </div>
             ) : (
               <>
@@ -379,15 +495,29 @@ export default function RevenuePage() {
                           <TableCell className="text-right tabular-nums">
                             {formatCurrency(entry.credits)}
                           </TableCell>
-                          <TableCell
-                            className={cn(
-                              'text-right font-semibold tabular-nums',
-                              (entry.revenue ?? 0) >= 0
-                                ? 'text-emerald-700'
-                                : 'text-red-600',
-                            )}
-                          >
-                            {formatCurrency(entry.revenue)}
+                          <TableCell className="text-right">
+                            <span className="inline-flex items-center justify-end gap-1">
+                              <span
+                                className={cn(
+                                  'font-semibold tabular-nums',
+                                  (entry.revenue ?? 0) >= 0
+                                    ? 'text-emerald-700'
+                                    : 'text-red-600',
+                                )}
+                              >
+                                {formatCurrency(entry.revenue)}
+                              </span>
+                              <InfoTooltip
+                                align="end"
+                                label={`How ${formatCurrency(entry.revenue)} was calculated`}
+                              >
+                                <LoadEarningsExplanation
+                                  entry={entry}
+                                  viewerName={viewerOrgName}
+                                  uplineLabel={viewerUplineLabel}
+                                />
+                              </InfoTooltip>
+                            </span>
                           </TableCell>
                         </TableRow>
                       ))}

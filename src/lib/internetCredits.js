@@ -80,10 +80,11 @@ export function getRequestCredits(request) {
 }
 
 export function isReleasedStatus(status) {
+  const normalized = String(status || '').toLowerCase()
   return (
-    status === FUNDING_STATUS.RELEASED ||
-    status === FUNDING_STATUS.APPROVED ||
-    status === FUNDING_STATUS.COMPLETED
+    normalized === FUNDING_STATUS.RELEASED ||
+    normalized === FUNDING_STATUS.APPROVED ||
+    normalized === FUNDING_STATUS.COMPLETED
   )
 }
 

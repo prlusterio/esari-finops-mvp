@@ -20,12 +20,8 @@ export const WALLET_BALANCE_STATUS_LABELS = {
   [WALLET_BALANCE_STATUS.ZERO]: 'Zero Balance',
 }
 
-const DEFAULT_MINIMUM_BY_TYPE = {
-  platform: 100000,
-  subfranchisee: 50000,
-  franchisee: 25000,
-  retailer: 5000,
-}
+/** Credits Directory: Low Balance when Available Credits are this amount or below. */
+export const LOW_BALANCE_THRESHOLD = 5000
 
 const TYPE_LABELS = {
   platform: 'Platform',
@@ -38,16 +34,14 @@ function roundMoney(value) {
   return Math.round((Number(value) + Number.EPSILON) * 100) / 100
 }
 
-export function resolveMinimumBalance(wallet, orgType) {
-  const configured = Number(wallet?.minimumBalance)
-  if (Number.isFinite(configured) && configured > 0) return configured
-  return DEFAULT_MINIMUM_BY_TYPE[orgType] || 5000
+export function resolveMinimumBalance(_wallet, _orgType) {
+  return LOW_BALANCE_THRESHOLD
 }
 
-export function getWalletBalanceStatus(availableBalance, minimumBalance) {
+export function getWalletBalanceStatus(availableBalance) {
   const available = Number(availableBalance) || 0
   if (available <= 0) return WALLET_BALANCE_STATUS.ZERO
-  if (available < Number(minimumBalance || 0)) return WALLET_BALANCE_STATUS.LOW
+  if (available <= LOW_BALANCE_THRESHOLD) return WALLET_BALANCE_STATUS.LOW
   return WALLET_BALANCE_STATUS.SUFFICIENT
 }
 

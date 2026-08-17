@@ -4,6 +4,8 @@ import { useAuth } from '@/context/AuthContext'
 import {
   DEMO_ACCOUNTS,
   DEMO_PASSWORD,
+  USER_GUIDE_DOCX_HREF,
+  USER_GUIDE_HREF,
 } from '@/lib/constants'
 import { getHomePathForRole } from '@/lib/permissions'
 import { Button } from '@/components/ui/button'
@@ -124,6 +126,26 @@ export default function LoginPage() {
               </button>
             ))}
           </div>
+
+          <p className="mt-4 text-center text-xs text-muted-foreground">
+            <a
+              href={USER_GUIDE_HREF}
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-foreground underline-offset-4 hover:underline"
+            >
+              Open the user guide
+            </a>
+            {' '}
+            in your browser, or{' '}
+            <a
+              href={USER_GUIDE_DOCX_HREF}
+              className="font-medium text-foreground underline-offset-4 hover:underline"
+            >
+              download Word
+            </a>
+            .
+          </p>
         </div>
       </CardContent>
     </Card>

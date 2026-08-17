@@ -77,19 +77,11 @@ export function WalletDetailsSheet({
         </SheetHeader>
 
         <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
-              <p className="text-xs text-slate-400">Minimum Balance</p>
-              <p className="mt-1 text-sm font-semibold text-slate-900">
-                {formatCurrency(walletRow.minimumBalance)}
-              </p>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
-              <p className="text-xs text-slate-400">Parent Organization</p>
-              <p className="mt-1 text-sm font-semibold text-slate-900">
-                {walletRow.parentName}
-              </p>
-            </div>
+          <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <p className="text-xs text-slate-400">Parent Organization</p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">
+              {walletRow.parentName}
+            </p>
           </div>
 
           <div>

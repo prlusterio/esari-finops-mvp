@@ -31,21 +31,28 @@ export const STORAGE_KEYS = {
   COMMISSION_SETTINGS_SEED_VERSION: 'esarisari_commission_settings_seed_version',
   /** One-time migrations for internet credits funding request shape */
   INTERNET_CREDITS_SEED_VERSION: 'esarisari_internet_credits_seed_version',
+  /** One-time trim of demo orgs to accounts that have logins */
+  NETWORK_SEED_VERSION: 'esarisari_network_seed_version',
   /** Deposit rate overrides per downline */
   DEPOSIT_RATES: 'esarisari_deposit_rates',
+  /** Per-organization read state for in-app notifications */
+  NOTIFICATION_READS: 'esarisari_notification_reads',
 }
 
 /** Bump when operating wallet seed balances change and existing demos should realign once. */
-export const WALLET_LEDGER_VERSION = 'funding-ledger-v3'
+export const WALLET_LEDGER_VERSION = 'funding-ledger-v7'
 
 /** Bump when seeded transactions change and existing demos should refresh once. */
-export const TRANSACTIONS_SEED_VERSION = 'direct-admin-v1'
+export const TRANSACTIONS_SEED_VERSION = 'empty-demo-v1'
 
 /** Bump when seeded commission settings change and existing demos should refresh once. */
-export const COMMISSION_SETTINGS_SEED_VERSION = 'direct-admin-v1'
+export const COMMISSION_SETTINGS_SEED_VERSION = 'login-accounts-v1'
 
 /** Bump when internet-credits funding seeds change and existing demos should refresh once. */
-export const INTERNET_CREDITS_SEED_VERSION = 'internet-credits-statement-v1'
+export const INTERNET_CREDITS_SEED_VERSION = 'empty-demo-v3'
+
+/** Bump when the demo org tree is trimmed to login-backed accounts. */
+export const NETWORK_SEED_VERSION = 'login-accounts-v1'
 
 /** Default deposit rate (cash ÷ credit face) by hop. */
 export const CREDIT_DEPOSIT_RATES = {
@@ -59,16 +66,9 @@ export const ORG_IDS = {
   SUB_001: 'org-sub-001',
   FRANCHISE_001: 'org-franchise-001',
   FRANCHISE_002: 'org-franchise-002',
-  FRANCHISE_003: 'org-franchise-003',
-  FRANCHISE_004: 'org-franchise-004',
-  FRANCHISE_005: 'org-franchise-005',
   RETAILER_001: 'org-retailer-001',
   RETAILER_002: 'org-retailer-002',
   RETAILER_003: 'org-retailer-003',
-  RETAILER_004: 'org-retailer-004',
-  RETAILER_005: 'org-retailer-005',
-  RETAILER_006: 'org-retailer-006',
-  RETAILER_007: 'org-retailer-007',
 }
 
 export const FUNDING_STATUS = {
@@ -110,12 +110,24 @@ export const DEMO_ACCOUNTS = [
     email: 'subfranchisee@esarisari.local',
   },
   {
-    label: 'Franchisee',
-    email: 'franchisee@esarisari.local',
+    label: 'Franchisee A',
+    email: 'franchisee-a@esarisari.local',
   },
   {
-    label: 'Retailer',
-    email: 'retailer@esarisari.local',
+    label: 'Franchisee B',
+    email: 'franchisee-b@esarisari.local',
+  },
+  {
+    label: 'Retailer A',
+    email: 'retailer-a@esarisari.local',
+  },
+  {
+    label: 'Retailer B',
+    email: 'retailer-b@esarisari.local',
+  },
+  {
+    label: 'Retailer C',
+    email: 'retailer-c@esarisari.local',
   },
 ]
 
@@ -124,3 +136,9 @@ export const DEMO_PASSWORD = 'password123'
 
 /** Restricted password for the platform admin demo account. */
 export const ADMIN_DEMO_PASSWORD = 'abc12345678'
+
+/** HTML user guide on GitHub Pages / local preview. */
+export const USER_GUIDE_HREF = `${import.meta.env.BASE_URL}user-guide.html`
+
+/** Word copy of the same guide. */
+export const USER_GUIDE_DOCX_HREF = `${import.meta.env.BASE_URL}user-guide.docx`

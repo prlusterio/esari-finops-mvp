@@ -2,14 +2,16 @@ import { useState } from 'react'
 import { Link, Outlet, useNavigate } from 'react-router-dom'
 import {
   ChevronDown,
+  BookOpen,
   LogOut,
   Menu,
   RefreshCcw,
   UserRound,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { ROLE_LABELS } from '@/lib/constants'
+import { ROLE_LABELS, USER_GUIDE_HREF } from '@/lib/constants'
 import { SidebarNav } from '@/components/shared/SidebarNav'
+import { NotificationBell } from '@/components/shared/NotificationBell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -102,6 +104,7 @@ export default function AppLayout() {
           </div>
 
           <div className="flex items-center gap-3">
+            <NotificationBell />
             <Badge variant="secondary">{ROLE_LABELS[user?.role] || user?.role}</Badge>
 
             <DropdownMenu>
@@ -127,6 +130,17 @@ export default function AppLayout() {
                     <UserRound className="h-4 w-4" />
                     Profile
                   </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <a
+                    href={USER_GUIDE_HREF}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="cursor-pointer"
+                  >
+                    <BookOpen className="h-4 w-4" />
+                    User Guide
+                  </a>
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => setResetOpen(true)}>
                   <RefreshCcw className="h-4 w-4" />

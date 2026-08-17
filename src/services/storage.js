@@ -181,6 +181,41 @@ export function clearSession() {
   localStorage.removeItem(STORAGE_KEYS.SESSION)
 }
 
+function readNotificationReads() {
+  const result = readObjectOrArray(STORAGE_KEYS.NOTIFICATION_READS, {})
+  if (!result.data || Array.isArray(result.data) || typeof result.data !== 'object') {
+    return {}
+  }
+  return result.data
+}
+
+export function getNotificationReads() {
+  return readNotificationReads()
+}
+
+export function saveNotificationReads(data) {
+  write(
+    STORAGE_KEYS.NOTIFICATION_READS,
+    data && typeof data === 'object' && !Array.isArray(data) ? data : {},
+  )
+}
+
+export function markNotificationsRead(organizationId, notificationIds) {
+  if (!organizationId) return getNotificationReads()
+  const ids = (notificationIds || []).filter(Boolean)
+  if (ids.length === 0) return getNotificationReads()
+
+  const all = { ...readNotificationReads() }
+  const current = { ...(all[organizationId] || {}) }
+  const readAt = new Date().toISOString()
+  ids.forEach((id) => {
+    current[id] = { readAt }
+  })
+  all[organizationId] = current
+  saveNotificationReads(all)
+  return all
+}
+
 /** Business data keys only — excludes session */
 export const BUSINESS_COLLECTIONS = {
   users,
@@ -206,6 +241,8 @@ export function clearAllBusinessData() {
   localStorage.removeItem(STORAGE_KEYS.TRANSACTIONS_SEED_VERSION)
   localStorage.removeItem(STORAGE_KEYS.COMMISSION_SETTINGS_SEED_VERSION)
   localStorage.removeItem(STORAGE_KEYS.INTERNET_CREDITS_SEED_VERSION)
+  localStorage.removeItem(STORAGE_KEYS.NETWORK_SEED_VERSION)
+  localStorage.removeItem(STORAGE_KEYS.NOTIFICATION_READS)
 }
 
 export function collectionNeedsSeed(name) {

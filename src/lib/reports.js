@@ -42,7 +42,7 @@ export function getReportsPageConfig(role) {
       showViewerCommissionColumn: true,
       yourCommissionLabel: 'Sales Commission',
       viewerCommissionLabel: 'Platform Commission',
-      creditEarningsLabel: 'Load earnings',
+      creditEarningsLabel: 'Internet Credits earnings',
       earningsMode: 'platform_load',
       defaultDateRange: 'this_month',
     }
@@ -64,7 +64,7 @@ export function getReportsPageConfig(role) {
       showViewerCommissionColumn: true,
       yourCommissionLabel: 'Sales Commission',
       viewerCommissionLabel: 'Your Commission',
-      creditEarningsLabel: 'Load earnings',
+      creditEarningsLabel: 'Internet Credits earnings',
       earningsMode: 'credit_spread',
       defaultDateRange: 'this_month',
     }
@@ -86,7 +86,7 @@ export function getReportsPageConfig(role) {
       showViewerCommissionColumn: true,
       yourCommissionLabel: 'Sales Commission',
       viewerCommissionLabel: 'Your Commission',
-      creditEarningsLabel: 'Load earnings',
+      creditEarningsLabel: 'Internet Credits earnings',
       earningsMode: 'credit_spread',
       defaultDateRange: 'this_month',
     }
@@ -325,23 +325,10 @@ export function buildPartyRevenueRows({
       totalRevenue: roundMoney(creditedRevenue + pendingRevenue),
       viewerCommission,
       pendingViewerCommission,
-      shareOfViewerTotal: 0,
     }
   })
 
-  const viewerTotal = rows.reduce(
-    (sum, row) => roundMoney(sum + (Number(row.viewerCommission) || 0)),
-    0,
-  )
-
   return rows
-    .map((row) => ({
-      ...row,
-      shareOfViewerTotal:
-        viewerTotal > 0
-          ? roundMoney(((Number(row.viewerCommission) || 0) / viewerTotal) * 100)
-          : 0,
-    }))
     .sort((a, b) => {
       if (viewerRole) {
         if (b.viewerCommission !== a.viewerCommission) {
@@ -460,6 +447,7 @@ function rowsToCsv(headers, rows) {
 export function fundingRequestsToCsv(requests, orgById = {}) {
   const headers = [
     'Request ID',
+    'Type',
     'Organization',
     'Requester Role',
     'Deposit Amount',
@@ -490,6 +478,7 @@ export function fundingRequestsToCsv(requests, orgById = {}) {
       (suggested > 0 ? roundMoney(deposit / suggested) : '')
     return [
       request.id,
+      request.directTransfer ? 'Direct Release' : 'Request',
       org?.name || request.organizationId,
       request.requesterRole,
       deposit,
@@ -544,11 +533,12 @@ export function fundingTransfersToCsv(transfers, orgById = {}) {
 
 export function revenueEntriesToCsv(entries) {
   const headers = [
-    'Reference',
     'Date',
+    'Reference',
     'Retailer',
     'Retailer Code',
     'Commission Pool',
+    'Your Share %',
     'Your Commission',
     'Status',
   ]
@@ -558,13 +548,42 @@ export function revenueEntriesToCsv(entries) {
   )
 
   const rows = sorted.map((entry) => [
-    entry.reference,
     entry.createdAt,
+    entry.reference,
     entry.retailerName,
     entry.retailerCode,
     entry.distributableRevenue,
+    entry.sharePercentage ?? '',
     entry.yourRevenue,
     entry.status,
+  ])
+
+  return rowsToCsv(headers, rows)
+}
+
+export function creditLoadEntriesToCsv(entries = []) {
+  const headers = [
+    'Date',
+    'Reference',
+    'Downline',
+    'Cash In',
+    'Credits',
+    'Earnings',
+    'Buy Rate',
+    'Sell Rate',
+    'Cost Basis',
+  ]
+
+  const rows = [...entries].map((entry) => [
+    entry.createdAt,
+    entry.reference,
+    entry.counterpartyName,
+    entry.cashIn,
+    entry.credits,
+    entry.revenue,
+    entry.buyRate ?? '',
+    entry.sellRate ?? entry.depositRate ?? '',
+    entry.costBasis ?? '',
   ])
 
   return rowsToCsv(headers, rows)

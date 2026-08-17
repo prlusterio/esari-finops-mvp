@@ -156,7 +156,7 @@ export function getDepositRatesPageConfig(role) {
     return {
       title: 'Deposit Rates',
       description:
-        'Set the deposit rate charged when each franchisee buys credits from you. Load earnings come from this rate card; sale commissions are configured separately in Commission Settings.',
+        'Set the deposit rate charged when each franchisee buys credits from you. Internet Credits earnings come from this rate card; sale commissions are configured separately in Commission Settings.',
       hopLabel: DEPOSIT_RATE_HOP_LABELS[CREDIT_HOPS.SUB_TO_FRANCHISEE],
       defaultHop: CREDIT_HOPS.SUB_TO_FRANCHISEE,
       emptyLabel: 'No franchisees found under your organization.',
@@ -167,7 +167,7 @@ export function getDepositRatesPageConfig(role) {
     return {
       title: 'Deposit Rates',
       description:
-        'Set the deposit rate charged when each retailer buys credits from you. Load earnings come from this rate card; sale commissions still use the distribution % on each sale.',
+        'Set the deposit rate charged when each retailer buys credits from you. Internet Credits earnings come from this rate card; sale commissions still use the distribution % on each sale.',
       hopLabel: DEPOSIT_RATE_HOP_LABELS[CREDIT_HOPS.FRANCHISEE_TO_RETAILER],
       defaultHop: CREDIT_HOPS.FRANCHISEE_TO_RETAILER,
       emptyLabel: 'No retailers found under your organization.',

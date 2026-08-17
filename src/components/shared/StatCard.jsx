@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
@@ -8,6 +9,8 @@ export function StatCard({
   icon: Icon,
   accent = 'default',
   descriptionBelowTitle = false,
+  to,
+  toLabel,
 }) {
   const accents = {
     default: 'text-foreground',
@@ -17,8 +20,13 @@ export function StatCard({
     danger: 'text-danger',
   }
 
-  return (
-    <Card>
+  const card = (
+    <Card
+      className={cn(
+        to &&
+          'transition-colors hover:border-blue-200 hover:bg-blue-50/40',
+      )}
+    >
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
         <div className="min-w-0 space-y-0.5">
           <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -51,5 +59,17 @@ export function StatCard({
         ) : null}
       </CardContent>
     </Card>
+  )
+
+  if (!to) return card
+
+  return (
+    <Link
+      to={to}
+      aria-label={toLabel || title}
+      className="block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+    >
+      {card}
+    </Link>
   )
 }

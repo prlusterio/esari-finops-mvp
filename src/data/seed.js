@@ -1,6 +1,7 @@
 import {
   FUNDING_STATUS,
   INTERNET_CREDITS_SEED_VERSION,
+  NETWORK_SEED_VERSION,
   ORG_IDS,
   ROLES,
   STORAGE_KEYS,
@@ -10,7 +11,6 @@ import {
   WALLET_LEDGER_VERSION,
   ADMIN_DEMO_PASSWORD,
   DEMO_PASSWORD,
-  CREDIT_DEPOSIT_RATES,
 } from '@/lib/constants'
 import { sumCreditedShareForOrg } from '@/lib/revenue'
 import {
@@ -42,19 +42,6 @@ import {
   saveWallets,
   clearAllBusinessData,
 } from '@/services/storage'
-
-function isEmptyCollection(name) {
-  if (name === 'fundingRequests') {
-    return getFundingRequests().length === 0
-  }
-  if (name === 'fundingTransfers') {
-    return getFundingTransfers().length === 0
-  }
-  if (name === 'transactions') {
-    return getTransactions().length === 0
-  }
-  return false
-}
 
 const now = '2026-01-01T00:00:00.000Z'
 
@@ -95,8 +82,8 @@ export function getSeedUsers() {
     },
     {
       id: 'user-franchisee',
-      name: 'CDO Franchisee',
-      email: 'franchisee@esarisari.local',
+      name: 'Franchisee A',
+      email: 'franchisee-a@esarisari.local',
       password: DEMO_PASSWORD,
       role: ROLES.FRANCHISEE,
       organizationId: ORG_IDS.FRANCHISE_001,
@@ -105,12 +92,45 @@ export function getSeedUsers() {
       updatedAt: now,
     },
     {
+      id: 'user-franchisee-b',
+      name: 'Franchisee B',
+      email: 'franchisee-b@esarisari.local',
+      password: DEMO_PASSWORD,
+      role: ROLES.FRANCHISEE,
+      organizationId: ORG_IDS.FRANCHISE_002,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
       id: 'user-retailer',
       name: 'Retailer A',
-      email: 'retailer@esarisari.local',
+      email: 'retailer-a@esarisari.local',
       password: DEMO_PASSWORD,
       role: ROLES.RETAILER,
       organizationId: ORG_IDS.RETAILER_001,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: 'user-retailer-b',
+      name: 'Retailer B',
+      email: 'retailer-b@esarisari.local',
+      password: DEMO_PASSWORD,
+      role: ROLES.RETAILER,
+      organizationId: ORG_IDS.RETAILER_002,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: 'user-retailer-c',
+      name: 'Retailer C',
+      email: 'retailer-c@esarisari.local',
+      password: DEMO_PASSWORD,
+      role: ROLES.RETAILER,
+      organizationId: ORG_IDS.RETAILER_003,
       status: 'active',
       createdAt: now,
       updatedAt: now,
@@ -142,7 +162,7 @@ export function getSeedOrganizations() {
     },
     {
       id: ORG_IDS.FRANCHISE_001,
-      name: 'CDO Franchisee',
+      name: 'Franchisee A',
       code: 'FR-01010',
       type: 'franchisee',
       parentId: ORG_IDS.SUB_001,
@@ -152,40 +172,10 @@ export function getSeedOrganizations() {
     },
     {
       id: ORG_IDS.FRANCHISE_002,
-      name: 'Manila Central Retailers',
+      name: 'Franchisee B',
       code: 'FR-00892',
       type: 'franchisee',
       parentId: ORG_IDS.SUB_001,
-      status: 'active',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: ORG_IDS.FRANCHISE_003,
-      name: 'Cebu Southern Hub',
-      code: 'FR-00945',
-      type: 'franchisee',
-      parentId: ORG_IDS.SUB_001,
-      status: 'active',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: ORG_IDS.FRANCHISE_004,
-      name: 'Davao East Distributors',
-      code: 'FR-01002',
-      type: 'franchisee',
-      parentId: ORG_IDS.SUB_001,
-      status: 'active',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: ORG_IDS.FRANCHISE_005,
-      name: 'NCR Direct Franchisee',
-      code: 'FR-02001',
-      type: 'franchisee',
-      parentId: ORG_IDS.PLATFORM,
       status: 'active',
       createdAt: now,
       updatedAt: now,
@@ -212,50 +202,10 @@ export function getSeedOrganizations() {
     },
     {
       id: ORG_IDS.RETAILER_003,
-      name: 'SariSari Central',
-      code: 'RT-00291',
-      type: 'retailer',
-      parentId: ORG_IDS.FRANCHISE_001,
-      status: 'active',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: ORG_IDS.RETAILER_004,
-      name: 'QuickStop Mart',
-      code: 'RT-00882',
-      type: 'retailer',
-      parentId: ORG_IDS.FRANCHISE_001,
-      status: 'active',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: ORG_IDS.RETAILER_005,
-      name: 'Neighborhood Hub',
-      code: 'RT-00104',
+      name: 'Retailer C',
+      code: 'RT-00003',
       type: 'retailer',
       parentId: ORG_IDS.FRANCHISE_002,
-      status: 'active',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: ORG_IDS.RETAILER_006,
-      name: 'Pasig Direct Store',
-      code: 'RT-03001',
-      type: 'retailer',
-      parentId: ORG_IDS.FRANCHISE_005,
-      status: 'active',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: ORG_IDS.RETAILER_007,
-      name: 'CWPC Direct Retailer',
-      code: 'RT-04001',
-      type: 'retailer',
-      parentId: ORG_IDS.PLATFORM,
       status: 'active',
       createdAt: now,
       updatedAt: now,
@@ -294,21 +244,6 @@ const REVENUE_WALLET_SPECS = [
     role: ROLES.FRANCHISEE,
   },
   {
-    id: 'wallet-franchise-003-revenue',
-    organizationId: ORG_IDS.FRANCHISE_003,
-    role: ROLES.FRANCHISEE,
-  },
-  {
-    id: 'wallet-franchise-004-revenue',
-    organizationId: ORG_IDS.FRANCHISE_004,
-    role: ROLES.FRANCHISEE,
-  },
-  {
-    id: 'wallet-franchise-005-revenue',
-    organizationId: ORG_IDS.FRANCHISE_005,
-    role: ROLES.FRANCHISEE,
-  },
-  {
     id: 'wallet-retailer-001-revenue',
     organizationId: ORG_IDS.RETAILER_001,
     role: ROLES.RETAILER,
@@ -323,33 +258,13 @@ const REVENUE_WALLET_SPECS = [
     organizationId: ORG_IDS.RETAILER_003,
     role: ROLES.RETAILER,
   },
-  {
-    id: 'wallet-retailer-004-revenue',
-    organizationId: ORG_IDS.RETAILER_004,
-    role: ROLES.RETAILER,
-  },
-  {
-    id: 'wallet-retailer-005-revenue',
-    organizationId: ORG_IDS.RETAILER_005,
-    role: ROLES.RETAILER,
-  },
-  {
-    id: 'wallet-retailer-006-revenue',
-    organizationId: ORG_IDS.RETAILER_006,
-    role: ROLES.RETAILER,
-  },
-  {
-    id: 'wallet-retailer-007-revenue',
-    organizationId: ORG_IDS.RETAILER_007,
-    role: ROLES.RETAILER,
-  },
 ]
 
 /**
  * Keep persisted revenue wallets aligned with completed-transaction share totals.
- * Must run after transactions are seeded/migrated.
+ * Must run after transactions are seeded/migrated or a demo sale is recorded.
  */
-function reconcileRevenueWallets() {
+export function reconcileRevenueWallets() {
   const transactions = getTransactions()
   const revenueSharing = getRevenueSharing()
   const existing = getWallets()
@@ -390,29 +305,70 @@ function reconcileRevenueWallets() {
   if (changed) {
     saveWallets(Array.from(byId.values()))
   }
+
+  const orgIds = new Set(getOrganizations().map((org) => org.id))
+  const pruned = Array.from(byId.values()).filter((wallet) =>
+    orgIds.has(wallet.organizationId),
+  )
+  if (pruned.length !== byId.size) {
+    saveWallets(pruned)
+  }
+}
+
+function netSeedTransferAmount(organizationId, transfers) {
+  return roundMoney(
+    (transfers || []).reduce((sum, transfer) => {
+      if (
+        transfer.status !== FUNDING_STATUS.COMPLETED &&
+        transfer.status !== FUNDING_STATUS.RELEASED &&
+        transfer.status !== FUNDING_STATUS.APPROVED
+      ) {
+        return sum
+      }
+      const amount = Number(transfer.amount) || 0
+      if (transfer.toOrganizationId === organizationId) return sum + amount
+      if (transfer.fromOrganizationId === organizationId) return sum - amount
+      return sum
+    }, 0),
+  )
+}
+
+/**
+ * Keep seed Available Credits reconcilable with the credit statement:
+ * opening + posted transfers = available. If that would go negative,
+ * keep the listed available float and raise opening instead.
+ */
+function applySeedTransferLedger(wallet, transfers) {
+  const opening = roundMoney(Number(wallet.openingBalance) || 0)
+  const net = netSeedTransferAmount(wallet.organizationId, transfers)
+  const derivedAvailable = roundMoney(opening + net)
+  if (derivedAvailable >= 0) {
+    return { ...wallet, availableBalance: derivedAvailable }
+  }
+  const floor = roundMoney(Math.max(Number(wallet.availableBalance) || 0, 0))
+  return {
+    ...wallet,
+    availableBalance: floor,
+    openingBalance: roundMoney(floor - net),
+  }
 }
 
 export function getSeedWallets() {
   const transactions = getSeedTransactions()
   const revenueSharing = getSeedRevenueSharing()
+  const transfers = getSeedFundingTransfers()
 
-  // Operating balances follow seeded funding transfers + opening float so
-  // Available Balance matches Funding / Transfer history.
-  //
-  // Platform:       opening 675,000 - TRF-5002 175,000 = 500,000
-  // Sub-Franchisee: opening 50,000 + TRF-5002 175,000 - TRF-5001 90,000 = 135,000
-  // Franchisee-001: opening 40,000 - TRF-5003 10,000 = 30,000
-  // Franchisee-002: opening 15,000 + TRF-5001 90,000 = 105,000
-  // Franchisee-003/004: opening float only (no completed transfers yet)
-  // Retailer-001:   opening 5,000 + TRF-5003 10,000 = 15,000
-  const operating = [
+  // Opening float is the intended starting inventory. Available Credits are
+  // derived from opening + posted seed transfers so Reports statements
+  // (opening + in − out) match the live wallet.
+  const rawOperating = [
     {
       id: 'wallet-platform',
       organizationId: ORG_IDS.PLATFORM,
       walletType: 'master',
       availableBalance: 500000,
-      openingBalance: 675000,
-      minimumBalance: 100000,
+      openingBalance: 500000,
+      minimumBalance: 5000,
       status: 'active',
       createdAt: now,
       updatedAt: now,
@@ -422,8 +378,8 @@ export function getSeedWallets() {
       organizationId: ORG_IDS.SUB_001,
       walletType: 'operating',
       availableBalance: 135000,
-      openingBalance: 50000,
-      minimumBalance: 50000,
+      openingBalance: 135000,
+      minimumBalance: 5000,
       status: 'active',
       createdAt: now,
       updatedAt: now,
@@ -432,9 +388,9 @@ export function getSeedWallets() {
       id: 'wallet-franchise-001',
       organizationId: ORG_IDS.FRANCHISE_001,
       walletType: 'operating',
-      availableBalance: 30000,
-      openingBalance: 40000,
-      minimumBalance: 25000,
+      availableBalance: 0,
+      openingBalance: 0,
+      minimumBalance: 5000,
       status: 'active',
       createdAt: now,
       updatedAt: now,
@@ -443,42 +399,9 @@ export function getSeedWallets() {
       id: 'wallet-franchise-002',
       organizationId: ORG_IDS.FRANCHISE_002,
       walletType: 'operating',
-      availableBalance: 105000,
-      openingBalance: 15000,
-      minimumBalance: 25000,
-      status: 'active',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: 'wallet-franchise-003',
-      organizationId: ORG_IDS.FRANCHISE_003,
-      walletType: 'operating',
-      availableBalance: 18000,
-      openingBalance: 18000,
-      minimumBalance: 25000,
-      status: 'active',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: 'wallet-franchise-004',
-      organizationId: ORG_IDS.FRANCHISE_004,
-      walletType: 'operating',
-      availableBalance: 32000,
-      openingBalance: 32000,
-      minimumBalance: 25000,
-      status: 'active',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: 'wallet-franchise-005',
-      organizationId: ORG_IDS.FRANCHISE_005,
-      walletType: 'operating',
-      availableBalance: 28000,
-      openingBalance: 28000,
-      minimumBalance: 25000,
+      availableBalance: 0,
+      openingBalance: 0,
+      minimumBalance: 5000,
       status: 'active',
       createdAt: now,
       updatedAt: now,
@@ -487,9 +410,9 @@ export function getSeedWallets() {
       id: 'wallet-retailer-001',
       organizationId: ORG_IDS.RETAILER_001,
       walletType: 'operating',
-      availableBalance: 15000,
-      openingBalance: 5000,
-      minimumBalance: 8000,
+      availableBalance: 0,
+      openingBalance: 0,
+      minimumBalance: 5000,
       status: 'active',
       createdAt: now,
       updatedAt: now,
@@ -498,9 +421,9 @@ export function getSeedWallets() {
       id: 'wallet-retailer-002',
       organizationId: ORG_IDS.RETAILER_002,
       walletType: 'operating',
-      availableBalance: 5000,
-      openingBalance: 5000,
-      minimumBalance: 8000,
+      availableBalance: 0,
+      openingBalance: 0,
+      minimumBalance: 5000,
       status: 'active',
       createdAt: now,
       updatedAt: now,
@@ -509,58 +432,18 @@ export function getSeedWallets() {
       id: 'wallet-retailer-003',
       organizationId: ORG_IDS.RETAILER_003,
       walletType: 'operating',
-      availableBalance: 7500,
-      openingBalance: 7500,
-      minimumBalance: 8000,
-      status: 'active',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: 'wallet-retailer-004',
-      organizationId: ORG_IDS.RETAILER_004,
-      walletType: 'operating',
-      availableBalance: 6200,
-      openingBalance: 6200,
-      minimumBalance: 8000,
-      status: 'active',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: 'wallet-retailer-005',
-      organizationId: ORG_IDS.RETAILER_005,
-      walletType: 'operating',
-      availableBalance: 9100,
-      openingBalance: 9100,
-      minimumBalance: 8000,
-      status: 'active',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: 'wallet-retailer-006',
-      organizationId: ORG_IDS.RETAILER_006,
-      walletType: 'operating',
-      availableBalance: 8400,
-      openingBalance: 8400,
-      minimumBalance: 8000,
-      status: 'active',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: 'wallet-retailer-007',
-      organizationId: ORG_IDS.RETAILER_007,
-      walletType: 'operating',
-      availableBalance: 11200,
-      openingBalance: 11200,
-      minimumBalance: 8000,
+      availableBalance: 0,
+      openingBalance: 0,
+      minimumBalance: 5000,
       status: 'active',
       createdAt: now,
       updatedAt: now,
     },
   ]
+
+  const operating = rawOperating.map((wallet) =>
+    applySeedTransferLedger(wallet, transfers),
+  )
 
   const revenue = REVENUE_WALLET_SPECS.map((spec) =>
     buildRevenueWallet(
@@ -604,13 +487,8 @@ export function getSeedCommissionSettings() {
   // Different downline splits per retailer — only platform fee stays 40% when SF exists.
   // Direct-to-admin paths set SF=0 and absorb remainder into platform share.
   const sharePlans = [
-    { retailerPercentage: 25, franchiseePercentage: 20, status: 'active' }, // SF 15
-    { retailerPercentage: 30, franchiseePercentage: 15, status: 'active' }, // SF 15
-    { retailerPercentage: 18, franchiseePercentage: 22, status: 'active' }, // SF 20
-    { retailerPercentage: 28, franchiseePercentage: 12, status: 'active' }, // SF 20
-    { retailerPercentage: 22, franchiseePercentage: 18, status: 'active' }, // SF 20
-    { retailerPercentage: 27, franchiseePercentage: 18, status: 'active' }, // direct franchisee → platform 55
-    { retailerPercentage: 35, franchiseePercentage: 0, status: 'active' }, // direct retailer → platform 65
+    { retailerPercentage: 25, franchiseePercentage: 20, status: 'active' },
+    { retailerPercentage: 30, franchiseePercentage: 15, status: 'active' },
   ]
 
   return retailers.map((retailer, index) => {
@@ -641,999 +519,93 @@ export function getSeedCommissionSettings() {
 }
 
 export function getSeedDepositRates() {
-  return [
-    {
-      id: 'dr-sub-001',
-      organizationId: ORG_IDS.SUB_001,
-      parentOrganizationId: ORG_IDS.PLATFORM,
-      hop: 'admin_to_sub',
-      depositRate: 0.58,
-      reason: 'Launch rate for primary Sub-Franchisee',
-      updatedAt: daysAgoAt(12, 11, 0),
-      updatedByUserId: 'user-admin',
-    },
-    {
-      id: 'dr-franchise-001',
-      organizationId: ORG_IDS.FRANCHISE_001,
-      parentOrganizationId: ORG_IDS.SUB_001,
-      hop: 'sub_to_franchisee',
-      depositRate: 0.72,
-      reason: 'Preferred franchisee volume rate',
-      updatedAt: daysAgoAt(8, 14, 0),
-      updatedByUserId: 'user-subfranchisee',
-    },
-    {
-      id: 'dr-retailer-001',
-      organizationId: ORG_IDS.RETAILER_001,
-      parentOrganizationId: ORG_IDS.FRANCHISE_001,
-      hop: 'franchisee_to_retailer',
-      depositRate: 0.78,
-      reason: 'Pilot retailer promo',
-      updatedAt: daysAgoAt(5, 9, 30),
-      updatedByUserId: 'user-franchisee',
-    },
-  ]
+  return []
 }
 
-const DEFAULT_PROOF = {
-  fileName: 'deposit_slip_oct24.jpg',
-  fileSize: '1.2 MB',
-  url: '/proofs/deposit_slip_oct24.svg',
-}
-
-function withFundingDetails(request, notes) {
-  return {
-    ...request,
-    notes,
-    proofOfPayment: { ...DEFAULT_PROOF },
-  }
-}
-
-function buildCreditRelease({
-  requestId,
-  transferId,
-  organizationId,
-  parentOrganizationId,
-  requesterRole,
-  credits,
-  depositRate,
-  requestedAt,
-  releasedAt,
-  paymentReferenceId,
-  notes,
-  transferKind = 'internet_credit_transfer',
-}) {
-  const depositAmount = roundMoney(Number(credits) * Number(depositRate))
-  return {
-    request: withFundingDetails(
-      {
-        id: requestId,
-        organizationId,
-        requesterRole,
-        parentOrganizationId,
-        amount: depositAmount,
-        depositAmount,
-        depositRate,
-        suggestedCredits: credits,
-        creditsReleased: credits,
-        paymentReferenceId,
-        releaseSource: transferKind.includes('mint') ? 'mint' : 'balance',
-        status: FUNDING_STATUS.RELEASED,
-        approvedAt: releasedAt,
-        createdAt: requestedAt,
-        updatedAt: releasedAt,
-      },
-      notes,
-    ),
-    transfer: {
-      id: transferId,
-      fromOrganizationId: parentOrganizationId,
-      toOrganizationId: organizationId,
-      amount: credits,
-      status: FUNDING_STATUS.COMPLETED,
-      fundingRequestId: requestId,
-      paymentReferenceId,
-      transferKind,
-      notes: 'Internet credit release',
-      createdAt: releasedAt,
-      updatedAt: releasedAt,
-    },
-  }
-}
-
-function getSeedDemoCreditLoads() {
-  const retailerRate = CREDIT_DEPOSIT_RATES.FRANCHISEE_TO_RETAILER
-  const franchiseeRate = CREDIT_DEPOSIT_RATES.SUB_TO_FRANCHISEE
-  return [
-    buildCreditRelease({
-      requestId: 'REQ-1401',
-      transferId: 'TRF-5015',
-      organizationId: ORG_IDS.FRANCHISE_001,
-      parentOrganizationId: ORG_IDS.SUB_001,
-      requesterRole: ROLES.FRANCHISEE,
-      credits: 40000,
-      depositRate: franchiseeRate,
-      requestedAt: daysAgoAt(10, 9, 0),
-      releasedAt: daysAgoAt(10, 11, 15),
-      paymentReferenceId: 'PAY-REF-1401',
-      notes: 'Internet credits loaded to CDO Franchisee for retailer replenishment.',
-    }),
-    buildCreditRelease({
-      requestId: 'REQ-1304',
-      transferId: 'TRF-5006',
-      organizationId: ORG_IDS.RETAILER_001,
-      parentOrganizationId: ORG_IDS.FRANCHISE_001,
-      requesterRole: ROLES.RETAILER,
-      credits: 8000,
-      depositRate: retailerRate,
-      requestedAt: daysAgoAt(7, 10, 0),
-      releasedAt: daysAgoAt(7, 11, 20),
-      paymentReferenceId: 'PAY-REF-1304',
-      notes: 'Mid-week internet credits top-up after load sales.',
-    }),
-    buildCreditRelease({
-      requestId: 'REQ-1305',
-      transferId: 'TRF-5007',
-      organizationId: ORG_IDS.RETAILER_001,
-      parentOrganizationId: ORG_IDS.FRANCHISE_001,
-      requesterRole: ROLES.RETAILER,
-      credits: 5000,
-      depositRate: retailerRate,
-      requestedAt: daysAgoAt(3, 9, 40),
-      releasedAt: daysAgoAt(3, 10, 30),
-      paymentReferenceId: 'PAY-REF-1305',
-      notes: 'Additional retailer float before weekend sales.',
-    }),
-    buildCreditRelease({
-      requestId: 'REQ-1306',
-      transferId: 'TRF-5008',
-      organizationId: ORG_IDS.RETAILER_002,
-      parentOrganizationId: ORG_IDS.FRANCHISE_001,
-      requesterRole: ROLES.RETAILER,
-      credits: 6000,
-      depositRate: retailerRate,
-      requestedAt: daysAgoAt(8, 11, 0),
-      releasedAt: daysAgoAt(8, 12, 10),
-      paymentReferenceId: 'PAY-REF-1306',
-      notes: 'Internet credits loaded to Retailer B.',
-    }),
-    buildCreditRelease({
-      requestId: 'REQ-1307',
-      transferId: 'TRF-5009',
-      organizationId: ORG_IDS.RETAILER_002,
-      parentOrganizationId: ORG_IDS.FRANCHISE_001,
-      requesterRole: ROLES.RETAILER,
-      credits: 4500,
-      depositRate: retailerRate,
-      requestedAt: daysAgoAt(4, 13, 0),
-      releasedAt: daysAgoAt(4, 14, 20),
-      paymentReferenceId: 'PAY-REF-1307',
-      notes: 'Follow-up top-up after high load volume.',
-    }),
-    buildCreditRelease({
-      requestId: 'REQ-1308',
-      transferId: 'TRF-5010',
-      organizationId: ORG_IDS.RETAILER_003,
-      parentOrganizationId: ORG_IDS.FRANCHISE_001,
-      requesterRole: ROLES.RETAILER,
-      credits: 7000,
-      depositRate: retailerRate,
-      requestedAt: daysAgoAt(6, 9, 15),
-      releasedAt: daysAgoAt(6, 10, 45),
-      paymentReferenceId: 'PAY-REF-1308',
-      notes: 'Internet credits loaded to SariSari Central.',
-    }),
-    buildCreditRelease({
-      requestId: 'REQ-1309',
-      transferId: 'TRF-5011',
-      organizationId: ORG_IDS.RETAILER_004,
-      parentOrganizationId: ORG_IDS.FRANCHISE_001,
-      requesterRole: ROLES.RETAILER,
-      credits: 5500,
-      depositRate: retailerRate,
-      requestedAt: daysAgoAt(5, 10, 0),
-      releasedAt: daysAgoAt(5, 11, 30),
-      paymentReferenceId: 'PAY-REF-1309',
-      notes: 'Internet credits loaded to QuickStop Mart.',
-    }),
-    buildCreditRelease({
-      requestId: 'REQ-1310',
-      transferId: 'TRF-5012',
-      organizationId: ORG_IDS.RETAILER_005,
-      parentOrganizationId: ORG_IDS.FRANCHISE_002,
-      requesterRole: ROLES.RETAILER,
-      credits: 8000,
-      depositRate: retailerRate,
-      requestedAt: daysAgoAt(6, 14, 0),
-      releasedAt: daysAgoAt(6, 15, 10),
-      paymentReferenceId: 'PAY-REF-1310',
-      notes: 'Internet credits loaded to Neighborhood Hub.',
-    }),
-    buildCreditRelease({
-      requestId: 'REQ-1311',
-      transferId: 'TRF-5013',
-      organizationId: ORG_IDS.RETAILER_006,
-      parentOrganizationId: ORG_IDS.FRANCHISE_005,
-      requesterRole: ROLES.RETAILER,
-      credits: 4000,
-      depositRate: retailerRate,
-      requestedAt: daysAgoAt(5, 8, 30),
-      releasedAt: daysAgoAt(5, 9, 50),
-      paymentReferenceId: 'PAY-REF-1311',
-      notes: 'Internet credits loaded to Pasig Direct Store.',
-    }),
-    buildCreditRelease({
-      requestId: 'REQ-1312',
-      transferId: 'TRF-5014',
-      organizationId: ORG_IDS.RETAILER_007,
-      parentOrganizationId: ORG_IDS.PLATFORM,
-      requesterRole: ROLES.RETAILER,
-      credits: 3500,
-      depositRate: CREDIT_DEPOSIT_RATES.ADMIN_TO_SUB,
-      requestedAt: daysAgoAt(4, 10, 0),
-      releasedAt: daysAgoAt(4, 11, 40),
-      paymentReferenceId: 'PAY-REF-1312',
-      notes: 'Platform-loaded internet credits for CWPC Direct Retailer.',
-      transferKind: 'internet_credit_mint',
-    }),
-  ]
-}
-
+/**
+ * Demo starts with an empty Internet Credits request/release ledger
+ * so roles can walk cash-in and credit loads themselves.
+ */
 export function getSeedFundingRequests() {
-  const incoming = [
-    withFundingDetails(
-      {
-        id: 'REQ-1234',
-        organizationId: ORG_IDS.FRANCHISE_002,
-        requesterRole: ROLES.FRANCHISEE,
-        parentOrganizationId: ORG_IDS.SUB_001,
-        amount: 3500,
-        depositAmount: 3500,
-        depositRate: CREDIT_DEPOSIT_RATES.SUB_TO_FRANCHISEE,
-        suggestedCredits: 5000,
-        status: FUNDING_STATUS.PENDING,
-        createdAt: daysAgoAt(0, 10, 45),
-        updatedAt: daysAgoAt(0, 10, 45),
-      },
-      'Internet credits request — ₱3,500 deposit at 70% rate (suggested 5,000 credits).',
-    ),
-    withFundingDetails(
-      {
-        id: 'REQ-1235',
-        organizationId: ORG_IDS.FRANCHISE_003,
-        requesterRole: ROLES.FRANCHISEE,
-        parentOrganizationId: ORG_IDS.SUB_001,
-        amount: 14000,
-        depositAmount: 14000,
-        depositRate: CREDIT_DEPOSIT_RATES.SUB_TO_FRANCHISEE,
-        suggestedCredits: 20000,
-        creditsReleased: 20000,
-        paymentReferenceId: 'PAY-REF-1235',
-        releaseSource: 'balance',
-        status: FUNDING_STATUS.RELEASED,
-        approvedAt: daysAgoAt(1, 15, 0),
-        createdAt: daysAgoAt(1, 14, 12),
-        updatedAt: daysAgoAt(1, 15, 0),
-      },
-      'Released internet credits to franchisee at 70% deposit rate.',
-    ),
-    withFundingDetails(
-      {
-        id: 'REQ-1236',
-        organizationId: ORG_IDS.FRANCHISE_004,
-        requesterRole: ROLES.FRANCHISEE,
-        parentOrganizationId: ORG_IDS.SUB_001,
-        amount: 7000,
-        depositAmount: 7000,
-        depositRate: CREDIT_DEPOSIT_RATES.SUB_TO_FRANCHISEE,
-        suggestedCredits: 10000,
-        status: FUNDING_STATUS.PENDING,
-        createdAt: daysAgoAt(2, 9, 30),
-        updatedAt: daysAgoAt(2, 9, 30),
-      },
-      'Urgent internet credits for distributor replenishment.',
-    ),
-    withFundingDetails(
-      {
-        id: 'REQ-1237',
-        organizationId: ORG_IDS.FRANCHISE_001,
-        requesterRole: ROLES.FRANCHISEE,
-        parentOrganizationId: ORG_IDS.SUB_001,
-        amount: 45000,
-        status: FUNDING_STATUS.PENDING,
-        createdAt: daysAgoAt(2, 16, 5),
-        updatedAt: daysAgoAt(2, 16, 5),
-      },
-      'Additional float needed for CDO retailer network coverage.',
-    ),
-    withFundingDetails(
-      {
-        id: 'REQ-1238',
-        organizationId: ORG_IDS.FRANCHISE_002,
-        requesterRole: ROLES.FRANCHISEE,
-        parentOrganizationId: ORG_IDS.SUB_001,
-        amount: 62000,
-        status: FUNDING_STATUS.PENDING,
-        createdAt: daysAgoAt(3, 11, 20),
-        updatedAt: daysAgoAt(3, 11, 20),
-      },
-      'Deposit completed this morning. Please process once verified.',
-    ),
-    withFundingDetails(
-      {
-        id: 'REQ-1239',
-        organizationId: ORG_IDS.FRANCHISE_003,
-        requesterRole: ROLES.FRANCHISEE,
-        parentOrganizationId: ORG_IDS.SUB_001,
-        amount: 97500,
-        status: FUNDING_STATUS.PENDING,
-        createdAt: daysAgoAt(3, 15, 40),
-        updatedAt: daysAgoAt(3, 15, 40),
-      },
-      'Funding request for mid-week transaction spike.',
-    ),
-    withFundingDetails(
-      {
-        id: 'REQ-1240',
-        organizationId: ORG_IDS.FRANCHISE_004,
-        requesterRole: ROLES.FRANCHISEE,
-        parentOrganizationId: ORG_IDS.SUB_001,
-        amount: 128000,
-        status: FUNDING_STATUS.PENDING,
-        createdAt: daysAgoAt(4, 9, 15),
-        updatedAt: daysAgoAt(4, 9, 15),
-      },
-      'Proof attached for branch cash-in consolidation.',
-    ),
-    withFundingDetails(
-      {
-        id: 'REQ-1241',
-        organizationId: ORG_IDS.FRANCHISE_001,
-        requesterRole: ROLES.FRANCHISEE,
-        parentOrganizationId: ORG_IDS.SUB_001,
-        amount: 33000,
-        status: FUNDING_STATUS.PENDING,
-        createdAt: daysAgoAt(5, 14, 50),
-        updatedAt: daysAgoAt(5, 14, 50),
-      },
-      'Small top-up to maintain minimum operating balance.',
-    ),
-    withFundingDetails(
-      {
-        id: 'REQ-1242',
-        organizationId: ORG_IDS.FRANCHISE_002,
-        requesterRole: ROLES.FRANCHISEE,
-        parentOrganizationId: ORG_IDS.SUB_001,
-        amount: 76000,
-        status: FUNDING_STATUS.PENDING,
-        createdAt: daysAgoAt(6, 13, 5),
-        updatedAt: daysAgoAt(6, 13, 5),
-      },
-      'Inventory restock funding with bank transfer receipt.',
-    ),
-    withFundingDetails(
-      {
-        id: 'REQ-1243',
-        organizationId: ORG_IDS.FRANCHISE_003,
-        requesterRole: ROLES.FRANCHISEE,
-        parentOrganizationId: ORG_IDS.SUB_001,
-        amount: 54000,
-        status: FUNDING_STATUS.PENDING,
-        createdAt: daysAgoAt(7, 7, 25),
-        updatedAt: daysAgoAt(7, 7, 25),
-      },
-      'Please approve after validating attached deposit slip.',
-    ),
-    withFundingDetails(
-      {
-        id: 'REQ-1244',
-        organizationId: ORG_IDS.FRANCHISE_004,
-        requesterRole: ROLES.FRANCHISEE,
-        parentOrganizationId: ORG_IDS.SUB_001,
-        amount: 189000,
-        status: FUNDING_STATUS.PENDING,
-        createdAt: daysAgoAt(8, 12, 10),
-        updatedAt: daysAgoAt(8, 12, 10),
-      },
-      'Large float request for regional expansion weekend.',
-    ),
-    withFundingDetails(
-      {
-        id: 'REQ-1245',
-        organizationId: ORG_IDS.FRANCHISE_001,
-        requesterRole: ROLES.FRANCHISEE,
-        parentOrganizationId: ORG_IDS.SUB_001,
-        amount: 41000,
-        status: FUNDING_STATUS.PENDING,
-        createdAt: daysAgoAt(9, 4, 55),
-        updatedAt: daysAgoAt(9, 4, 55),
-      },
-      'Standard weekly funding request with proof attached.',
-    ),
-  ]
-
-  const myRequests = [
-    withFundingDetails(
-      {
-        id: 'REQ-1101',
-        organizationId: ORG_IDS.SUB_001,
-        requesterRole: ROLES.SUBFRANCHISEE,
-        parentOrganizationId: ORG_IDS.PLATFORM,
-        amount: 15000,
-        depositAmount: 15000,
-        depositRate: CREDIT_DEPOSIT_RATES.ADMIN_TO_SUB,
-        suggestedCredits: 25000,
-        status: FUNDING_STATUS.PENDING,
-        createdAt: daysAgoAt(1, 11, 0),
-        updatedAt: daysAgoAt(1, 11, 0),
-      },
-      'Internet credits request — ₱15,000 deposit at 60% rate (suggested 25,000 credits).',
-    ),
-    withFundingDetails(
-      {
-        id: 'REQ-1500',
-        organizationId: ORG_IDS.SUB_001,
-        requesterRole: ROLES.SUBFRANCHISEE,
-        parentOrganizationId: ORG_IDS.PLATFORM,
-        amount: 30000,
-        depositAmount: 30000,
-        depositRate: CREDIT_DEPOSIT_RATES.ADMIN_TO_SUB,
-        suggestedCredits: 50000,
-        status: FUNDING_STATUS.PENDING,
-        createdAt: daysAgoAt(0, 9, 30),
-        updatedAt: daysAgoAt(0, 9, 30),
-      },
-      'Additional internet credits float for franchisee replenishment.',
-    ),
-    withFundingDetails(
-      {
-        id: 'REQ-1090',
-        organizationId: ORG_IDS.SUB_001,
-        requesterRole: ROLES.SUBFRANCHISEE,
-        parentOrganizationId: ORG_IDS.PLATFORM,
-        amount: 30000,
-        depositAmount: 30000,
-        depositRate: CREDIT_DEPOSIT_RATES.ADMIN_TO_SUB,
-        suggestedCredits: 50000,
-        creditsReleased: 50000,
-        paymentReferenceId: 'PAY-REF-1090',
-        releaseSource: 'mint',
-        status: FUNDING_STATUS.RELEASED,
-        approvedAt: daysAgoAt(11, 16, 0),
-        createdAt: daysAgoAt(12, 10, 0),
-        updatedAt: daysAgoAt(11, 16, 0),
-      },
-      'Released internet credits for Northern Mindanao operations.',
-    ),
-  ]
-
-  const completed = [
-    withFundingDetails(
-      {
-        id: 'REQ-1001',
-        organizationId: ORG_IDS.FRANCHISE_002,
-        requesterRole: ROLES.FRANCHISEE,
-        parentOrganizationId: ORG_IDS.SUB_001,
-        amount: 63000,
-        depositAmount: 63000,
-        depositRate: CREDIT_DEPOSIT_RATES.SUB_TO_FRANCHISEE,
-        suggestedCredits: 90000,
-        creditsReleased: 90000,
-        paymentReferenceId: 'PAY-REF-1001',
-        releaseSource: 'balance',
-        status: FUNDING_STATUS.RELEASED,
-        approvedAt: daysAgoAt(13, 15, 0),
-        createdAt: daysAgoAt(14, 10, 0),
-        updatedAt: daysAgoAt(13, 15, 0),
-      },
-      'Released internet credits for prior inventory cycle (70% deposit rate).',
-    ),
-    withFundingDetails(
-      {
-        id: 'REQ-1002',
-        organizationId: ORG_IDS.FRANCHISE_003,
-        requesterRole: ROLES.FRANCHISEE,
-        parentOrganizationId: ORG_IDS.SUB_001,
-        amount: 84000,
-        depositAmount: 84000,
-        depositRate: CREDIT_DEPOSIT_RATES.SUB_TO_FRANCHISEE,
-        suggestedCredits: 120000,
-        creditsReleased: 120000,
-        paymentReferenceId: 'PAY-REF-1002',
-        releaseSource: 'balance',
-        status: FUNDING_STATUS.RELEASED,
-        approvedAt: daysAgoAt(9, 13, 15),
-        createdAt: daysAgoAt(10, 12, 30),
-        updatedAt: daysAgoAt(9, 13, 15),
-      },
-      'Released internet credits after deposit verification (70% deposit rate).',
-    ),
-  ]
-
-  const retailerIncoming = [
-    withFundingDetails(
-      {
-        id: 'REQ-1301',
-        organizationId: ORG_IDS.RETAILER_001,
-        requesterRole: ROLES.RETAILER,
-        parentOrganizationId: ORG_IDS.FRANCHISE_001,
-        amount: 560,
-        depositAmount: 560,
-        depositRate: CREDIT_DEPOSIT_RATES.FRANCHISEE_TO_RETAILER,
-        suggestedCredits: 700,
-        status: FUNDING_STATUS.PENDING,
-        createdAt: daysAgoAt(0, 9, 15),
-        updatedAt: daysAgoAt(0, 9, 15),
-      },
-      'Internet credits request — ₱560 deposit at 80% rate (suggested 700 credits).',
-    ),
-    withFundingDetails(
-      {
-        id: 'REQ-1302',
-        organizationId: ORG_IDS.RETAILER_002,
-        requesterRole: ROLES.RETAILER,
-        parentOrganizationId: ORG_IDS.FRANCHISE_001,
-        amount: 800,
-        depositAmount: 800,
-        depositRate: CREDIT_DEPOSIT_RATES.FRANCHISEE_TO_RETAILER,
-        suggestedCredits: 1000,
-        status: FUNDING_STATUS.PENDING,
-        createdAt: daysAgoAt(1, 16, 40),
-        updatedAt: daysAgoAt(1, 16, 40),
-      },
-      'Internet credits replenishment after high load sales.',
-    ),
-    withFundingDetails(
-      {
-        id: 'REQ-1303',
-        organizationId: ORG_IDS.RETAILER_001,
-        requesterRole: ROLES.RETAILER,
-        parentOrganizationId: ORG_IDS.FRANCHISE_001,
-        amount: 1600,
-        depositAmount: 1600,
-        depositRate: CREDIT_DEPOSIT_RATES.FRANCHISEE_TO_RETAILER,
-        suggestedCredits: 2000,
-        creditsReleased: 2000,
-        paymentReferenceId: 'PAY-REF-1303',
-        releaseSource: 'balance',
-        status: FUNDING_STATUS.RELEASED,
-        approvedAt: daysAgoAt(2, 14, 0),
-        createdAt: daysAgoAt(2, 13, 20),
-        updatedAt: daysAgoAt(2, 14, 0),
-      },
-      'Released internet credits to retailer at 80% deposit rate.',
-    ),
-  ]
-
-  const franchiseeOwn = [
-    withFundingDetails(
-      {
-        id: 'REQ-1201',
-        organizationId: ORG_IDS.FRANCHISE_001,
-        requesterRole: ROLES.FRANCHISEE,
-        parentOrganizationId: ORG_IDS.SUB_001,
-        amount: 14000,
-        depositAmount: 14000,
-        depositRate: CREDIT_DEPOSIT_RATES.SUB_TO_FRANCHISEE,
-        suggestedCredits: 20000,
-        status: FUNDING_STATUS.PENDING,
-        createdAt: daysAgoAt(4, 11, 0),
-        updatedAt: daysAgoAt(4, 11, 0),
-      },
-      'Franchisee requesting internet credits from Sub at 70% deposit rate.',
-    ),
-  ]
-
-  const retailerCompleted = [
-    withFundingDetails(
-      {
-        id: 'REQ-1050',
-        organizationId: ORG_IDS.RETAILER_001,
-        requesterRole: ROLES.RETAILER,
-        parentOrganizationId: ORG_IDS.FRANCHISE_001,
-        amount: 800,
-        depositAmount: 800,
-        depositRate: CREDIT_DEPOSIT_RATES.FRANCHISEE_TO_RETAILER,
-        suggestedCredits: 1000,
-        creditsReleased: 1000,
-        paymentReferenceId: 'PAY-REF-1050',
-        releaseSource: 'balance',
-        status: FUNDING_STATUS.RELEASED,
-        approvedAt: daysAgoAt(14, 14, 0),
-        createdAt: daysAgoAt(15, 10, 0),
-        updatedAt: daysAgoAt(14, 14, 0),
-      },
-      'Released retailer internet credits for prior week operations.',
-    ),
-  ]
-
-  return [
-    ...incoming,
-    ...myRequests,
-    ...completed,
-    ...retailerIncoming,
-    ...franchiseeOwn,
-    ...retailerCompleted,
-    ...getSeedDemoCreditLoads().map((item) => item.request),
-  ]
+  return []
 }
 
 export function getSeedFundingTransfers() {
-  return [
-    {
-      id: 'TRF-5001',
-      fromOrganizationId: ORG_IDS.SUB_001,
-      toOrganizationId: ORG_IDS.FRANCHISE_002,
-      amount: 90000,
-      status: FUNDING_STATUS.COMPLETED,
-      fundingRequestId: 'REQ-1001',
-      paymentReferenceId: 'PAY-REF-1001',
-      transferKind: 'internet_credit_transfer',
-      notes: 'Internet credit release',
-      createdAt: daysAgoAt(13, 15, 0),
-      updatedAt: daysAgoAt(13, 15, 0),
-    },
-    {
-      id: 'TRF-5002',
-      fromOrganizationId: ORG_IDS.PLATFORM,
-      toOrganizationId: ORG_IDS.SUB_001,
-      amount: 50000,
-      status: FUNDING_STATUS.COMPLETED,
-      fundingRequestId: 'REQ-1090',
-      paymentReferenceId: 'PAY-REF-1090',
-      transferKind: 'internet_credit_mint',
-      notes: 'Internet credit release',
-      createdAt: daysAgoAt(11, 16, 0),
-      updatedAt: daysAgoAt(11, 16, 0),
-    },
-    {
-      id: 'TRF-5003',
-      fromOrganizationId: ORG_IDS.FRANCHISE_001,
-      toOrganizationId: ORG_IDS.RETAILER_001,
-      amount: 1000,
-      status: FUNDING_STATUS.COMPLETED,
-      fundingRequestId: 'REQ-1050',
-      paymentReferenceId: 'PAY-REF-1050',
-      transferKind: 'internet_credit_transfer',
-      notes: 'Internet credit release',
-      createdAt: daysAgoAt(14, 14, 0),
-      updatedAt: daysAgoAt(14, 14, 0),
-    },
-    {
-      id: 'TRF-5004',
-      fromOrganizationId: ORG_IDS.SUB_001,
-      toOrganizationId: ORG_IDS.FRANCHISE_003,
-      amount: 120000,
-      status: FUNDING_STATUS.COMPLETED,
-      fundingRequestId: 'REQ-1002',
-      paymentReferenceId: 'PAY-REF-1002',
-      transferKind: 'internet_credit_transfer',
-      notes: 'Internet credit release',
-      createdAt: daysAgoAt(9, 13, 15),
-      updatedAt: daysAgoAt(9, 13, 15),
-    },
-    {
-      id: 'TRF-5005',
-      fromOrganizationId: ORG_IDS.FRANCHISE_001,
-      toOrganizationId: ORG_IDS.RETAILER_001,
-      amount: 2000,
-      status: FUNDING_STATUS.COMPLETED,
-      fundingRequestId: 'REQ-1303',
-      paymentReferenceId: 'PAY-REF-1303',
-      transferKind: 'internet_credit_transfer',
-      notes: 'Internet credit release',
-      createdAt: daysAgoAt(2, 14, 0),
-      updatedAt: daysAgoAt(2, 14, 0),
-    },
-    ...getSeedDemoCreditLoads().map((item) => item.transfer),
-  ]
+  return []
 }
 
-function buildTransaction({
-  id,
-  createdAt,
-  retailerOrganizationId,
-  franchiseeOrganizationId,
-  subfranchiseeOrganizationId = '',
-  retailerName,
-  retailerCode,
-  customerPayment,
-  baseCost,
-  platformProcessingFee,
-  walletDeduction,
-  retailerShare,
-  retailerPercentage,
-  franchiseePercentage,
-  subfranchiseePercentage,
-  companyPercentage = DEFAULT_PLATFORM_FEE_PERCENTAGE,
-  remainderTarget,
-  status,
-  productService,
-  customerReference,
-}) {
-  const resolvedBaseCost =
-    baseCost != null
-      ? Math.round(Number(baseCost) * 100) / 100
-      : Math.round(Number(walletDeduction) * 100) / 100
-  const resolvedProcessingFee =
-    platformProcessingFee != null
-      ? Math.round(Number(platformProcessingFee) * 100) / 100
-      : 0
-  const netWalletDeduction =
-    walletDeduction != null
-      ? Math.round(Number(walletDeduction) * 100) / 100
-      : Math.round((resolvedBaseCost + resolvedProcessingFee) * 100) / 100
-  const distributableRevenue =
-    Math.round((customerPayment - netWalletDeduction) * 100) / 100
-  const totalDistributed = distributableRevenue
-
-  const shares = normalizeCommissionShares({
-    retailerPercentage: retailerPercentage ?? 0,
-    franchiseePercentage: franchiseePercentage ?? 0,
-    companyPercentage: companyPercentage ?? DEFAULT_PLATFORM_FEE_PERCENTAGE,
-    remainderTarget:
-      remainderTarget ||
-      (subfranchiseeOrganizationId ? 'subfranchisee' : 'company'),
-  })
-  const resolvedRetailerShare =
-    retailerShare != null
-      ? Math.round(Number(retailerShare) * 100) / 100
-      : roundMoney((distributableRevenue * shares.retailerPercentage) / 100)
-
-  return {
-    id,
-    reference: id,
-    createdAt,
-    updatedAt: createdAt,
-    retailerOrganizationId,
-    franchiseeOrganizationId: franchiseeOrganizationId || '',
-    subfranchiseeOrganizationId: subfranchiseeOrganizationId || '',
-    retailerName,
-    retailerCode,
-    customerPayment,
-    baseCost: resolvedBaseCost,
-    platformProcessingFee: resolvedProcessingFee,
-    walletDeduction: netWalletDeduction,
-    distributableRevenue,
-    retailerShare: resolvedRetailerShare,
-    retailerPercentage: shares.retailerPercentage,
-    franchiseePercentage: shares.franchiseePercentage,
-    subfranchiseePercentage: shares.subfranchiseePercentage,
-    companyPercentage: shares.companyPercentage,
-    totalDistributed,
-    productService: matchProductServiceToPayment(
-      productService || 'Mobile Load - Globe',
-      customerPayment,
-    ),
-    customerReference: customerReference || '0917-000-0000',
-    status,
-  }
-}
-
+/**
+ * Demo starts with an empty sales ledger so retailers can record dummy sales
+ * and walk the result through Revenue and Reports for themselves and uplines.
+ */
 export function getSeedTransactions() {
-  const allCommission = getSeedCommissionSettings()
-  const commissionByRetailer = Object.fromEntries(
-    allCommission.map((entry) => [entry.retailerOrganizationId, entry]),
-  )
-  // Prefer active config when a retailer has both.
-  allCommission
-    .filter((entry) => entry.status === 'active')
-    .forEach((entry) => {
-      commissionByRetailer[entry.retailerOrganizationId] = entry
-    })
-
-  const sharesForRetailer = (retailerOrganizationId) => {
-    const configured = commissionByRetailer[retailerOrganizationId]
-    if (configured) {
-      return normalizeCommissionShares({
-        retailerPercentage: configured.retailerPercentage,
-        franchiseePercentage: configured.franchiseePercentage,
-        companyPercentage: configured.companyPercentage,
-        remainderTarget: configured.subfranchiseeOrganizationId
-          ? 'subfranchisee'
-          : 'company',
-      })
-    }
-    return normalizeCommissionShares({
-      retailerPercentage: 0,
-      franchiseePercentage: 0,
-      companyPercentage: DEFAULT_PLATFORM_FEE_PERCENTAGE,
-      remainderTarget: 'company',
-    })
-  }
-
-  const hierarchyIdsForRetailer = (retailerOrganizationId) => {
-    const configured = commissionByRetailer[retailerOrganizationId]
-    return {
-      franchiseeOrganizationId: configured?.franchiseeOrganizationId || '',
-      subfranchiseeOrganizationId: configured?.subfranchiseeOrganizationId || '',
-    }
-  }
-
-  const productCatalog = [
-    'Mobile Load - Globe',
-    'Mobile Load - Smart',
-    'Mobile Load - TNT',
-    'Bills Payment - Meralco',
-    'Bills Payment - Maynilad',
-    'E-Wallet Cash-in - GCash',
-    'E-Wallet Cash-in - Maya',
-    'Gaming Credits - Steam',
-  ]
-
-  const featured = [
-    buildTransaction({
-      id: 'TX-8921-A',
-      createdAt: daysAgoAt(0, 10, 42),
-      retailerOrganizationId: ORG_IDS.RETAILER_003,
-      ...hierarchyIdsForRetailer(ORG_IDS.RETAILER_003),
-      retailerName: 'SariSari Central',
-      retailerCode: 'RT-00291',
-      customerPayment: 1500,
-      baseCost: 1425,
-      platformProcessingFee: 30,
-      walletDeduction: 1455,
-      ...sharesForRetailer(ORG_IDS.RETAILER_003),
-      productService: 'Mobile Load - Globe',
-      customerReference: '0917-123-4567',
-      status: TRANSACTION_STATUS.COMPLETED,
-    }),
-    buildTransaction({
-      id: 'TX-8920-B',
-      createdAt: daysAgoAt(0, 9, 15),
-      retailerOrganizationId: ORG_IDS.RETAILER_004,
-      ...hierarchyIdsForRetailer(ORG_IDS.RETAILER_004),
-      retailerName: 'QuickStop Mart',
-      retailerCode: 'RT-00882',
-      customerPayment: 850,
-      baseCost: 807.5,
-      platformProcessingFee: 17,
-      walletDeduction: 824.5,
-      ...sharesForRetailer(ORG_IDS.RETAILER_004),
-      productService: 'Bills Payment - Meralco',
-      customerReference: '0918-555-0192',
-      status: TRANSACTION_STATUS.COMPLETED,
-    }),
-    buildTransaction({
-      id: 'TX-8919-C',
-      createdAt: daysAgoAt(1, 16, 30),
-      retailerOrganizationId: ORG_IDS.RETAILER_005,
-      ...hierarchyIdsForRetailer(ORG_IDS.RETAILER_005),
-      retailerName: 'Neighborhood Hub',
-      retailerCode: 'RT-00104',
-      customerPayment: 2200,
-      baseCost: 2090,
-      platformProcessingFee: 44,
-      walletDeduction: 2134,
-      ...sharesForRetailer(ORG_IDS.RETAILER_005),
-      productService: 'E-Wallet Cash-in - GCash',
-      customerReference: '0920-771-3344',
-      status: TRANSACTION_STATUS.COMPLETED,
-    }),
-    buildTransaction({
-      id: 'TX-8918-D',
-      createdAt: daysAgoAt(0, 11, 5),
-      retailerOrganizationId: ORG_IDS.RETAILER_001,
-      ...hierarchyIdsForRetailer(ORG_IDS.RETAILER_001),
-      retailerName: 'Retailer A',
-      retailerCode: 'RT-00001',
-      customerPayment: 1000,
-      baseCost: 950,
-      platformProcessingFee: 20,
-      walletDeduction: 970,
-      ...sharesForRetailer(ORG_IDS.RETAILER_001),
-      productService: 'Mobile Load - Smart',
-      customerReference: '0917-882-1001',
-      status: TRANSACTION_STATUS.COMPLETED,
-    }),
-  ]
-
-  const retailers = [
-    {
-      id: ORG_IDS.RETAILER_001,
-      name: 'Retailer A',
-      code: 'RT-00001',
-    },
-    {
-      id: ORG_IDS.RETAILER_002,
-      name: 'Retailer B',
-      code: 'RT-00002',
-    },
-    {
-      id: ORG_IDS.RETAILER_003,
-      name: 'SariSari Central',
-      code: 'RT-00291',
-    },
-    {
-      id: ORG_IDS.RETAILER_004,
-      name: 'QuickStop Mart',
-      code: 'RT-00882',
-    },
-    {
-      id: ORG_IDS.RETAILER_005,
-      name: 'Neighborhood Hub',
-      code: 'RT-00104',
-    },
-    {
-      id: ORG_IDS.RETAILER_006,
-      name: 'Pasig Direct Store',
-      code: 'RT-03001',
-    },
-    {
-      id: ORG_IDS.RETAILER_007,
-      name: 'CWPC Direct Retailer',
-      code: 'RT-04001',
-    },
-  ]
-
-  const generated = []
-  for (let index = 0; index < 45; index += 1) {
-    const retailer = retailers[index % retailers.length]
-    const dayOffset = 2 + Math.floor(index / 3)
-    const hour = 8 + (index % 10)
-    const minute = (index * 7) % 60
-    const payment = 500 + (index % 12) * 125
-    const baseCost = roundMoney(payment * 0.95)
-    const platformProcessingFee = roundMoney(payment * 0.02)
-    const walletDeduction = roundMoney(baseCost + platformProcessingFee)
-    const productService = productCatalog[index % productCatalog.length]
-    const customerReference = `09${17 + (index % 10)}-${String(100 + (index % 90)).padStart(3, '0')}-${String(1000 + index).slice(-4)}`
-    const shares = sharesForRetailer(retailer.id)
-    const hierarchyIds = hierarchyIdsForRetailer(retailer.id)
-
-    generated.push(
-      buildTransaction({
-        id: `TX-${8800 + index}-${String.fromCharCode(65 + (index % 26))}`,
-        createdAt: daysAgoAt(dayOffset % 40, hour, minute),
-        retailerOrganizationId: retailer.id,
-        ...hierarchyIds,
-        retailerName: retailer.name,
-        retailerCode: retailer.code,
-        customerPayment: payment,
-        baseCost,
-        platformProcessingFee,
-        walletDeduction,
-        ...shares,
-        productService,
-        customerReference,
-        status: TRANSACTION_STATUS.COMPLETED,
-      }),
-    )
-  }
-
-  return [...featured, ...generated]
+  return []
 }
 
 /**
  * Seeds missing localStorage collections only.
  * Does not overwrite existing valid data.
- *
- * Exception: empty funding collections are treated as unseeded so the
- * funding module demo data appears after this feature was added.
  */
 export function initializeMockData() {
   if (collectionNeedsSeed('users')) {
     saveUsers(getSeedUsers())
   } else {
-    // Keep demo admin credentials aligned without wiping other user accounts.
     const existing = getUsers()
-    const admin = existing.find((user) => user.email === 'admin@esarisari.local')
-    if (admin && admin.password !== ADMIN_DEMO_PASSWORD) {
-      saveUsers(
-        existing.map((user) =>
-          user.email === 'admin@esarisari.local'
-            ? { ...user, password: ADMIN_DEMO_PASSWORD }
-            : user,
-        ),
-      )
+    const seedUsers = getSeedUsers()
+    const byId = new Map(existing.map((user) => [user.id, user]))
+    let changed = false
+
+    seedUsers.forEach((seedUser) => {
+      const current = byId.get(seedUser.id)
+      if (!current) {
+        byId.set(seedUser.id, seedUser)
+        changed = true
+        return
+      }
+      const next = {
+        ...current,
+        name: seedUser.name,
+        email: seedUser.email,
+        role: seedUser.role,
+        organizationId: seedUser.organizationId,
+        password: seedUser.password,
+        status: seedUser.status || current.status,
+      }
+      if (
+        current.name !== next.name ||
+        current.email !== next.email ||
+        current.role !== next.role ||
+        current.organizationId !== next.organizationId ||
+        current.password !== next.password
+      ) {
+        byId.set(seedUser.id, next)
+        changed = true
+      }
+    })
+
+    if (changed) {
+      saveUsers(Array.from(byId.values()))
     }
   }
-  if (collectionNeedsSeed('organizations')) {
+  if (
+    collectionNeedsSeed('organizations') ||
+    localStorage.getItem(STORAGE_KEYS.NETWORK_SEED_VERSION) !==
+      NETWORK_SEED_VERSION
+  ) {
     saveOrganizations(getSeedOrganizations())
+    saveWallets(getSeedWallets())
+    saveCommissionSettings(getSeedCommissionSettings())
+    saveDepositRates(getSeedDepositRates())
+    localStorage.setItem(STORAGE_KEYS.NETWORK_SEED_VERSION, NETWORK_SEED_VERSION)
+    localStorage.setItem(STORAGE_KEYS.WALLET_LEDGER_VERSION, WALLET_LEDGER_VERSION)
+    localStorage.setItem(
+      STORAGE_KEYS.COMMISSION_SETTINGS_SEED_VERSION,
+      COMMISSION_SETTINGS_SEED_VERSION,
+    )
   } else {
-    // Ensure newly added demo franchisees exist without wiping other org data.
     const existing = getOrganizations()
     const seedOrgs = getSeedOrganizations()
+    const seedIds = new Set(seedOrgs.map((org) => org.id))
     const byId = new Map(existing.map((org) => [org.id, org]))
 
     seedOrgs.forEach((seedOrg) => {
@@ -1651,7 +623,9 @@ export function initializeMockData() {
       })
     })
 
-    saveOrganizations(Array.from(byId.values()))
+    saveOrganizations(
+      Array.from(byId.values()).filter((org) => seedIds.has(org.id)),
+    )
   }
   if (collectionNeedsSeed('wallets')) {
     saveWallets(getSeedWallets())
@@ -1705,85 +679,32 @@ export function initializeMockData() {
       }
     })
 
-    saveWallets(Array.from(byId.values()))
+    const allowedWalletIds = new Set(seedWallets.map((wallet) => wallet.id))
+    saveWallets(
+      Array.from(byId.values()).filter((wallet) =>
+        allowedWalletIds.has(wallet.id),
+      ),
+    )
     if (shouldRealignOperating) {
       // Keep transfer history aligned with reset balances (drop orphan demo transfers).
       saveFundingTransfers(getSeedFundingTransfers())
       localStorage.setItem(STORAGE_KEYS.WALLET_LEDGER_VERSION, WALLET_LEDGER_VERSION)
     }
   }
-  if (collectionNeedsSeed('fundingRequests') || isEmptyCollection('fundingRequests')) {
+  if (
+    collectionNeedsSeed('fundingRequests') ||
+    localStorage.getItem(STORAGE_KEYS.INTERNET_CREDITS_SEED_VERSION) !==
+      INTERNET_CREDITS_SEED_VERSION
+  ) {
     saveFundingRequests(getSeedFundingRequests())
+    saveFundingTransfers(getSeedFundingTransfers())
     localStorage.setItem(
       STORAGE_KEYS.INTERNET_CREDITS_SEED_VERSION,
       INTERNET_CREDITS_SEED_VERSION,
     )
-  } else {
-    const existing = getFundingRequests()
-    const seedRequests = getSeedFundingRequests()
-    const byId = new Map(existing.map((request) => [request.id, request]))
-    let changed = false
-    const appliedCreditsVersion = localStorage.getItem(
-      STORAGE_KEYS.INTERNET_CREDITS_SEED_VERSION,
-    )
-    const shouldRealignInternetCredits =
-      appliedCreditsVersion !== INTERNET_CREDITS_SEED_VERSION
-
-    seedRequests.forEach((seed) => {
-      const current = byId.get(seed.id)
-      if (!current) {
-        byId.set(seed.id, seed)
-        changed = true
-        return
-      }
-      if (shouldRealignInternetCredits) {
-        byId.set(seed.id, { ...current, ...seed })
-        changed = true
-        return
-      }
-      if (!current.notes || !current.proofOfPayment) {
-        byId.set(seed.id, {
-          ...current,
-          notes: current.notes || seed.notes,
-          proofOfPayment: current.proofOfPayment || seed.proofOfPayment,
-        })
-        changed = true
-      }
-    })
-
-    if (changed) {
-      saveFundingRequests(Array.from(byId.values()))
-    }
-    if (shouldRealignInternetCredits) {
-      const existingTransfers = getFundingTransfers()
-      const seedTransfers = getSeedFundingTransfers()
-      const transferById = new Map(
-        existingTransfers.map((transfer) => [transfer.id, transfer]),
-      )
-      seedTransfers.forEach((seedTransfer) => {
-        transferById.set(seedTransfer.id, {
-          ...(transferById.get(seedTransfer.id) || {}),
-          ...seedTransfer,
-        })
-      })
-      saveFundingTransfers(Array.from(transferById.values()))
-      localStorage.setItem(
-        STORAGE_KEYS.INTERNET_CREDITS_SEED_VERSION,
-        INTERNET_CREDITS_SEED_VERSION,
-      )
-    }
   }
-  if (collectionNeedsSeed('fundingTransfers') || isEmptyCollection('fundingTransfers')) {
+  if (collectionNeedsSeed('fundingTransfers')) {
     saveFundingTransfers(getSeedFundingTransfers())
-  } else {
-    const existing = getFundingTransfers()
-    const seedTransfers = getSeedFundingTransfers()
-    const missing = seedTransfers.filter(
-      (transfer) => !existing.some((item) => item.id === transfer.id),
-    )
-    if (missing.length > 0) {
-      saveFundingTransfers([...existing, ...missing])
-    }
   }
   if (collectionNeedsSeed('revenueSharing')) {
     saveRevenueSharing(getSeedRevenueSharing())
@@ -1866,15 +787,36 @@ export function initializeMockData() {
     if (changed) {
       saveCommissionSettings(Array.from(byId.values()))
     }
+
+    const kept = Array.from(byId.values()).filter(
+      (entry) => orgById[entry.retailerOrganizationId]?.type === 'retailer',
+    )
+    if (kept.length !== byId.size) {
+      saveCommissionSettings(kept)
+    }
   }
 
-  if (collectionNeedsSeed('depositRates') || getDepositRates().length === 0) {
+  if (
+    collectionNeedsSeed('depositRates') ||
+    localStorage.getItem(STORAGE_KEYS.NETWORK_SEED_VERSION) !==
+      NETWORK_SEED_VERSION
+  ) {
     saveDepositRates(getSeedDepositRates())
+  } else {
+    const seedOrgIds = new Set(getSeedOrganizations().map((org) => org.id))
+    const existing = getDepositRates()
+    const next = existing.filter(
+      (row) =>
+        seedOrgIds.has(row.organizationId) ||
+        seedOrgIds.has(row.parentOrganizationId),
+    )
+    if (next.length !== existing.length) {
+      saveDepositRates(next)
+    }
   }
 
   if (
     collectionNeedsSeed('transactions') ||
-    isEmptyCollection('transactions') ||
     localStorage.getItem(STORAGE_KEYS.TRANSACTIONS_SEED_VERSION) !==
       TRANSACTIONS_SEED_VERSION
   ) {
@@ -1963,6 +905,14 @@ export function initializeMockData() {
     if (changed) {
       saveTransactions(Array.from(byId.values()))
     }
+
+    const seedOrgIds = new Set(getSeedOrganizations().map((org) => org.id))
+    const keptTx = Array.from(byId.values()).filter((tx) =>
+      seedOrgIds.has(tx.retailerOrganizationId),
+    )
+    if (keptTx.length !== byId.size) {
+      saveTransactions(keptTx)
+    }
   }
   // Always recompute revenue wallets from the finalized transaction ledger.
   reconcileRevenueWallets()
@@ -1984,8 +934,10 @@ export function resetDemoData() {
   saveFundingTransfers(getSeedFundingTransfers())
   saveRevenueSharing(getSeedRevenueSharing())
   saveCommissionSettings(getSeedCommissionSettings())
+  saveDepositRates(getSeedDepositRates())
   saveTransactions(getSeedTransactions())
   saveSettlements([])
+  localStorage.setItem(STORAGE_KEYS.NETWORK_SEED_VERSION, NETWORK_SEED_VERSION)
   localStorage.setItem(STORAGE_KEYS.WALLET_LEDGER_VERSION, WALLET_LEDGER_VERSION)
   localStorage.setItem(
     STORAGE_KEYS.TRANSACTIONS_SEED_VERSION,

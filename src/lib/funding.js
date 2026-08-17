@@ -38,7 +38,7 @@ export function getFundingWorkspaceConfig({ role, organizationId, organizations 
       showIncoming: true,
       showMine: false,
       showNewRequest: false,
-      showDirectTransfer: false,
+      showDirectTransfer: true,
       showTransfersTab: false,
       showApprovedTab: true,
       incomingRequesterRole: ROLES.SUBFRANCHISEE,
@@ -47,6 +47,8 @@ export function getFundingWorkspaceConfig({ role, organizationId, organizations 
       recipientLabel: 'Recipient',
       recipients,
       newRequestParentId: null,
+      depositHop: 'admin_to_sub',
+      releaseSource: 'mint',
       newRequestInfo:
         'Submit this form to request additional wallet funds from the Central Admin. Ensure your bank transfer is completed before submitting.',
     }
@@ -63,7 +65,7 @@ export function getFundingWorkspaceConfig({ role, organizationId, organizations 
       showIncoming: true,
       showMine: true,
       showNewRequest: true,
-      showDirectTransfer: false,
+      showDirectTransfer: true,
       showTransfersTab: false,
       showApprovedTab: true,
       incomingRequesterRole: ROLES.FRANCHISEE,
@@ -87,14 +89,14 @@ export function getFundingWorkspaceConfig({ role, organizationId, organizations 
     const sellNote = 'configured per-retailer rates'
     return {
       title: 'Internet Credits',
-      description: `Request credits from your Sub-Franchisee (${buyRateLabel}) and release credits to retailers from your Available Credits (${sellNote}). Cash + proof only — no cashless direct transfer.`,
+      description: `Request credits from your Sub-Franchisee (${buyRateLabel}) and release credits to retailers from your Available Credits (${sellNote}).`,
       breadcrumb: 'Internet Credits',
       defaultTab: 'incoming',
       mode: 'internetCredits',
       showIncoming: true,
       showMine: true,
       showNewRequest: true,
-      showDirectTransfer: false,
+      showDirectTransfer: true,
       showTransfersTab: false,
       showApprovedTab: true,
       incomingRequesterRole: ROLES.RETAILER,
@@ -140,6 +142,29 @@ export function getFundingWorkspaceConfig({ role, organizationId, organizations 
   }
 }
 
+function isPendingFundingStatus(status) {
+  return String(status || '').toLowerCase() === FUNDING_STATUS.PENDING
+}
+
+function isHistoryFundingStatus(status) {
+  const normalized = String(status || '').toLowerCase()
+  return (
+    normalized === FUNDING_STATUS.APPROVED ||
+    normalized === FUNDING_STATUS.COMPLETED ||
+    normalized === FUNDING_STATUS.RELEASED ||
+    normalized === FUNDING_STATUS.REVERSED ||
+    normalized === FUNDING_STATUS.REJECTED
+  )
+}
+
+function sameOrganizationId(left, right) {
+  return String(left || '') === String(right || '')
+}
+
+export function getFundingRequestTypeLabel(request) {
+  return request?.directTransfer ? 'Direct Release' : 'Request'
+}
+
 export function getFundingDatasets({
   role,
   organizationId,
@@ -147,40 +172,28 @@ export function getFundingDatasets({
   transfers,
   config,
 }) {
-  const allowedRequesterRoles = Array.isArray(config.incomingRequesterRoles)
-    ? config.incomingRequesterRoles
-    : config.incomingRequesterRole
-      ? [config.incomingRequesterRole]
-      : []
-
   const incoming = config.showIncoming
     ? sortByNewest(
         requests.filter(
           (request) =>
-            request.parentOrganizationId === organizationId &&
-            (allowedRequesterRoles.length === 0 ||
-              allowedRequesterRoles.includes(request.requesterRole)) &&
-            request.status === FUNDING_STATUS.PENDING,
+            sameOrganizationId(request.parentOrganizationId, organizationId) &&
+            isPendingFundingStatus(request.status),
         ),
       )
     : []
 
   const mine = sortByNewest(
-    requests.filter((request) => request.organizationId === organizationId),
+    requests.filter((request) =>
+      sameOrganizationId(request.organizationId, organizationId),
+    ),
   )
 
   const approved = sortByNewest(
     requests.filter((request) => {
       const related =
-        request.parentOrganizationId === organizationId ||
-        request.organizationId === organizationId
-      const done =
-        request.status === FUNDING_STATUS.APPROVED ||
-        request.status === FUNDING_STATUS.COMPLETED ||
-        request.status === FUNDING_STATUS.RELEASED ||
-        request.status === FUNDING_STATUS.REVERSED ||
-        request.status === FUNDING_STATUS.REJECTED
-      return related && done
+        sameOrganizationId(request.parentOrganizationId, organizationId) ||
+        sameOrganizationId(request.organizationId, organizationId)
+      return related && isHistoryFundingStatus(request.status)
     }),
   )
 
@@ -200,13 +213,9 @@ export function getFundingDatasets({
       approved: sortByNewest(
         requests.filter(
           (request) =>
-            (request.parentOrganizationId === organizationId ||
-              request.organizationId === organizationId) &&
-            (request.status === FUNDING_STATUS.APPROVED ||
-              request.status === FUNDING_STATUS.COMPLETED ||
-              request.status === FUNDING_STATUS.RELEASED ||
-              request.status === FUNDING_STATUS.REVERSED ||
-              request.status === FUNDING_STATUS.REJECTED),
+            (sameOrganizationId(request.parentOrganizationId, organizationId) ||
+              sameOrganizationId(request.organizationId, organizationId)) &&
+            isHistoryFundingStatus(request.status),
         ),
       ),
       transfers: relatedTransfers,

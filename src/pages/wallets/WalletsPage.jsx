@@ -15,6 +15,7 @@ import { getHomePathForRole } from '@/lib/permissions'
 import {
   buildAdminWalletDirectory,
   buildWalletActivity,
+  LOW_BALANCE_THRESHOLD,
   WALLET_BALANCE_STATUS,
   WALLET_BALANCE_STATUS_LABELS,
 } from '@/lib/wallets'
@@ -184,10 +185,15 @@ export default function WalletsPage() {
       </div>
 
       <Card className="mb-4 overflow-hidden shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-border px-4 py-3">
-          <CardTitle className="text-base font-semibold">
-            Credits Directory
-          </CardTitle>
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0 border-b border-border px-4 py-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <CardTitle className="text-base font-semibold">
+              Credits Directory
+            </CardTitle>
+            <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+              Low ≤ ₱{LOW_BALANCE_THRESHOLD.toLocaleString('en-PH')}
+            </span>
+          </div>
           <div className="flex items-center gap-2">
             <Button
               type="button"

@@ -15,6 +15,7 @@ import {
   getWallets,
 } from '@/services/storage'
 import { DateTimeCell } from '@/components/shared/DateTimeCell'
+import { LowBalanceAlert } from '@/components/shared/LowBalanceAlert'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { StatCard } from '@/components/shared/StatCard'
 import { Badge } from '@/components/ui/badge'
@@ -85,7 +86,7 @@ export default function WalletPage() {
   const requestHint =
     view.parentTypeLabel === 'CWPC Admin'
       ? 'Request more via Internet Credits from CWPC Admin (cash + proof).'
-      : 'Request more via Internet Credits from your franchisee (cash + proof, 80% deposit rate).'
+      : 'Request more via Internet Credits from your franchisee.'
 
   return (
     <div>
@@ -96,6 +97,12 @@ export default function WalletPage() {
           { label: 'Home', href: getHomePathForRole(user?.role) },
           { label: 'Wallet' },
         ]}
+      />
+
+      <LowBalanceAlert
+        status={view.kpis.operatingStatus}
+        availableBalance={view.kpis.operatingBalance}
+        role={user?.role}
       />
 
       <div className="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

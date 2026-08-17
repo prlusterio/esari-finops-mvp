@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { FileUp, FileImage, Info, Send, Wallet, X } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
+import { hopForOrgType } from '@/lib/depositRates'
+import {
+  formatDepositRatePercent,
+  getDepositRate,
+  suggestCredits,
+} from '@/lib/internetCredits'
+import { ROLES } from '@/lib/constants'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -54,6 +61,13 @@ function readFileAsDataUrl(file) {
   })
 }
 
+function roleForOrgType(orgType) {
+  if (orgType === 'subfranchisee') return ROLES.SUBFRANCHISEE
+  if (orgType === 'franchisee') return ROLES.FRANCHISEE
+  if (orgType === 'retailer') return ROLES.RETAILER
+  return orgType
+}
+
 export function DirectTransferSheet({
   open,
   onOpenChange,
@@ -62,6 +76,9 @@ export function DirectTransferSheet({
   recipientLabel = 'Recipient Franchisee',
   availableBalance = 0,
   initialRecipientId = '',
+  internetCredits = false,
+  depositHop,
+  releaseSource = 'balance',
   onConfirmIntent,
 }) {
   const fileInputRef = useRef(null)
@@ -81,6 +98,28 @@ export function DirectTransferSheet({
       ),
     [recipients],
   )
+
+  const selectedRecipient = sortedRecipients.find((item) => item.id === recipientId)
+
+  const depositRate = useMemo(() => {
+    if (!internetCredits || !selectedRecipient) return null
+    return getDepositRate({
+      organizationId: selectedRecipient.id,
+      parentOrganizationId: user?.organizationId,
+      hop: depositHop || hopForOrgType(selectedRecipient.type),
+      orgType: selectedRecipient.type,
+    })
+  }, [
+    depositHop,
+    internetCredits,
+    selectedRecipient,
+    user?.organizationId,
+  ])
+
+  const suggestedCredits =
+    internetCredits && depositRate != null && Number(amount) > 0
+      ? suggestCredits(Number(amount), Number(depositRate))
+      : 0
 
   useEffect(() => {
     if (!open) return
@@ -169,8 +208,24 @@ export function DirectTransferSheet({
       return
     }
 
-    if (numericAmount > Number(availableBalance)) {
-      setError('Amount exceeds available wallet balance.')
+    const creditsToMove = internetCredits
+      ? suggestCredits(numericAmount, Number(depositRate))
+      : numericAmount
+
+    if (internetCredits && !(creditsToMove > 0)) {
+      setError('Select a recipient so the deposit rate can calculate credits.')
+      return
+    }
+
+    if (
+      (!internetCredits || releaseSource === 'balance') &&
+      creditsToMove > Number(availableBalance)
+    ) {
+      setError(
+        internetCredits
+          ? 'Suggested credits exceed Available Credits.'
+          : 'Amount exceeds available wallet balance.',
+      )
       return
     }
 
@@ -191,11 +246,18 @@ export function DirectTransferSheet({
         fromOrganizationId: user.organizationId,
         toOrganizationId: recipientId,
         amount: numericAmount,
+        depositRate: depositRate != null ? Number(depositRate) : undefined,
+        depositHop: depositHop || hopForOrgType(recipient.type),
+        requesterRole: roleForOrgType(recipient.type),
+        suggestedCredits: creditsToMove,
         notes: notes.trim(),
         proofOfPayment,
         recipientName: recipient?.name || 'Recipient',
         recipientLabel,
-        balanceAfter: Number(availableBalance) - numericAmount,
+        balanceAfter:
+          !internetCredits || releaseSource === 'balance'
+            ? Number(availableBalance) - creditsToMove
+            : undefined,
       })
       onOpenChange(false)
     } catch (submitError) {
@@ -210,7 +272,7 @@ export function DirectTransferSheet({
       <SheetContent side="right" className="w-full gap-0 p-0 sm:max-w-[28rem]">
         <SheetHeader className="border-b border-slate-200 px-6 py-5 pr-12">
           <SheetTitle className="text-xl font-semibold text-slate-900">
-            Direct Transfer
+            Direct {internetCredits ? 'Credits Release' : 'Transfer'}
           </SheetTitle>
         </SheetHeader>
 
@@ -218,7 +280,9 @@ export function DirectTransferSheet({
           <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
             <div className="flex items-center justify-between rounded-xl border border-blue-100 bg-blue-50 px-4 py-4">
               <div>
-                <div className="text-xs text-slate-500">Available Balance</div>
+                <div className="text-xs text-slate-500">
+                  {internetCredits ? 'Available Credits' : 'Available Balance'}
+                </div>
                 <div className="mt-1 text-2xl font-bold text-slate-900">
                   {formatCurrency(availableBalance)}
                 </div>
@@ -227,6 +291,17 @@ export function DirectTransferSheet({
                 <Wallet className="h-5 w-5" />
               </div>
             </div>
+
+            {internetCredits ? (
+              <div className="flex gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-slate-700">
+                <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+                <p>
+                  Same as a credits request: deposit ÷ this downline’s deposit
+                  rate = credits released. The only difference is you release
+                  now — no pending request.
+                </p>
+              </div>
+            ) : null}
 
             <div className="space-y-2">
               <Label className="text-sm text-slate-700">
@@ -276,6 +351,26 @@ export function DirectTransferSheet({
                   required
                 />
               </div>
+              {internetCredits && selectedRecipient && depositRate ? (
+                <p className="text-xs text-slate-500">
+                  Deposit rate for {selectedRecipient.name}:{' '}
+                  {formatDepositRatePercent(depositRate)}
+                  {amount && Number(amount) > 0
+                    ? ` · ${formatCurrency(amount)} deposited → ${formatCurrency(
+                        suggestedCredits,
+                      )} credits`
+                    : ''}
+                </p>
+              ) : internetCredits ? (
+                <p className="text-xs text-slate-400">
+                  Select a downline to see their deposit rate and suggested
+                  credits.
+                </p>
+              ) : amount && Number(amount) > 0 ? (
+                <p className="text-xs text-slate-400">
+                  Transferring {formatCurrency(amount)}
+                </p>
+              ) : null}
             </div>
 
             <div className="space-y-2">
