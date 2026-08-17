@@ -145,7 +145,7 @@ export function getDepositRatesPageConfig(role) {
     return {
       title: 'Deposit Rates',
       description:
-        'Set Internet Credits deposit rates for each direct downline. Credits = deposit ÷ rate. Sale commission splits are retired — earnings come from credit-load cash and spreads.',
+        'Set Internet Credits deposit rates for each direct downline. Credits = deposit ÷ rate. Sale commission splits are configured separately in Commission Settings.',
       hopLabel: 'Per downline (Admin hop defaults to 60%)',
       defaultHop: CREDIT_HOPS.ADMIN_TO_SUB,
       emptyLabel: 'No direct downlines found under the platform.',
@@ -156,7 +156,7 @@ export function getDepositRatesPageConfig(role) {
     return {
       title: 'Deposit Rates',
       description:
-        'Set the deposit rate charged when each franchisee buys credits from you. Your earnings are the credit spread between your buy rate and this sell rate.',
+        'Set the deposit rate charged when each franchisee buys credits from you. Load earnings come from this rate card; sale commissions are configured separately in Commission Settings.',
       hopLabel: DEPOSIT_RATE_HOP_LABELS[CREDIT_HOPS.SUB_TO_FRANCHISEE],
       defaultHop: CREDIT_HOPS.SUB_TO_FRANCHISEE,
       emptyLabel: 'No franchisees found under your organization.',
@@ -167,7 +167,7 @@ export function getDepositRatesPageConfig(role) {
     return {
       title: 'Deposit Rates',
       description:
-        'Set the deposit rate charged when each retailer buys credits from you. Your earnings are the credit spread between your buy rate and this sell rate.',
+        'Set the deposit rate charged when each retailer buys credits from you. Load earnings come from this rate card; sale commissions still use the distribution % on each sale.',
       hopLabel: DEPOSIT_RATE_HOP_LABELS[CREDIT_HOPS.FRANCHISEE_TO_RETAILER],
       defaultHop: CREDIT_HOPS.FRANCHISEE_TO_RETAILER,
       emptyLabel: 'No retailers found under your organization.',

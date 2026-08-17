@@ -13,11 +13,13 @@ import {
   applyTransactionFilters,
   filterTransactionsForRole,
   getTransactionsPageConfig,
+  getViewerShareAmountForRole,
   sortTransactionsNewest,
   transactionsToCsv,
 } from '@/lib/transactions'
 import {
   getOrganizations,
+  getRevenueSharing,
   getTransactions,
 } from '@/services/storage'
 import { PageHeader } from '@/components/shared/PageHeader'
@@ -153,6 +155,8 @@ export default function TransactionsPage() {
     )
   }, [user?.role, user?.organizationId, dataVersion])
 
+  const revenueSharing = useMemo(() => getRevenueSharing(), [dataVersion])
+
   const filteredTransactions = useMemo(
     () =>
       applyTransactionFilters(scopedTransactions, {
@@ -191,7 +195,10 @@ export default function TransactionsPage() {
   }
 
   const handleExport = () => {
-    const csv = transactionsToCsv(filteredTransactions, orgById)
+    const csv = transactionsToCsv(filteredTransactions, orgById, {
+      revenueSharing,
+      role: user?.role,
+    })
     downloadCsv(`esarisari-transactions-${user?.role || 'export'}.csv`, csv)
   }
 
@@ -341,6 +348,9 @@ export default function TransactionsPage() {
                       <TableHead>Customer Payment</TableHead>
                       <TableHead>Credits Consumed</TableHead>
                       <TableHead>Sale Margin</TableHead>
+                      {config.showShareColumns ? (
+                        <TableHead>{config.yourShareLabel || 'Your Share'}</TableHead>
+                      ) : null}
                       <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -352,6 +362,11 @@ export default function TransactionsPage() {
                       const saleMargin =
                         (Number(tx.customerPayment) || 0) -
                         (Number(tx.walletDeduction) || 0)
+                      const yourShare = getViewerShareAmountForRole(
+                        tx,
+                        user?.role,
+                        revenueSharing,
+                      )
                       return (
                         <TableRow key={tx.id}>
                           <TableCell className="font-medium text-slate-900">
@@ -390,6 +405,15 @@ export default function TransactionsPage() {
                               showSign={false}
                             />
                           </TableCell>
+                          {config.showShareColumns ? (
+                            <TableCell className="whitespace-nowrap">
+                              <SignedAmount
+                                amount={yourShare}
+                                direction="credit"
+                                showSign={false}
+                              />
+                            </TableCell>
+                          ) : null}
                           <TableCell>
                             <TransactionStatusBadge status={tx.status} />
                           </TableCell>

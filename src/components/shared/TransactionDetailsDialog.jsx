@@ -28,7 +28,7 @@ function SummaryField({ label, value }) {
 }
 
 function downloadReceipt(tx, distribution, summary) {
-  const { costs } = distribution
+  const { costs, tiers, distributable } = distribution
   const lines = [
     'eSariSari Transaction Receipt',
     `Reference: ${summary.reference}`,
@@ -42,6 +42,13 @@ function downloadReceipt(tx, distribution, summary) {
     `Total Customer Payment: ${formatCurrency(costs.customerPayment)}`,
     `Credits Consumed: ${formatSignedCurrency(costs.netWalletDeduction, 'debit')}`,
     `Sale Margin: ${formatCurrency(costs.saleMargin ?? costs.customerPayment - costs.netWalletDeduction)}`,
+    `Distributable Revenue: ${formatCurrency(distributable)}`,
+    '',
+    'Commission Distribution',
+    ...(tiers || []).map(
+      (tier) =>
+        `${tier.roleLabel} (${tier.percentage}%)${tier.isViewer ? ' [You]' : ''}: ${formatCurrency(tier.amount)} — ${tier.entity}`,
+    ),
   ]
 
   const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8;' })
@@ -94,7 +101,7 @@ export function TransactionDetailsDialog({
     role,
     revenueSharing: getRevenueSharing(),
   })
-  const { costs } = distribution
+  const { costs, tiers, distributable } = distribution
   const saleMargin =
     costs.saleMargin ??
     Math.round(
@@ -194,11 +201,60 @@ export function TransactionDetailsDialog({
             </div>
           </div>
 
+          <div className="rounded-xl border border-slate-200 bg-white px-4 py-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Commission Distribution
+                </h3>
+                <p className="mt-0.5 text-xs text-slate-400">
+                  Sale margin split by the percentages on this sale
+                </p>
+              </div>
+              <p className="text-sm font-semibold text-slate-900">
+                {formatCurrency(distributable)}
+              </p>
+            </div>
+
+            <div className="space-y-2.5">
+              {(tiers || []).map((tier) => (
+                <div
+                  key={tier.key}
+                  className="flex items-center justify-between gap-3"
+                >
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${tier.avatarClassName}`}
+                    >
+                      {tier.initials}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-slate-800">
+                        {tier.label}
+                        {tier.isViewer ? (
+                          <span className="ml-1.5 rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700">
+                            You
+                          </span>
+                        ) : null}
+                      </p>
+                      <p className="truncate text-xs text-slate-400">
+                        {tier.entity} · {tier.percentage}%
+                      </p>
+                    </div>
+                  </div>
+                  <p className={`shrink-0 text-sm font-semibold ${tier.amountClassName}`}>
+                    {formatCurrency(tier.amount)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
             <p className="text-sm leading-relaxed text-slate-500">
-              Sale margin is customer payment minus credits consumed. Upline
-              earnings come from Internet Credits deposit spreads (see Revenue),
-              not a per-sale commission split.
+              Sale margin (customer payment minus credits consumed) is the
+              commission pool. Deposit rates still price Internet Credits loads
+              separately — they do not replace this per-sale split.
             </p>
           </div>
         </div>

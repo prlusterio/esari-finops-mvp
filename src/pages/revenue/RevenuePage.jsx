@@ -1,16 +1,24 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Banknote, Coins, Eye, Filter, Wallet } from 'lucide-react'
+import { Banknote, Coins, Eye, Filter, PieChart, Wallet } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { ROLES } from '@/lib/constants'
 import { buildCreditRevenueSnapshot } from '@/lib/creditEconomics'
 import { formatCurrency } from '@/lib/currency'
 import { formatReportPeriodLabel } from '@/lib/date'
-import { formatDepositRatePercent } from '@/lib/internetCredits'
 import { DEFAULT_PAGE_SIZE, paginateItems } from '@/lib/pagination'
 import { getHomePathForRole } from '@/lib/permissions'
 import {
+  buildRevenueEntries,
+  filterRevenueEntries,
+  REVENUE_ENTRY_STATUS,
+  REVENUE_ENTRY_STATUS_LABELS,
+  sumRevenueByStatus,
+} from '@/lib/revenue'
+import { filterTransactionsForRole } from '@/lib/transactions'
+import {
   getFundingRequests,
   getOrganizations,
+  getRevenueSharing,
   getTransactions,
 } from '@/services/storage'
 import { DateTimeCell } from '@/components/shared/DateTimeCell'
@@ -18,8 +26,9 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { StatCard } from '@/components/shared/StatCard'
 import { TablePagination } from '@/components/shared/TablePagination'
 import { TransactionDetailsDialog } from '@/components/shared/TransactionDetailsDialog'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -55,10 +64,12 @@ export default function RevenuePage() {
     search: '',
   })
   const [page, setPage] = useState(0)
+  const [commissionPage, setCommissionPage] = useState(0)
   const [selectedTx, setSelectedTx] = useState(null)
 
   useEffect(() => {
     setPage(0)
+    setCommissionPage(0)
     setDateRange('this_month')
     setCustomFrom('')
     setCustomTo('')
@@ -115,10 +126,45 @@ export default function RevenuePage() {
     })
   }, [snapshot.entries, appliedFilters.search])
 
+  const commissionEntries = useMemo(() => {
+    const scoped = filterTransactionsForRole(transactions, {
+      role: user?.role,
+      organizationId: user?.organizationId,
+    })
+    const entries = buildRevenueEntries({
+      transactions: scoped,
+      organizations,
+      role: user?.role,
+      revenueSharing: getRevenueSharing(),
+    })
+    return filterRevenueEntries(entries, {
+      dateRange: appliedFilters.dateRange,
+      customDateRange: appliedFilters.customDateRange,
+      search: appliedFilters.search,
+    })
+  }, [
+    transactions,
+    organizations,
+    user?.role,
+    user?.organizationId,
+    appliedFilters,
+    dataVersion,
+  ])
+
+  const commissionTotals = useMemo(
+    () => sumRevenueByStatus(commissionEntries),
+    [commissionEntries],
+  )
+
   const {
     page: currentPage,
     items: paged,
   } = paginateItems(filteredEntries, page, DEFAULT_PAGE_SIZE)
+
+  const {
+    page: currentCommissionPage,
+    items: pagedCommission,
+  } = paginateItems(commissionEntries, commissionPage, DEFAULT_PAGE_SIZE)
 
   const periodLabel = formatReportPeriodLabel(
     appliedFilters.dateRange,
@@ -135,16 +181,27 @@ export default function RevenuePage() {
       search,
     })
     setPage(0)
+    setCommissionPage(0)
   }
 
   const mode = snapshot.mode
   const kpis = snapshot.kpis
+  const isRetailer = user?.role === ROLES.RETAILER
+  const showCreditTable = mode === 'platform_load' || mode === 'credit_spread'
+  const salesCommission = commissionTotals.credited
+  const creditEarnings = showCreditTable ? Number(kpis.primaryValue) || 0 : 0
+  const combinedEarnings =
+    Math.round((creditEarnings + salesCommission + Number.EPSILON) * 100) / 100
+
+  const pageDescription = isRetailer
+    ? 'Your commission from each internet sale.'
+    : 'Earnings from loading Internet Credits to downlines, plus your commission from sales.'
 
   return (
     <div>
       <PageHeader
         title={snapshot.title}
-        description={snapshot.description}
+        description={pageDescription}
         breadcrumbs={[
           { label: 'Home', href: getHomePathForRole(user?.role) },
           { label: 'Revenue' },
@@ -152,32 +209,57 @@ export default function RevenuePage() {
       />
 
       <div className="mb-4 grid gap-4 sm:grid-cols-3">
-        <StatCard
-          title={kpis.primaryLabel}
-          value={formatCurrency(kpis.primaryValue)}
-          description={`For ${periodLabel}`}
-          descriptionBelowTitle
-          icon={Banknote}
-          accent="success"
-        />
-        <StatCard
-          title={kpis.secondaryLabel}
-          value={formatCurrency(kpis.secondaryValue)}
-          description={`For ${periodLabel}`}
-          descriptionBelowTitle
-          icon={mode === 'sale_margin' ? Wallet : Coins}
-        />
-        <StatCard
-          title={kpis.tertiaryLabel}
-          value={
-            kpis.tertiaryIsCount
-              ? String(kpis.tertiaryValue)
-              : formatCurrency(kpis.tertiaryValue)
-          }
-          description={`For ${periodLabel}`}
-          descriptionBelowTitle
-          icon={Coins}
-        />
+        {isRetailer ? (
+          <>
+            <StatCard
+              title="Your Commission"
+              value={formatCurrency(salesCommission)}
+              description={`For ${periodLabel}`}
+              descriptionBelowTitle
+              icon={PieChart}
+              accent="success"
+            />
+            <StatCard
+              title={kpis.secondaryLabel}
+              value={formatCurrency(kpis.secondaryValue)}
+              description={`For ${periodLabel}`}
+              descriptionBelowTitle
+              icon={Wallet}
+            />
+            <StatCard
+              title={kpis.tertiaryLabel}
+              value={formatCurrency(kpis.tertiaryValue)}
+              description={`For ${periodLabel}`}
+              descriptionBelowTitle
+              icon={Coins}
+            />
+          </>
+        ) : (
+          <>
+            <StatCard
+              title="Load earnings"
+              value={formatCurrency(kpis.primaryValue)}
+              description={`For ${periodLabel}`}
+              descriptionBelowTitle
+              icon={Banknote}
+            />
+            <StatCard
+              title="Sales Commission"
+              value={formatCurrency(salesCommission)}
+              description={`For ${periodLabel}`}
+              descriptionBelowTitle
+              icon={PieChart}
+              accent="success"
+            />
+            <StatCard
+              title="Total earnings"
+              value={formatCurrency(combinedEarnings)}
+              description={`Loads + sales · ${periodLabel}`}
+              descriptionBelowTitle
+              icon={Coins}
+            />
+          </>
+        )}
       </div>
 
       <Card className="mb-4 shadow-sm">
@@ -248,11 +330,96 @@ export default function RevenuePage() {
         </CardContent>
       </Card>
 
+      {showCreditTable ? (
+        <Card className="mb-4 overflow-hidden shadow-sm">
+          <CardHeader className="border-b border-border px-4 py-3">
+            <CardTitle className="text-base font-semibold">
+              Internet Credits
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              What you earned when downlines bought credits from you.
+            </p>
+          </CardHeader>
+          <CardContent className="p-0">
+            {paged.length === 0 ? (
+              <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+                No credit-load entries for the selected period.
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50 hover:bg-muted/50">
+                        <TableHead>Date</TableHead>
+                        <TableHead>Reference</TableHead>
+                        <TableHead>Downline</TableHead>
+                        <TableHead className="text-right">Cash in</TableHead>
+                        <TableHead className="text-right">Credits</TableHead>
+                        <TableHead className="text-right">Earnings</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paged.map((entry) => (
+                        <TableRow key={entry.id}>
+                          <TableCell>
+                            <DateTimeCell value={entry.createdAt} />
+                          </TableCell>
+                          <TableCell className="font-medium text-slate-900">
+                            {entry.reference}
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-semibold text-slate-900">
+                              {entry.counterpartyName}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatCurrency(entry.cashIn)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatCurrency(entry.credits)}
+                          </TableCell>
+                          <TableCell
+                            className={cn(
+                              'text-right font-semibold tabular-nums',
+                              (entry.revenue ?? 0) >= 0
+                                ? 'text-emerald-700'
+                                : 'text-red-600',
+                            )}
+                          >
+                            {formatCurrency(entry.revenue)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                <TablePagination
+                  page={currentPage}
+                  pageSize={DEFAULT_PAGE_SIZE}
+                  total={filteredEntries.length}
+                  onPageChange={setPage}
+                />
+              </>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card className="mb-4 overflow-hidden shadow-sm">
+        <CardHeader className="border-b border-border px-4 py-3">
+          <CardTitle className="text-base font-semibold">
+            Sales Commission
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Your share of each sale, from the distribution percentages on that
+            transaction.
+          </p>
+        </CardHeader>
         <CardContent className="p-0">
-          {paged.length === 0 ? (
+          {pagedCommission.length === 0 ? (
             <div className="px-4 py-12 text-center text-sm text-muted-foreground">
-              No revenue entries for the selected period.
+              No sales commission entries for the selected period.
             </div>
           ) : (
             <>
@@ -262,40 +429,16 @@ export default function RevenuePage() {
                     <TableRow className="bg-muted/50 hover:bg-muted/50">
                       <TableHead>Date</TableHead>
                       <TableHead>Reference</TableHead>
-                      <TableHead>
-                        {mode === 'sale_margin' ? 'Product / Service' : 'Counterparty'}
-                      </TableHead>
-                      {mode === 'platform_load' ? (
-                        <>
-                          <TableHead className="text-right">Cash in</TableHead>
-                          <TableHead className="text-right">Credits</TableHead>
-                          <TableHead className="text-right">Load revenue</TableHead>
-                        </>
-                      ) : null}
-                      {mode === 'credit_spread' ? (
-                        <>
-                          <TableHead className="text-right">Cash in</TableHead>
-                          <TableHead className="text-right">Credits</TableHead>
-                          <TableHead className="text-right">Cost basis</TableHead>
-                          <TableHead className="text-right">Spread</TableHead>
-                        </>
-                      ) : null}
-                      {mode === 'sale_margin' ? (
-                        <>
-                          <TableHead className="text-right">
-                            Customer payment
-                          </TableHead>
-                          <TableHead className="text-right">
-                            Credits consumed
-                          </TableHead>
-                          <TableHead className="text-right">Margin</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </>
-                      ) : null}
+                      <TableHead>Retailer</TableHead>
+                      <TableHead className="text-right">Commission pool</TableHead>
+                      <TableHead className="text-right">Your share %</TableHead>
+                      <TableHead className="text-right">Your commission</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paged.map((entry) => (
+                    {pagedCommission.map((entry) => (
                       <TableRow key={entry.id}>
                         <TableCell>
                           <DateTimeCell value={entry.createdAt} />
@@ -305,98 +448,67 @@ export default function RevenuePage() {
                         </TableCell>
                         <TableCell>
                           <div className="font-semibold text-slate-900">
-                            {entry.counterpartyName}
+                            {entry.retailerName}
                           </div>
-                          {mode === 'credit_spread' && entry.buyRate ? (
+                          {entry.retailerCode ? (
                             <div className="text-xs text-slate-400">
-                              Buy rate {formatDepositRatePercent(entry.buyRate)}
+                              {entry.retailerCode}
                             </div>
                           ) : null}
                         </TableCell>
-                        {mode === 'platform_load' ? (
-                          <>
-                            <TableCell className="text-right tabular-nums">
-                              {formatCurrency(entry.cashIn)}
-                            </TableCell>
-                            <TableCell className="text-right tabular-nums">
-                              {formatCurrency(entry.credits)}
-                            </TableCell>
-                            <TableCell
-                              className={cn(
-                                'text-right font-semibold tabular-nums text-emerald-700',
-                              )}
-                            >
-                              {formatCurrency(entry.revenue)}
-                            </TableCell>
-                          </>
-                        ) : null}
-                        {mode === 'credit_spread' ? (
-                          <>
-                            <TableCell className="text-right tabular-nums">
-                              {formatCurrency(entry.cashIn)}
-                            </TableCell>
-                            <TableCell className="text-right tabular-nums">
-                              {formatCurrency(entry.credits)}
-                            </TableCell>
-                            <TableCell className="text-right tabular-nums text-slate-600">
-                              {formatCurrency(entry.costBasis)}
-                            </TableCell>
-                            <TableCell
-                              className={cn(
-                                'text-right font-semibold tabular-nums',
-                                entry.spread >= 0
-                                  ? 'text-emerald-700'
-                                  : 'text-red-600',
-                              )}
-                            >
-                              {formatCurrency(entry.spread)}
-                            </TableCell>
-                          </>
-                        ) : null}
-                        {mode === 'sale_margin' ? (
-                          <>
-                            <TableCell className="text-right tabular-nums">
-                              {formatCurrency(entry.customerPayment)}
-                            </TableCell>
-                            <TableCell className="text-right tabular-nums text-slate-600">
-                              {formatCurrency(entry.creditsConsumed)}
-                            </TableCell>
-                            <TableCell
-                              className={cn(
-                                'text-right font-semibold tabular-nums',
-                                entry.margin >= 0
-                                  ? 'text-emerald-700'
-                                  : 'text-red-600',
-                              )}
-                            >
-                              {formatCurrency(entry.margin)}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                                onClick={() =>
-                                  setSelectedTx(entry.transaction || null)
-                                }
-                                aria-label={`View ${entry.reference}`}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </>
-                        ) : null}
+                        <TableCell className="text-right tabular-nums">
+                          {formatCurrency(entry.distributableRevenue)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums text-slate-600">
+                          {entry.sharePercentage}%
+                        </TableCell>
+                        <TableCell
+                          className={cn(
+                            'text-right font-semibold tabular-nums',
+                            entry.yourRevenue >= 0
+                              ? 'text-emerald-700'
+                              : 'text-red-600',
+                          )}
+                        >
+                          {formatCurrency(entry.yourRevenue)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            className={cn(
+                              'rounded-full border-transparent px-2.5 py-1 font-medium',
+                              entry.status === REVENUE_ENTRY_STATUS.CREDITED
+                                ? 'bg-emerald-50 text-emerald-700'
+                                : 'bg-amber-50 text-amber-700',
+                            )}
+                          >
+                            {REVENUE_ENTRY_STATUS_LABELS[entry.status] ||
+                              entry.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                            onClick={() =>
+                              setSelectedTx(entry.transaction || null)
+                            }
+                            aria-label={`View ${entry.reference}`}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </div>
               <TablePagination
-                page={currentPage}
+                page={currentCommissionPage}
                 pageSize={DEFAULT_PAGE_SIZE}
-                total={filteredEntries.length}
-                onPageChange={setPage}
+                total={commissionEntries.length}
+                onPageChange={setCommissionPage}
               />
             </>
           )}

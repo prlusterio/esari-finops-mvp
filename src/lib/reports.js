@@ -29,19 +29,20 @@ export function getReportsPageConfig(role) {
   if (role === ROLES.ADMIN) {
     return {
       subtitle:
-        'Internet Credits load cash, network sales volume, and credit inventory. Sale commission splits are retired.',
+        'Sale commission distribution plus Internet Credits load cash and inventory.',
       walletLabel: 'Available Credits',
       showFundingExports: true,
-      showRevenueExport: false,
+      showRevenueExport: true,
       showNetworkFilters: true,
       showRetailerFilter: false,
       showCustomDateRange: true,
-      showFranchiseeRevenueTable: false,
-      showRetailerRevenueTable: false,
+      showFranchiseeRevenueTable: true,
+      showRetailerRevenueTable: true,
       showNetworkEarningsHero: true,
-      showViewerCommissionColumn: false,
-      yourCommissionLabel: 'Load cash',
-      viewerCommissionLabel: 'Load cash',
+      showViewerCommissionColumn: true,
+      yourCommissionLabel: 'Sales Commission',
+      viewerCommissionLabel: 'Platform Commission',
+      creditEarningsLabel: 'Load earnings',
       earningsMode: 'platform_load',
       defaultDateRange: 'this_month',
     }
@@ -50,19 +51,20 @@ export function getReportsPageConfig(role) {
   if (role === ROLES.SUBFRANCHISEE) {
     return {
       subtitle:
-        'Credit spread on downline releases and network sales volume. Sale commission splits are retired.',
+        'Your sale commission plus earnings from loading Internet Credits to downlines.',
       walletLabel: 'Available Credits',
       showFundingExports: true,
-      showRevenueExport: false,
+      showRevenueExport: true,
       showNetworkFilters: true,
       showRetailerFilter: false,
       showCustomDateRange: true,
-      showFranchiseeRevenueTable: false,
-      showRetailerRevenueTable: false,
+      showFranchiseeRevenueTable: true,
+      showRetailerRevenueTable: true,
       showNetworkEarningsHero: true,
-      showViewerCommissionColumn: false,
-      yourCommissionLabel: 'Credit spread',
-      viewerCommissionLabel: 'Credit spread',
+      showViewerCommissionColumn: true,
+      yourCommissionLabel: 'Sales Commission',
+      viewerCommissionLabel: 'Your Commission',
+      creditEarningsLabel: 'Load earnings',
       earningsMode: 'credit_spread',
       defaultDateRange: 'this_month',
     }
@@ -71,19 +73,20 @@ export function getReportsPageConfig(role) {
   if (role === ROLES.FRANCHISEE) {
     return {
       subtitle:
-        'Credit spread on retailer releases and sales volume. Sale commission splits are retired.',
+        'Your sale commission plus earnings from loading Internet Credits to retailers.',
       walletLabel: 'Available Credits',
       showFundingExports: true,
-      showRevenueExport: false,
+      showRevenueExport: true,
       showNetworkFilters: false,
       showRetailerFilter: true,
       showCustomDateRange: true,
       showFranchiseeRevenueTable: false,
-      showRetailerRevenueTable: false,
+      showRetailerRevenueTable: true,
       showNetworkEarningsHero: true,
-      showViewerCommissionColumn: false,
-      yourCommissionLabel: 'Credit spread',
-      viewerCommissionLabel: 'Credit spread',
+      showViewerCommissionColumn: true,
+      yourCommissionLabel: 'Sales Commission',
+      viewerCommissionLabel: 'Your Commission',
+      creditEarningsLabel: 'Load earnings',
       earningsMode: 'credit_spread',
       defaultDateRange: 'this_month',
     }
@@ -91,10 +94,10 @@ export function getReportsPageConfig(role) {
 
   return {
     subtitle:
-      'Sale margin (customer payment minus credits consumed) and sales volume. Internet Credits loads stay on Wallet / Internet Credits.',
+      'Your sale commission share (from distribution %) plus sales volume. Internet Credits loads stay on Wallet / Internet Credits.',
     walletLabel: 'Available Credits',
     showFundingExports: true,
-    showRevenueExport: false,
+    showRevenueExport: true,
     showNetworkFilters: false,
     showRetailerFilter: false,
     showCustomDateRange: true,
@@ -102,9 +105,10 @@ export function getReportsPageConfig(role) {
     showRetailerRevenueTable: false,
     showNetworkEarningsHero: true,
     showViewerCommissionColumn: false,
-    yourCommissionLabel: 'Sale margin',
-    viewerCommissionLabel: 'Sale margin',
-    earningsMode: 'sale_margin',
+    yourCommissionLabel: 'Your Commission',
+    viewerCommissionLabel: 'Your Commission',
+    creditEarningsLabel: 'Sale margin pool',
+    earningsMode: 'sale_commission',
     defaultDateRange: 'this_month',
   }
 }

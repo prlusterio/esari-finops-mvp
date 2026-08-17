@@ -237,43 +237,47 @@ export function getTransactionsPageConfig(role) {
   if (role === ROLES.ADMIN) {
     return {
       subtitle:
-        'Platform transaction history with customer payment and credits consumed',
+        'Platform transaction history with credits consumed and sale commission distribution',
       searchLabel: 'Retailer / Franchisee',
       searchPlaceholder: 'Search by name or ID',
       showRetailerColumn: true,
-      showShareColumns: false,
+      showShareColumns: true,
+      yourShareLabel: 'Platform Share',
     }
   }
 
   if (role === ROLES.SUBFRANCHISEE) {
     return {
       subtitle:
-        'Network transaction history with customer payment and credits consumed',
+        'Network transaction history with credits consumed and your commission share',
       searchLabel: 'Retailer / Franchisee',
       searchPlaceholder: 'Search by name or ID',
       showRetailerColumn: true,
-      showShareColumns: false,
+      showShareColumns: true,
+      yourShareLabel: 'Your Share',
     }
   }
 
   if (role === ROLES.FRANCHISEE) {
     return {
       subtitle:
-        'Retailer transaction history with customer payment and credits consumed',
+        'Retailer transaction history with credits consumed and your commission share',
       searchLabel: 'Retailer',
       searchPlaceholder: 'Search by name or ID',
       showRetailerColumn: true,
-      showShareColumns: false,
+      showShareColumns: true,
+      yourShareLabel: 'Your Share',
     }
   }
 
   return {
     subtitle:
-      'Your transaction history with customer payment, credits consumed, and sale margin',
+      'Your transaction history with credits consumed, sale margin, and your commission share',
     searchLabel: 'Reference',
     searchPlaceholder: 'Search by reference',
     showRetailerColumn: false,
-    showShareColumns: false,
+    showShareColumns: true,
+    yourShareLabel: 'Your Share',
   }
 }
 
@@ -362,12 +366,32 @@ export function sortTransactionsNewest(transactions) {
   )
 }
 
+export function getTransactionShareAmounts(tx, revenueSharing = []) {
+  const distributable = getTransactionCostBreakdown(tx).distributable
+  const shares = resolveTransactionSharePercentages(tx, revenueSharing)
+  const retailer = roundMoney((distributable * shares.retailer) / 100)
+  const franchisee = roundMoney((distributable * shares.franchisee) / 100)
+  const subfranchisee = roundMoney((distributable * shares.subfranchisee) / 100)
+  const company = roundMoney(
+    distributable - retailer - franchisee - subfranchisee,
+  )
+  return { retailer, franchisee, subfranchisee, company, distributable, shares }
+}
+
+export function getViewerShareAmountForRole(tx, role, revenueSharing = []) {
+  const amounts = getTransactionShareAmounts(tx, revenueSharing)
+  if (role === ROLES.RETAILER) return amounts.retailer
+  if (role === ROLES.FRANCHISEE) return amounts.franchisee
+  if (role === ROLES.SUBFRANCHISEE) return amounts.subfranchisee
+  if (role === ROLES.ADMIN) return amounts.company
+  return 0
+}
+
 export function transactionsToCsv(
   transactions,
   orgById = {},
-  { revenueSharing = [] } = {},
+  { revenueSharing = [], role } = {},
 ) {
-  void revenueSharing
   const headers = [
     'Reference',
     'Date',
@@ -376,6 +400,11 @@ export function transactionsToCsv(
     'Customer Payment',
     'Credits Consumed',
     'Sale Margin',
+    'Retailer %',
+    'Franchisee %',
+    'Sub-Franchisee %',
+    'Platform %',
+    'Your Share',
     'Status',
   ]
 
@@ -384,6 +413,7 @@ export function transactionsToCsv(
   const rows = sorted.map((tx) => {
     const retailer = orgById[tx.retailerOrganizationId]
     const costs = getTransactionCostBreakdown(tx)
+    const split = getTransactionShareAmounts(tx, revenueSharing)
     return [
       tx.reference || tx.id,
       tx.createdAt,
@@ -392,6 +422,11 @@ export function transactionsToCsv(
       costs.customerPayment,
       costs.netWalletDeduction,
       costs.saleMargin,
+      split.shares.retailer,
+      split.shares.franchisee,
+      split.shares.subfranchisee,
+      split.shares.company,
+      role ? getViewerShareAmountForRole(tx, role, revenueSharing) : '',
       tx.status,
     ]
   })

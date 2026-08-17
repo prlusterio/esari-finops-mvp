@@ -1,9 +1,11 @@
-import { ROLE_LABELS, ROLES } from '@/lib/constants'
+import { FUNDING_STATUS, ROLE_LABELS, ROLES, TRANSACTION_STATUS } from '@/lib/constants'
+import { filterItemsByDateRange } from '@/lib/date'
 import { getChildOrganizations } from '@/lib/funding'
 import {
   buildRetailerMarginEntries,
   sumCreditEconomyField,
 } from '@/lib/creditEconomics'
+import { getTransactionCostBreakdown } from '@/lib/transactions'
 import { getOperatingWallet } from '@/services/fundingActions'
 
 export const WALLET_BALANCE_STATUS = {
@@ -596,6 +598,365 @@ export function sumWalletActivityNet(activity = []) {
       return sum + amount
     }, 0),
   )
+}
+
+export const CREDIT_LEDGER_TYPE = {
+  OPENING: 'opening',
+  RECEIVED: 'credits_received',
+  RELEASED: 'credits_released',
+  CONSUMED: 'credits_consumed',
+  REVERSAL_IN: 'reversal_in',
+  REVERSAL_OUT: 'reversal_out',
+}
+
+export const CREDIT_LEDGER_TYPE_LABELS = {
+  [CREDIT_LEDGER_TYPE.OPENING]: 'Opening balance',
+  [CREDIT_LEDGER_TYPE.RECEIVED]: 'Credits received',
+  [CREDIT_LEDGER_TYPE.RELEASED]: 'Credits released',
+  [CREDIT_LEDGER_TYPE.CONSUMED]: 'Credits consumed',
+  [CREDIT_LEDGER_TYPE.REVERSAL_IN]: 'Credits restored (reversal)',
+  [CREDIT_LEDGER_TYPE.REVERSAL_OUT]: 'Credits clawed back (reversal)',
+}
+
+const POSTED_TRANSFER_STATUSES = new Set([
+  FUNDING_STATUS.COMPLETED,
+  FUNDING_STATUS.RELEASED,
+  FUNDING_STATUS.APPROVED,
+])
+
+function signedLedgerAmount(entry) {
+  const amount = Number(entry.amount) || 0
+  return entry.direction === 'debit' ? -amount : amount
+}
+
+function describeTransferMovement(transfer, organizationId, orgById) {
+  const isIn = transfer.toOrganizationId === organizationId
+  const counterpartyId = isIn
+    ? transfer.fromOrganizationId
+    : transfer.toOrganizationId
+  const counterpartyName =
+    orgById[counterpartyId]?.name || counterpartyId || '—'
+  const kind = String(transfer.transferKind || '')
+  const isReversal = kind.includes('reversal')
+
+  if (isReversal) {
+    return {
+      type: isIn ? CREDIT_LEDGER_TYPE.REVERSAL_IN : CREDIT_LEDGER_TYPE.REVERSAL_OUT,
+      typeLabel: isIn
+        ? CREDIT_LEDGER_TYPE_LABELS[CREDIT_LEDGER_TYPE.REVERSAL_IN]
+        : CREDIT_LEDGER_TYPE_LABELS[CREDIT_LEDGER_TYPE.REVERSAL_OUT],
+      direction: isIn ? 'credit' : 'debit',
+      counterpartyName,
+      details:
+        transfer.notes ||
+        (isIn
+          ? `Restored from ${counterpartyName}`
+          : `Clawed back to ${counterpartyName}`),
+    }
+  }
+
+  return {
+    type: isIn ? CREDIT_LEDGER_TYPE.RECEIVED : CREDIT_LEDGER_TYPE.RELEASED,
+    typeLabel: isIn
+      ? CREDIT_LEDGER_TYPE_LABELS[CREDIT_LEDGER_TYPE.RECEIVED]
+      : CREDIT_LEDGER_TYPE_LABELS[CREDIT_LEDGER_TYPE.RELEASED],
+    direction: isIn ? 'credit' : 'debit',
+    counterpartyName,
+    details: isIn
+      ? `Loaded from ${counterpartyName}`
+      : `Released to ${counterpartyName}`,
+  }
+}
+
+/**
+ * Available Credits ledger / balance rollforward for one organization.
+ * Opening is backed into from the live wallet so:
+ * opening + credits in − credits out − credits consumed = Available Credits.
+ * Period filter keeps a period-opening row so 20k → 10k is explainable.
+ */
+export function buildCreditLedger({
+  organizationId,
+  organizations = [],
+  transfers = [],
+  transactions = [],
+  wallet = null,
+  dateRange = 'all',
+  customDateRange = null,
+} = {}) {
+  if (!organizationId) {
+    return {
+      openingBalance: 0,
+      creditsIn: 0,
+      creditsOut: 0,
+      closingBalance: 0,
+      currentBalance: 0,
+      unpostedDifference: 0,
+      movements: [],
+    }
+  }
+
+  const orgById = Object.fromEntries(organizations.map((org) => [org.id, org]))
+  const currentBalance = roundMoney(Number(wallet?.availableBalance) || 0)
+
+  const postedTransfers = (transfers || []).filter(
+    (transfer) =>
+      POSTED_TRANSFER_STATUSES.has(transfer.status) &&
+      (transfer.fromOrganizationId === organizationId ||
+        transfer.toOrganizationId === organizationId),
+  )
+
+  const saleMovements = (transactions || [])
+    .filter(
+      (tx) =>
+        tx.status === TRANSACTION_STATUS.COMPLETED &&
+        tx.retailerOrganizationId === organizationId,
+    )
+    .map((tx) => {
+      const costs = getTransactionCostBreakdown(tx)
+      const amount = costs.netWalletDeduction
+      return {
+        id: `sale-${tx.id}`,
+        createdAt: tx.createdAt,
+        reference: tx.reference || tx.id,
+        type: CREDIT_LEDGER_TYPE.CONSUMED,
+        typeLabel: CREDIT_LEDGER_TYPE_LABELS[CREDIT_LEDGER_TYPE.CONSUMED],
+        direction: 'debit',
+        amount,
+        counterpartyName: tx.productService || 'Internet sale',
+        details: `Internet sale · customer paid ₱${costs.customerPayment.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        source: 'sale',
+        transaction: tx,
+      }
+    })
+    .filter((entry) => entry.amount > 0)
+
+  const transferMovements = postedTransfers.map((transfer) => {
+    const meta = describeTransferMovement(transfer, organizationId, orgById)
+    return {
+      id: transfer.id,
+      createdAt: transfer.createdAt,
+      reference: transfer.id,
+      amount: Number(transfer.amount) || 0,
+      source: 'transfer',
+      ...meta,
+    }
+  })
+
+  const eventNet = roundMoney(
+    [...transferMovements, ...saleMovements].reduce(
+      (sum, entry) => sum + signedLedgerAmount(entry),
+      0,
+    ),
+  )
+
+  // Back into opening from the live wallet so:
+  // opening + credits in − credits out − credits consumed = Available Credits.
+  // Using the stored openingBalance alone overdrafts the statement whenever
+  // seed/demo sales were never deducted from availableBalance.
+  const opening = Number.isFinite(currentBalance)
+    ? roundMoney(currentBalance - eventNet)
+    : roundMoney(Number(wallet?.openingBalance) || 0)
+
+  const openingAt = wallet?.createdAt || null
+  const eventTimes = [...transferMovements, ...saleMovements]
+    .map((entry) => new Date(entry.createdAt).getTime())
+    .filter((time) => Number.isFinite(time))
+  const openingTime = openingAt ? new Date(openingAt).getTime() : NaN
+  const openingIsOldest =
+    Number.isFinite(openingTime) &&
+    eventTimes.every((time) => time >= openingTime)
+  const resolvedOpeningAt = openingIsOldest
+    ? openingAt
+    : eventTimes.length > 0
+      ? new Date(Math.min(...eventTimes) - 24 * 60 * 60 * 1000).toISOString()
+      : new Date().toISOString()
+
+  const allMovements = [...transferMovements, ...saleMovements]
+  allMovements.push({
+    id: `opening-${organizationId}`,
+    createdAt: resolvedOpeningAt,
+    reference: 'OPENING',
+    type: CREDIT_LEDGER_TYPE.OPENING,
+    typeLabel: CREDIT_LEDGER_TYPE_LABELS[CREDIT_LEDGER_TYPE.OPENING],
+    direction: opening >= 0 ? 'credit' : 'debit',
+    amount: Math.abs(opening),
+    counterpartyName: 'Initial inventory',
+    details: 'Starting Available Credits',
+    source: 'opening',
+  })
+
+  const chronological = [...allMovements].sort((a, b) => {
+    const timeDiff =
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    if (timeDiff !== 0) return timeDiff
+    if (a.type === CREDIT_LEDGER_TYPE.OPENING) return -1
+    if (b.type === CREDIT_LEDGER_TYPE.OPENING) return 1
+    return String(a.id).localeCompare(String(b.id))
+  })
+
+  let running = 0
+  const withBalance = chronological.map((entry) => {
+    running = roundMoney(running + signedLedgerAmount(entry))
+    return { ...entry, runningBalance: running }
+  })
+
+  const inPeriod = filterItemsByDateRange(
+    withBalance,
+    dateRange,
+    'createdAt',
+    customDateRange,
+  )
+  const inPeriodIds = new Set(inPeriod.map((entry) => entry.id))
+  const beforePeriod = withBalance.filter((entry) => !inPeriodIds.has(entry.id))
+
+  const isAllTime = !dateRange || dateRange === 'all'
+  let displayRows = withBalance
+
+  if (!isAllTime && beforePeriod.length > 0) {
+    const periodOpening = beforePeriod[beforePeriod.length - 1].runningBalance
+    displayRows = [
+      {
+        id: `period-opening-${organizationId}`,
+        createdAt:
+          inPeriod[0]?.createdAt ||
+          customDateRange?.from ||
+          resolvedOpeningAt,
+        reference: 'PERIOD-OPEN',
+        type: CREDIT_LEDGER_TYPE.OPENING,
+        typeLabel: 'Opening balance',
+        direction: periodOpening >= 0 ? 'credit' : 'debit',
+        amount: Math.abs(periodOpening),
+        counterpartyName: 'Balance brought forward',
+        details: 'Available Credits at start of selected period',
+        source: 'period_opening',
+        runningBalance: periodOpening,
+      },
+      ...inPeriod.filter((entry) => entry.source !== 'opening'),
+    ]
+  } else if (!isAllTime) {
+    displayRows = inPeriod
+  }
+
+  const movementRows = displayRows.filter(
+    (entry) =>
+      entry.source !== 'period_opening' && entry.source !== 'opening',
+  )
+  const creditsIn = roundMoney(
+    movementRows
+      .filter((entry) => entry.direction === 'credit')
+      .reduce((sum, entry) => sum + (Number(entry.amount) || 0), 0),
+  )
+  const creditsOut = roundMoney(
+    movementRows
+      .filter((entry) => entry.direction === 'debit')
+      .reduce((sum, entry) => sum + (Number(entry.amount) || 0), 0),
+  )
+
+  const openingBalance = isAllTime
+    ? opening
+    : beforePeriod.length > 0
+      ? beforePeriod[beforePeriod.length - 1].runningBalance
+      : opening
+  const closingBalance =
+    displayRows.length > 0
+      ? displayRows[displayRows.length - 1].runningBalance
+      : openingBalance
+
+  const ledgerAllTimeClosing =
+    withBalance.length > 0
+      ? withBalance[withBalance.length - 1].runningBalance
+      : opening
+  const unpostedDifference = roundMoney(currentBalance - ledgerAllTimeClosing)
+
+  return {
+    openingBalance,
+    creditsIn,
+    creditsOut,
+    closingBalance,
+    currentBalance,
+    unpostedDifference,
+    movements: [...displayRows].reverse(),
+  }
+}
+
+/**
+ * One credit-ledger summary row per organization (franchisee, retailer, etc.).
+ */
+export function buildCreditLedgerRows({
+  parties = [],
+  organizations = [],
+  wallets = [],
+  transfers = [],
+  transactions = [],
+  dateRange = 'all',
+  customDateRange = null,
+} = {}) {
+  const orgById = Object.fromEntries(organizations.map((org) => [org.id, org]))
+
+  return (parties || []).map((party) => {
+    const wallet = getOperatingWallet(wallets, party.id)
+    const ledger = buildCreditLedger({
+      organizationId: party.id,
+      organizations,
+      transfers,
+      transactions,
+      wallet,
+      dateRange,
+      customDateRange,
+    })
+    const parent = party.parentId ? orgById[party.parentId] : null
+    return {
+      organizationId: party.id,
+      name: party.name,
+      code: party.code || '',
+      orgType: party.type,
+      parentName: parent?.name || '',
+      currentBalance: ledger.currentBalance,
+      openingBalance: ledger.openingBalance,
+      creditsIn: ledger.creditsIn,
+      creditsOut: ledger.creditsOut,
+      closingBalance: ledger.closingBalance,
+      movementCount: ledger.movements.filter(
+        (entry) => entry.source !== 'opening' && entry.source !== 'period_opening',
+      ).length,
+      unpostedDifference: ledger.unpostedDifference,
+      ledger,
+    }
+  })
+}
+
+export function creditLedgerToCsv(ledger) {
+  const headers = [
+    'Date',
+    'Type',
+    'Reference',
+    'Details',
+    'In',
+    'Out',
+    'Running Balance',
+  ]
+  const rows = (ledger?.movements || []).map((entry) => [
+    entry.createdAt,
+    entry.typeLabel,
+    entry.reference,
+    entry.details,
+    entry.direction === 'credit' ? entry.amount : '',
+    entry.direction === 'debit' ? entry.amount : '',
+    entry.runningBalance,
+  ])
+  return [headers, ...rows]
+    .map((row) =>
+      row
+        .map((cell) => {
+          const value = cell == null ? '' : String(cell)
+          if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+            return `"${value.replace(/"/g, '""')}"`
+          }
+          return value
+        })
+        .join(','),
+    )
+    .join('\n')
 }
 
 export function getWalletTypeRoleLabel(orgType) {

@@ -45,7 +45,7 @@ export const TRANSACTIONS_SEED_VERSION = 'direct-admin-v1'
 export const COMMISSION_SETTINGS_SEED_VERSION = 'direct-admin-v1'
 
 /** Bump when internet-credits funding seeds change and existing demos should refresh once. */
-export const INTERNET_CREDITS_SEED_VERSION = 'internet-credits-retailer-v1'
+export const INTERNET_CREDITS_SEED_VERSION = 'internet-credits-statement-v1'
 
 /** Default deposit rate (cash ÷ credit face) by hop. */
 export const CREDIT_DEPOSIT_RATES = {

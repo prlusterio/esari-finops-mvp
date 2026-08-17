@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { ROLES, TRANSACTION_STATUS, TRANSACTION_STATUS_LABELS } from '@/lib/constants'
-import { formatCurrency } from '@/lib/currency'
+import { formatCurrency, formatSignedCurrency } from '@/lib/currency'
 import { formatReportPeriodLabel } from '@/lib/date'
 import { DEFAULT_PAGE_SIZE, paginateItems } from '@/lib/pagination'
 import { DateTimeCell } from '@/components/shared/DateTimeCell'
@@ -23,6 +23,7 @@ import {
   fundingRequestsToCsv,
   fundingTransfersToCsv,
   getNetworkFilterOptions,
+  getNetworkRevenueParties,
   getReportsPageConfig,
   partyRevenueDetailEntriesToCsv,
   revenueEntriesToCsv,
@@ -30,8 +31,14 @@ import {
 import { buildCreditRevenueSnapshot } from '@/lib/creditEconomics'
 import {
   getTransactionsPageConfig,
+  getViewerShareAmountForRole,
   sortTransactionsNewest,
 } from '@/lib/transactions'
+import {
+  buildCreditLedger,
+  creditLedgerToCsv,
+} from '@/lib/wallets'
+import { getOperatingWallet } from '@/services/fundingActions'
 import {
   getFundingRequests,
   getFundingTransfers,
@@ -303,6 +310,159 @@ function NetworkRevenueTable({
   )
 }
 
+function DownlineCreditStatement({
+  options = [],
+  selectedId,
+  onSelect,
+  ledger,
+  selectedName,
+  periodLabel,
+  onExport,
+  onViewTransaction,
+}) {
+  const movements = [...(ledger?.movements || [])]
+    .reverse()
+    .filter(
+      (entry) =>
+        entry.source !== 'opening' && entry.source !== 'period_opening',
+    )
+
+  return (
+    <Card className="mb-4 overflow-hidden shadow-sm">
+      <CardHeader className="border-b border-border px-4 py-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0 flex-1 space-y-2">
+            <CardTitle className="text-base font-semibold">
+              Downline Credit Statement
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Select a downline, then review + / − movements like a bank
+              statement · {periodLabel}
+            </p>
+            <div className="max-w-md space-y-1.5">
+              <Label className="text-xs text-slate-500">Downline</Label>
+              <Select
+                value={selectedId || undefined}
+                onValueChange={onSelect}
+                disabled={options.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a franchisee or retailer" />
+                </SelectTrigger>
+                <SelectContent>
+                  {options.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.group === 'Retailers' ? 'Retailer' : 'Franchisee'}
+                      {' · '}
+                      {option.name}
+                      {option.code ? ` (${option.code})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!selectedId || !ledger}
+            onClick={onExport}
+          >
+            <Download className="h-4 w-4" />
+            Download
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="p-0">
+        {!selectedId ? (
+          <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+            Select a downline to see their credit movements.
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between border-b border-border bg-slate-50 px-4 py-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">
+                  {selectedName}
+                </p>
+                <p className="text-xs text-muted-foreground">Opening balance</p>
+              </div>
+              <p className="text-base font-semibold tabular-nums text-slate-900">
+                {formatCurrency(ledger?.openingBalance ?? 0)}
+              </p>
+            </div>
+            {movements.length === 0 ? (
+              <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+                No + / − movements for this downline in the selected period.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50 hover:bg-muted/50">
+                      <TableHead>Date</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {movements.map((entry) => (
+                      <TableRow
+                        key={entry.id}
+                        className={
+                          entry.transaction ? 'cursor-pointer' : undefined
+                        }
+                        onClick={() => {
+                          if (entry.transaction) {
+                            onViewTransaction?.(entry.transaction)
+                          }
+                        }}
+                      >
+                        <TableCell className="whitespace-nowrap">
+                          <DateTimeCell value={entry.createdAt} />
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm font-medium text-slate-900">
+                            {entry.typeLabel}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            {entry.details}
+                          </div>
+                          {entry.counterpartyName ? (
+                            <div className="mt-0.5 text-[11px] text-slate-400">
+                              {entry.counterpartyName}
+                            </div>
+                          ) : null}
+                        </TableCell>
+                        <TableCell
+                          className={cn(
+                            'text-right text-sm font-semibold tabular-nums',
+                            entry.direction === 'debit'
+                              ? 'text-red-600'
+                              : 'text-emerald-600',
+                          )}
+                        >
+                          {formatSignedCurrency(entry.amount, entry.direction)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+            <div className="flex items-center justify-between border-t border-border bg-slate-50 px-4 py-4">
+              <p className="text-sm font-medium text-slate-600">Balance</p>
+              <p className="text-xl font-bold tabular-nums text-slate-900">
+                {formatCurrency(ledger?.closingBalance ?? 0)}
+              </p>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 function NetworkPartyRevenueDialog({
   open,
   onOpenChange,
@@ -494,6 +654,7 @@ export default function ReportsPage() {
   const [page, setPage] = useState(0)
   const [selectedTx, setSelectedTx] = useState(null)
   const [selectedParty, setSelectedParty] = useState(null)
+  const [selectedDownlineId, setSelectedDownlineId] = useState('')
 
   useEffect(() => {
     const nextRange = config.defaultDateRange || 'all'
@@ -511,6 +672,7 @@ export default function ReportsPage() {
     })
     setPage(0)
     setSelectedParty(null)
+    setSelectedDownlineId('')
   }, [user?.role, config.defaultDateRange])
 
   const retailerOptions = useMemo(() => {
@@ -610,8 +772,6 @@ export default function ReportsPage() {
     ],
   )
 
-  const earningsPrimary = creditRevenue.kpis?.primaryValue ?? 0
-
   const {
     kpis,
     datasets,
@@ -621,6 +781,9 @@ export default function ReportsPage() {
     retailerRevenueRows = [],
     networkEarnings,
   } = snapshot
+  const earningsPrimary = networkEarnings?.yourCommission ?? 0
+  const creditEarnings = creditRevenue.kpis?.primaryValue ?? 0
+  const showCreditEarningsCard = user?.role !== ROLES.RETAILER
   const roleSlug = user?.role || 'export'
   const showViewerCommission = Boolean(config.showViewerCommissionColumn)
 
@@ -628,6 +791,77 @@ export default function ReportsPage() {
     () => sortTransactionsNewest(datasets.transactions),
     [datasets.transactions],
   )
+
+  const creditLedgerParties = useMemo(() => {
+    if (user?.role === ROLES.RETAILER) {
+      const self = organizations.find((org) => org.id === user?.organizationId)
+      return { franchisees: [], retailers: self ? [self] : [] }
+    }
+    return getNetworkRevenueParties({
+      role: user?.role,
+      organizationId: user?.organizationId,
+      organizations,
+      franchiseeId: appliedFilters.franchiseeId,
+      retailerId: appliedFilters.retailerId,
+    })
+  }, [
+    user?.role,
+    user?.organizationId,
+    organizations,
+    appliedFilters.franchiseeId,
+    appliedFilters.retailerId,
+  ])
+
+  const downlineOptions = useMemo(() => {
+    const franchisees = (creditLedgerParties.franchisees || []).map((org) => ({
+      id: org.id,
+      name: org.name,
+      code: org.code || '',
+      group: 'Franchisees',
+    }))
+    const retailers = (creditLedgerParties.retailers || []).map((org) => ({
+      id: org.id,
+      name: org.name,
+      code: org.code || '',
+      group: 'Retailers',
+    }))
+    return [...franchisees, ...retailers]
+  }, [creditLedgerParties])
+
+  useEffect(() => {
+    const ids = new Set(downlineOptions.map((option) => option.id))
+    if (selectedDownlineId && ids.has(selectedDownlineId)) return
+    setSelectedDownlineId(
+      downlineOptions.length === 1 ? downlineOptions[0].id : '',
+    )
+  }, [downlineOptions, selectedDownlineId])
+
+  const selectedDownline = useMemo(
+    () => downlineOptions.find((option) => option.id === selectedDownlineId) || null,
+    [downlineOptions, selectedDownlineId],
+  )
+
+  const selectedDownlineLedger = useMemo(() => {
+    if (!selectedDownlineId) return null
+    const wallets = getWallets()
+    return buildCreditLedger({
+      organizationId: selectedDownlineId,
+      organizations,
+      transfers: getFundingTransfers(),
+      transactions: getTransactions(),
+      wallet: getOperatingWallet(wallets, selectedDownlineId),
+      dateRange: appliedFilters.dateRange,
+      customDateRange: {
+        from: appliedFilters.customFrom,
+        to: appliedFilters.customTo,
+      },
+    })
+  }, [
+    selectedDownlineId,
+    organizations,
+    appliedFilters,
+    dataVersion,
+  ])
 
   const {
     page: currentPage,
@@ -692,6 +926,15 @@ export default function ReportsPage() {
       viewerRole: showViewerCommission ? user?.role : null,
     })
     exportPartyRevenue(selection, entries)
+  }
+
+  const exportSelectedDownlineStatement = () => {
+    if (!selectedDownline || !selectedDownlineLedger) return
+    const slug = selectedDownline.code || selectedDownline.id || 'downline'
+    downloadCsv(
+      `esarisari-credit-statement-${slug}.csv`,
+      creditLedgerToCsv(selectedDownlineLedger),
+    )
   }
 
   const handleFranchiseeChange = (value) => {
@@ -841,15 +1084,29 @@ export default function ReportsPage() {
       </Card>
 
       {config.showNetworkEarningsHero ? (
-        <div className="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-2">
+        <div
+          className={cn(
+            'mb-4 grid gap-4 sm:grid-cols-2',
+            showCreditEarningsCard ? 'xl:grid-cols-3' : 'xl:grid-cols-2',
+          )}
+        >
           <StatCard
-            title={config.yourCommissionLabel || 'Earnings'}
+            title={config.yourCommissionLabel || 'Sales Commission'}
             value={formatCurrency(earningsPrimary)}
-            description={`For ${periodLabel} · see Revenue for detail`}
+            description={`For ${periodLabel} · from sale distribution %`}
             descriptionBelowTitle
             icon={Banknote}
             accent="success"
           />
+          {showCreditEarningsCard ? (
+            <StatCard
+              title={config.creditEarningsLabel || 'Credit-load earnings'}
+              value={formatCurrency(creditEarnings)}
+              description={`For ${periodLabel} · see Revenue for deposit-rate detail`}
+              descriptionBelowTitle
+              icon={Coins}
+            />
+          ) : null}
           <StatCard
             title="Sales Volume"
             value={formatCurrency(networkEarnings?.salesVolume ?? kpis.customerPaymentTotal)}
@@ -949,6 +1206,25 @@ export default function ReportsPage() {
         </div>
       ) : null}
 
+      {downlineOptions.length > 0 ? (
+        <DownlineCreditStatement
+          options={downlineOptions}
+          selectedId={selectedDownlineId}
+          onSelect={setSelectedDownlineId}
+          ledger={selectedDownlineLedger}
+          selectedName={
+            selectedDownline
+              ? `${selectedDownline.name}${
+                  selectedDownline.code ? ` (${selectedDownline.code})` : ''
+                }`
+              : ''
+          }
+          periodLabel={periodLabel}
+          onExport={exportSelectedDownlineStatement}
+          onViewTransaction={(tx) => setSelectedTx(tx)}
+        />
+      ) : null}
+
       {config.showFranchiseeRevenueTable || config.showRetailerRevenueTable ? (
         <div className="mb-4 space-y-4">
           {config.showFranchiseeRevenueTable ? (
@@ -1020,6 +1296,11 @@ export default function ReportsPage() {
                       <TableHead>Customer Payment</TableHead>
                       <TableHead>Credits Consumed</TableHead>
                       <TableHead>Sale Margin</TableHead>
+                      {txConfig.showShareColumns ? (
+                        <TableHead>
+                          {txConfig.yourShareLabel || 'Your Share'}
+                        </TableHead>
+                      ) : null}
                       <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -1030,6 +1311,11 @@ export default function ReportsPage() {
                       const saleMargin =
                         (Number(tx.customerPayment) || 0) -
                         (Number(tx.walletDeduction) || 0)
+                      const yourShare = getViewerShareAmountForRole(
+                        tx,
+                        user?.role,
+                        getRevenueSharing(),
+                      )
                       return (
                         <TableRow key={tx.id}>
                           <TableCell className="font-medium text-slate-900">
@@ -1068,6 +1354,15 @@ export default function ReportsPage() {
                               showSign={false}
                             />
                           </TableCell>
+                          {txConfig.showShareColumns ? (
+                            <TableCell className="whitespace-nowrap">
+                              <SignedAmount
+                                amount={yourShare}
+                                direction="credit"
+                                showSign={false}
+                              />
+                            </TableCell>
+                          ) : null}
                           <TableCell>
                             <TransactionStatusBadge status={tx.status} />
                           </TableCell>
@@ -1108,13 +1403,14 @@ export default function ReportsPage() {
         <div className="grid gap-4 md:grid-cols-2">
           <ExportCard
             title="Transactions"
-            description="Sales volume, credits consumed, and sale margin for your scope."
+            description="Sales volume, credits consumed, sale margin, and your commission share for your scope."
             count={datasets.transactions.length}
             onExport={() =>
               downloadCsv(
                 `esarisari-transactions-report-${roleSlug}.csv`,
                 exportTransactionsCsv(datasets.transactions, orgById, {
                   revenueSharing: getRevenueSharing(),
+                  role: user?.role,
                 }),
               )
             }

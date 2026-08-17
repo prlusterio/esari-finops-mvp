@@ -9,6 +9,7 @@ import {
   CircleDollarSign,
   Banknote,
   Percent,
+  PieChart,
 } from 'lucide-react'
 import { ROLES } from './constants'
 
@@ -86,6 +87,12 @@ export const NAV_ITEMS = [
     path: '/deposit-rates',
     icon: Percent,
     roles: [ROLES.ADMIN, ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE],
+  },
+  {
+    title: 'Commission Settings',
+    path: '/commission-settings',
+    icon: PieChart,
+    roles: [ROLES.ADMIN, ROLES.SUBFRANCHISEE],
   },
   {
     title: 'Transactions',

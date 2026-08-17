@@ -17,6 +17,7 @@ import FundingPage from '@/pages/funding/FundingPage'
 import RequestFundingPage from '@/pages/request-funding/RequestFundingPage'
 import RevenuePage from '@/pages/revenue/RevenuePage'
 import DepositRatesPage from '@/pages/deposit-rates/DepositRatesPage'
+import CommissionSettingsPage from '@/pages/commission-settings/CommissionSettingsPage'
 import TransactionsPage from '@/pages/transactions/TransactionsPage'
 import ReportsPage from '@/pages/reports/ReportsPage'
 import RetailersPage from '@/pages/retailers/RetailersPage'
@@ -103,10 +104,9 @@ export default function AppRoutes() {
             <Route path="/request-funding" element={<RequestFundingPage />} />
           </Route>
 
-          <Route path="/revenue-sharing" element={<Navigate to="/deposit-rates" replace />} />
           <Route
-            path="/commission-settings"
-            element={<Navigate to="/deposit-rates" replace />}
+            path="/revenue-sharing"
+            element={<Navigate to="/commission-settings" replace />}
           />
 
           <Route
@@ -140,6 +140,20 @@ export default function AppRoutes() {
             }
           >
             <Route path="/deposit-rates" element={<DepositRatesPage />} />
+          </Route>
+
+          <Route
+            element={
+              <RoleRoute
+                roles={[ROLES.ADMIN, ROLES.SUBFRANCHISEE]}
+                path="/commission-settings"
+              />
+            }
+          >
+            <Route
+              path="/commission-settings"
+              element={<CommissionSettingsPage />}
+            />
           </Route>
 
           <Route

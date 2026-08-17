@@ -197,10 +197,10 @@ export function buildCreditRevenueSnapshot({
       mode: 'platform_load',
       title: 'Revenue',
       description:
-        'Cash collected when you release Internet Credits to downlines (credit-load revenue). Separate from Deposit Rates configuration.',
+        'Cash collected when you release Internet Credits to downlines. Sale commissions are listed separately.',
       entries,
       kpis: {
-        primaryLabel: 'Load cash',
+        primaryLabel: 'Load earnings',
         primaryValue: sumCreditEconomyField(entries, 'cashIn'),
         secondaryLabel: 'Credits released',
         secondaryValue: sumCreditEconomyField(entries, 'credits'),
@@ -224,10 +224,10 @@ export function buildCreditRevenueSnapshot({
       mode: 'credit_spread',
       title: 'Revenue',
       description:
-        'Credit spread on downline releases: cash collected minus cost of credits at your buy rate. Not a sale-commission split.',
+        'What you earned when downlines bought Internet Credits from you. Sale commissions are listed separately.',
       entries,
       kpis: {
-        primaryLabel: 'Credit spread',
+        primaryLabel: 'Load earnings',
         primaryValue: sumCreditEconomyField(entries, 'spread'),
         secondaryLabel: 'Cash from downlines',
         secondaryValue: sumCreditEconomyField(entries, 'cashIn'),
@@ -248,7 +248,7 @@ export function buildCreditRevenueSnapshot({
       mode: 'sale_margin',
       title: 'Revenue',
       description:
-        'Sale margin from internet sales: customer payment minus credits consumed. Available Credits inventory is separate.',
+        'Commission pool on internet sales (customer payment minus credits consumed). Your credited share uses the distribution % on each sale.',
       entries,
       kpis: {
         primaryLabel: 'Sale margin',

@@ -1,10 +1,10 @@
 # Internet Credits — Business Model Review
 
-**Status:** Review only (no code changes yet)  
+**Status:** Living product lock (Internet Credits + Deposit Rates built; sale distribution % restored 2026-08-17)  
 **Source:** FigJam / mockups — eSarisari Internet Credits Initial Mockup  
-**Last updated:** 2026-08-14
+**Last updated:** 2026-08-17
 
-This document captures the finance/process review of the new **token / internet credits** business model across portals. Sections are filled as each role’s mockup is reviewed.
+This document captures the finance/process review of the **token / internet credits** business model across portals, plus the later product lock that **sale commission splits run alongside deposit rates** (they are not a replacement for each other).
 
 ---
 
@@ -18,7 +18,7 @@ This document captures the finance/process review of the new **token / internet 
 6. [End-to-end chain summary](#6-end-to-end-chain-summary)
 7. [Cross-role open questions](#7-cross-role-open-questions)
 8. [Priority recommendations](#8-priority-recommendations)
-9. [Decision checklist](#9-decision-checklist) — product lock before build
+9. [Decision checklist](#9-decision-checklist) — product lock (D3 restored 2026-08-17)
 10. [Other pages — change impact](#10-other-pages--change-impact-current-app-vs-locked-model)
 
 ---
@@ -38,7 +38,18 @@ This is a **multi-tier prepaid float / inventory credit** model. Mid-tiers hold 
 
 Pattern: deposit rate **rises down the chain** (60 → 70 → 80), creating mid-tier cash spreads on float sales.
 
-**Important distinction:** Sale **commission splits (40/60-style)** are **retired**. Earnings are credit-load cash (Admin), mid-tier credit spread, and retailer sale margin — not per-sale share percentages.
+### Two separate pricing surfaces (locked 2026-08-17)
+
+Deposit rates and sale splits are **both in product**. They price different events and must not be merged.
+
+| Surface | What it prices | Where configured | Earnings it creates |
+|---------|----------------|------------------|---------------------|
+| **Deposit Rates** | Internet Credits **loads** (cash paid ÷ credit face) | `/deposit-rates` — hop defaults 60/70/80 + per-downline override | Admin **load cash**; Sub/Fran **credit spread** |
+| **Commission Settings** | **Each internet sale** — split of sale margin | `/commission-settings` — per-retailer % (Admin + Sub-Franchisee) | Retailer / Franchisee / Sub / Platform **sale commission** |
+
+**Sale margin** = customer payment − credits consumed. That amount is the **commission pool**, not one party’s revenue. Each tier earns its stamped % of the pool. Retailer does **not** keep 100% of sale margin.
+
+Deposit rates do **not** replace the per-sale split. Credits consumed on a sale do **not** feed the share calculator — the split applies only after the sale.
 
 ### Correct conversion formula (any tier)
 
@@ -282,7 +293,7 @@ Illustrative unit on 1,000 credits sold to Franchisee:
 - Credit cost basis (what Subfranchisee paid Admin for those 1,000 credits): ₱600  
 - **Gross cash spread on that float sale:** ₱100 (before any other fees/COGS)
 
-**Why this matters:** This is mid-tier **distribution margin on prepaid inventory** — the primary Sub/Franchisee earnings model (sale commission splits are retired).
+**Why this matters:** This is mid-tier **distribution margin on prepaid inventory** — one of two Sub/Franchisee earning streams. The other is **sale commission**: their stamped % of each downline internet sale’s margin (see Commission Settings). Do not treat credit spread as a substitute for the per-sale split.
 
 ### 3.6 Recommended subfranchisee metrics
 
@@ -527,7 +538,7 @@ Retailer history **supports 80%** as the intended Franchisee→Retailer rate.
 | Buy from Franchisee | Pay ₱800 for 1,000 credits | Receive 1,000 into Available Credits |
 | Sell / use downstream | TBD (customer internet top-up / plan sale) | Debit Available Credits |
 
-Until usage/COGS screens exist, retailer gross margin on **end-customer sales** cannot be reviewed from these mocks.
+On an internet sale, credits are consumed and **sale margin** (`customer payment − credits consumed`) becomes the commission pool. The retailer’s earning is **their distribution % of that pool**, not the full margin. Uplines take the remaining shares (see D3).
 
 ### 5.7 Recommended retailer metrics / data
 
@@ -535,6 +546,7 @@ Until usage/COGS screens exist, retailer gross margin on **end-customer sales** 
 - Cash paid to Franchisee vs credits received (effective rate)
 - Pending request aging
 - Credits consumed / sold (once usage exists)
+- Sale commission (retailer % of sale margin), distinct from full sale margin / commission pool
 - Link My request ↔ Franchisee Retailers Credits Request ID
 - Always show Credits face on Approved rows
 
@@ -565,7 +577,7 @@ End customer
 | Admin ← Sub | ₱600 | 1,000 | Platform float: ₱600 cash for 1,000 face (40% unrealized until downstream rules defined) |
 | Sub ← Franchisee | ₱700 | 1,000 | Sub spread vs Admin cost ₱600 → **₱100** |
 | Franchisee ← Retailer | ₱800 | 1,000 | Franchisee spread vs Sub cost ₱700 → **₱100** |
-| Retailer | paid ₱800 | holds 1,000 | Margin depends on end-customer price / COGS (TBD) |
+| Retailer | paid ₱800 | holds 1,000 | On sale: consumes credits; earns **their %** of (customer payment − credits consumed). Remaining % goes upline. |
 
 ### Shared UX pattern (all portals)
 
@@ -587,7 +599,7 @@ End customer
 | 2 | Global vs tiered deposit %? | **Tiered.** Working card **60 / 70 / 80**. Fran→Retailer modal still wrongly shows 70. |
 | 3 | Who holds float? | **Resolved:** Sub, Franchisee, Retailer hold Available Credits; only Admin “creates” on approve. |
 | 4 | Revenue recognition timing? | **Open** — deposit vs release vs end-customer consumption. |
-| 5 | Link to 40/60 transaction share? | **Locked — retired.** Earnings = load cash / credit spread / sale margin only. |
+| 5 | Link to 40/60 transaction share? | **Locked — keep both, keep separate.** Deposit rates price credit loads. Distribution % splits sale margin on each internet sale. Credits do not feed the share calc. |
 | 6 | Credits = inventory float? | **Yes** from mocks; confirm usage/debit events. |
 | 7 | Pure credit transfer without cash? | **Open** — not in mocks. |
 | 8 | Mid-tier cash ownership / tax? | **Open** for Sub + Franchisee collectors. |
@@ -611,6 +623,8 @@ End customer
 - Add reject / hold / reverse paths.
 - Payment reference uniqueness / bank match rules.
 - Define revenue recognition + mid-tier cash custody for finance.
+- Keep **Deposit Rates** and **Commission Settings** as two nav surfaces; never redirect one to the other.
+- On Revenue / Reports / Transactions: report **credit-load earnings** and **sale commission** as separate totals. Do not label full sale margin as retailer revenue.
 
 ### Should have
 
@@ -630,8 +644,7 @@ End customer
 
 ## 9. Decision checklist
 
-Use this to lock product/finance rules **before any code**.  
-Tick with `[x]` (or click the box in GitHub / markdown preview). Pick **one** option where listed.
+Use this to lock product/finance rules. Deposit-rate items (A–C, D1–D2, D4) remain as originally locked. **D3 was reopened 2026-08-17** — sale distribution % is back in product.
 
 ### A. Rate card (must lock)
 
@@ -723,9 +736,9 @@ Example at 80%: ₱800 deposit → 1,000 credits. Never “deposit + X%”.
   - [x] Ops report in app v1; ledger with finance *(recommended minimum)*
   - [ ] Not tracked in app v1
 - [x] **D3** Relation to existing **40/60 transaction share**?
-  - [ ] Fully separate until product defines link
+  - [x] **Fully separate** — deposit rates price credit loads; distribution % splits sale margin on each internet sale. Commission Settings stays in nav (Admin + Sub-Franchisee). Credits do **not** feed the share calc. *(locked 2026-08-17)*
   - [ ] Credits feed into share calc
-  - [x] **Retired** — not part of credit economics; Commission Settings removed from nav *(locked)*
+  - [ ] Retired — not part of credit economics; Commission Settings removed from nav
   - [ ] TBD
 - [ ] **D4** Retailer credit consumption event for P&L?
   - [x] Internet sale
@@ -750,16 +763,16 @@ Example at 80%: ₱800 deposit → 1,000 credits. Never “deposit + X%”.
 
 ### Suggested default lock (if product wants a one-liner)
 
-> Tier deposit rates **60% / 70% / 80%**; snapshot on submit; `credits = deposit ÷ rate`; Admin mints; Sub/Fran release only from Available Credits; statuses `pending|released|rejected|reversed`; reject+reason required; payment ref required on release; no cashless transfer in v1; earnings = Admin load cash + mid-tier credit spread + retailer sale margin (**sale commission splits retired**).
+> Tier deposit rates **60% / 70% / 80%**; snapshot on submit; `credits = deposit ÷ rate`; Admin mints; Sub/Fran release only from Available Credits; statuses `pending|released|rejected|reversed`; reject+reason required; payment ref required on release; no cashless transfer in v1; **two earnings streams** — (1) Admin load cash + mid-tier credit spread from deposit rates, (2) per-sale commission from distribution % of sale margin (`customer payment − credits consumed`).
 
-- [x] **Accept suggested default lock as-is**
-- [ ] Accept with exceptions noted below: ___
+- [ ] Accept suggested default lock as-is *(superseded — D3 restored)*
+- [x] Accept with exceptions noted below: **D3 reversed 2026-08-17** — sale distribution % is in product again; deposit rates stay as-is.
 
 ---
 
 ## 10. Other pages — change impact (current app vs locked model)
 
-**Context:** Locked model is **tiered deposit → credit face** (`credits = deposit ÷ rate`) with inventory (**Available Credits**). Sale **commission splits are retired (D3)** — Revenue/Reports track load cash, credit spread, and sale margin.
+**Context:** Locked model is **tiered deposit → credit face** (`credits = deposit ÷ rate`) with inventory (**Available Credits**), **plus** per-sale **distribution %** (D3 restored). Revenue/Reports track both: load cash / credit spread **and** sale commission. Sale margin is the commission pool, not a single-role earning.
 
 ### 10.1 Impact map
 
@@ -770,15 +783,15 @@ Example at 80%: ₱800 deposit → 1,000 credits. Never “deposit + X%”.
 | P0 | **New request / Approve dialogs** | Amount + proof; approve/reject | Deposit + proof on submit; approve: payment ref + editable credits + suggested formula + rate snapshot; reject reason |
 | P0 | **Data model** (`FundingRequest` / transfer / wallet) | Single `amount` | Split `depositAmount`, `suggestedCredits`, `creditsReleased`, `depositRate`, `paymentReferenceId`, override reason; credit balance vs cash |
 | P1 | **Wallets** (`/wallets`, `/wallet-management`, `/wallet`) | Operating / revenue / master balances | Clarify **Available Credits** vs operating/revenue wallets; show credit inventory; activity from credit release/consume; stop treating funding approve as plain 1:1 peso transfer (or dual-post cash vs credits) |
-| P1 | **Transactions** | `walletDeduction` from operating float | **D4:** internet sale **burns retailer Available Credits**; show Credits Consumed + Sale Margin (no share columns) |
-| P1 | **Reports** | Funding CSV/KPIs treat amount as cash=credits | Split KPIs: cash deposited, credits released, pending liability, effective rate; hero = load cash / spread / sale margin; mid-tier spread ops report (D2); fix CSV columns |
-| P2 | **Revenue** | Was share / revenue-wallet commission | Role KPIs: Admin load cash; Sub/Fran credit spread; Retailer sale margin |
-| P2 | **Commission Settings** | Per-retailer transaction % shares | **Retired from UX** (nav redirect to Deposit Rates); engine may remain unused |
-| P2 | **Deposit Rates** | Rate card | Global 60/70/80 + per-downline override — primary pricing surface |
+| P1 | **Transactions** | `walletDeduction` from operating float | **D4:** internet sale **burns retailer Available Credits**; show Credits Consumed + Sale Margin **and** Your Share / 4-tier distribution % |
+| P1 | **Reports** | Funding CSV/KPIs treat amount as cash=credits | Split KPIs: cash deposited, credits released, pending liability, effective rate; hero = **sales commission** + load cash / spread + sales volume; mid-tier spread ops report (D2); CSV includes share % and Your Share |
+| P2 | **Revenue** | Dual ledger | Keep Deposit Rates stream (Admin load cash; Sub/Fran credit spread) **and** Sales Commission stream (each role’s % of sale margin). Combined earnings = both. Retailer primary KPI = commission share, not full margin. |
+| P2 | **Commission Settings** | Per-retailer transaction % shares | **In nav** for Admin + Sub-Franchisee. Separate from Deposit Rates. Snapshot % onto each sale. |
+| P2 | **Deposit Rates** | Rate card | Global 60/70/80 + per-downline override — pricing for **credit loads only** (unchanged) |
 | P3 | **Dashboard** (currently disabled in nav) | Pending funding counts | If re-enabled: pending deposits, pending credits, Available Credits, not 1:1 funding totals |
-| P3 | **Nav / copy** | “Token Credits” | Align to **Internet Credits** (mock) everywhere; field **Credits to release** (E3) |
-| P3 | **Seed / demo data** | 1:1 funding samples | Reseed with deposit/credits/rate examples per hop |
-| Later | **Retailer internet sale UX** | Partial via Transactions | Ensure sale flow explicitly consumes credits and supports retailer P&L (D4) |
+| P3 | **Nav / copy** | “Token Credits” | Align to **Internet Credits** (mock) everywhere; field **Credits to release** (E3); keep Deposit Rates and Commission Settings as sibling items |
+| P3 | **Seed / demo data** | 1:1 funding samples | Reseed with deposit/credits/rate examples per hop; keep per-retailer commission stamps on sales |
+| Later | **Retailer internet sale UX** | Partial via Transactions | Ensure sale flow explicitly consumes credits and supports retailer P&L (D4) + stamped distribution % |
 
 ### 10.2 What to change on each existing surface
 
@@ -796,24 +809,24 @@ Example at 80%: ₱800 deposit → 1,000 credits. Never “deposit + X%”.
 
 #### Transactions
 - On internet sale: debit retailer credits (D4).
-- Transaction detail: show credits consumed + customer payment + sale margin.
-- Do not show per-sale commission share lines (D3 retired).
+- Transaction detail: show credits consumed + customer payment + sale margin **and** the 4-tier commission distribution (entity, %, amount).
+- Table / CSV: keep Sale Margin (the pool) and add **Your Share**.
 
-#### Revenue + Deposit Rates
-- Deposit Rates = pricing for credit loads (60/70/80 + overrides).
-- Commission Settings = retired from product surface.
-- Revenue page: Admin load cash; Sub/Fran credit spread; Retailer sale margin.
+#### Revenue + Deposit Rates + Commission Settings
+- Deposit Rates = pricing for credit loads (60/70/80 + overrides). Unchanged.
+- Commission Settings = per-retailer sale splits (Admin + Sub-Franchisee). Do not redirect to Deposit Rates.
+- Revenue page: Internet Credits table (load cash / spread) **plus** Sales Commission table (viewer’s % of sale margin). Combined earnings = both streams. Retailer KPI = commission share, not full sale margin.
 
 #### Reports
-- Export columns: deposit ₱, credits, rate, payment ref, status, suggested vs actual credits.
-- KPIs: cash collected vs credits released; pending aging; override count; mid-tier spread (cash in − cash out for same credit face).
+- Export columns: deposit ₱, credits, rate, payment ref, status, suggested vs actual credits; transactions export includes share % and Your Share.
+- KPIs: sales commission + credit-load earnings + sales volume; cash collected vs credits released; pending aging; override count; mid-tier spread (cash in − cash out for same credit face).
 - E5: mid-tier CSV export still **decide later**.
 
 ### 10.3 Explicit non-goals for v1 (from checklist)
 - Cashless downline credit transfer (B4)
 - Hold/clarification status (C4)
 - Buyer-submitted payment reference (C6)
-- Merging credit loads into a sale commission share engine (D3 — retired)
+- Merging credit loads into the sale commission share engine (keep D3 **separate** — deposit rates do not feed the split)
 - Full accounting ledger for mid-tier spread (D2 = ops report only)
 
 ### 10.4 Suggested build order
@@ -822,9 +835,9 @@ Example at 80%: ₱800 deposit → 1,000 credits. Never “deposit + X%”.
 3. Rebuild Token Credits UI (request + approve) per role
 4. Wire Available Credits balance + block on short release (B2, E4)
 5. Disable direct transfer for credits (B4)
-6. Transactions: burn credits on internet sale (D4)
-7. Reports/KPIs split cash vs credits + mid-tier spread ops view (D2)
-8. Copy/nav rename + calculator rate label (E1–E3)
+6. Transactions: burn credits on internet sale (D4) **and** show stamped distribution %
+7. Reports/KPIs split cash vs credits + mid-tier spread ops view (D2) **and** sales commission
+8. Copy/nav rename + calculator rate label (E1–E3); keep Commission Settings beside Deposit Rates
 
 ---
 
@@ -832,4 +845,4 @@ Example at 80%: ₱800 deposit → 1,000 credits. Never “deposit + X%”.
 
 - FigJam: [eSarisari Internet Credits Initial Mockup](https://www.figma.com/board/bldr5TqWLzusJfH35nZBd1/eSarisari-Internet-Credits-Initial-Mockup?node-id=1-71)
 - Admin, Subfranchisee, Franchisee, Retailer screenshots (workspace attachments)
-- Related architecture PDF: `esarisari_onboarding_reporting_workflow.pdf` (legacy 40/60 transaction split — **retired** in favor of credit-load / spread / sale-margin economics)
+- Related architecture PDF: `esarisari_onboarding_reporting_workflow.pdf` (40/60-style transaction split). **Still in product** as Commission Settings / per-sale distribution %; it is **separate from** Internet Credits deposit-rate economics.
