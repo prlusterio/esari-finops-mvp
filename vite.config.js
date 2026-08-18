@@ -10,11 +10,14 @@ const DOCS_DIR = path.resolve(__dirname, 'docs')
 const USER_GUIDE_DOCX = path.join(DOCS_DIR, 'user-guide.docx')
 const USER_GUIDE_HTML = path.join(DOCS_DIR, 'user-guide.html')
 const USER_GUIDE_ASSETS = path.join(DOCS_DIR, 'user-guide-assets')
+const COMPUTATIONS_XLSX = path.join(DOCS_DIR, 'esari-computations.xlsx')
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.docx':
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.xlsx':
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
@@ -27,9 +30,15 @@ function safeJoin(root, relativePath) {
   return resolved
 }
 
-function sendFile(res, filePath) {
+function sendFile(res, filePath, { downloadName } = {}) {
   const ext = path.extname(filePath).toLowerCase()
   res.setHeader('Content-Type', MIME[ext] || 'application/octet-stream')
+  if (downloadName) {
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${downloadName}"`,
+    )
+  }
   createReadStream(filePath).pipe(res)
 }
 
@@ -45,6 +54,12 @@ function publishUserGuide() {
         }
         if (url === '/user-guide.docx' && existsSync(USER_GUIDE_DOCX)) {
           sendFile(res, USER_GUIDE_DOCX)
+          return
+        }
+        if (url === '/esari-computations.xlsx' && existsSync(COMPUTATIONS_XLSX)) {
+          sendFile(res, COMPUTATIONS_XLSX, {
+            downloadName: 'esari-computations.xlsx',
+          })
           return
         }
         if (url.startsWith('/user-guide-assets/')) {
@@ -65,6 +80,9 @@ function publishUserGuide() {
       }
       if (existsSync(USER_GUIDE_DOCX)) {
         copyFileSync(USER_GUIDE_DOCX, path.join(dist, 'user-guide.docx'))
+      }
+      if (existsSync(COMPUTATIONS_XLSX)) {
+        copyFileSync(COMPUTATIONS_XLSX, path.join(dist, 'esari-computations.xlsx'))
       }
       if (existsSync(USER_GUIDE_ASSETS)) {
         cpSync(USER_GUIDE_ASSETS, path.join(dist, 'user-guide-assets'), {

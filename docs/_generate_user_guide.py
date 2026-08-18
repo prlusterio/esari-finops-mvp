@@ -391,14 +391,14 @@ def build():
     )
     add_para(
         doc,
-        "A click-by-click walkthrough of how to buy Internet Credits, release them down the chain (request or Direct Release), record a customer sale, and read both earnings streams on Revenue and Reports. Admin is not covered in this version.",
+        "A click-by-click walkthrough of how to buy Internet Credits, release them down the chain (request or Direct Release), record a customer sale, and read both earnings streams on Revenue and Reports. Admin is not covered in this version. Detailed formulas are in section 1 and in the Excel workbook esari-computations.xlsx.",
         size=11,
         color=NAVY,
         space_after=10,
     )
     add_para(doc, "18 August 2026  ·  Demo environment", size=10, italic=True, color=MUTED)
     HTML.add(
-        '<p class="download"><a href="user-guide.docx">Download Word copy</a></p>'
+        '<p class="download"><a href="user-guide.docx">Download Word copy</a> · <a href="esari-computations.xlsx" download="esari-computations.xlsx">Download computations (Excel)</a></p>'
     )
 
     callout(
@@ -475,7 +475,7 @@ def build():
     heading(doc, "Internet sales — customer payment, then a split", 2)
     add_para(
         doc,
-        "In this demo, the retailer records a sale from Transactions → Record demo sale. Credits consumed are 97% of the customer payment (95% product + 2% processing). The remaining 3% is the commission pool.",
+        "In this demo, the retailer records a sale from Transactions → Record demo sale. Credits consumed are 97% of the customer payment. The remaining 3% is the commission pool.",
     )
     bullets(
         doc,
@@ -507,6 +507,108 @@ def build():
         fill="ECFDF5",
     )
 
+    heading(doc, "Detailed computations", 2)
+    add_para(
+        doc,
+        "The app always rounds peso amounts to two decimal places (ROUND to 0.01). 1 credit face = ₱1 for display. Yellow cells in the Excel workbook esari-computations.xlsx are inputs; grey cells recompute. Direct Release uses the same load formulas as a released request.",
+    )
+    add_para(
+        doc,
+        "Keep the Excel file next to this guide (docs/esari-computations.xlsx), or download it from Sign In (download Excel) or from your name menu → Download computations (Excel). Sheets, left to right: Load calculator, Sale calculator, Worked examples, Demo defaults, then Read me and All formulas.",
+    )
+
+    heading(doc, "Internet Credits loads", 3)
+    add_para(doc, "Deposit rate = cash paid ÷ credit face. Never add a percent to the cash.")
+    add_table(
+        doc,
+        ["What", "Formula", "Worked example"],
+        [
+            ["Suggested credits", "credits = ROUND(deposit ÷ rate, 2)", "₱7,000 ÷ 70% = 10,000 credits"],
+            ["Cash for 1,000 credits", "cash = ROUND(1,000 × rate, 2)", "1,000 × 80% = ₱800"],
+            ["Admin IC earnings", "cash collected on released loads", "₱600 cash for 1,000 credits at 60%"],
+            [
+                "Sub / Fran IC earnings",
+                "spread = cash in − ROUND(credits × your buy rate, 2)",
+                "₱700 − (1,000 × 60%) = ₱100",
+            ],
+        ],
+    )
+    add_para(doc, "Default hops and what the seller earns on 1,000 credits:")
+    add_table(
+        doc,
+        ["Hop", "Rate", "Cash paid", "Seller cost", "Seller IC earnings"],
+        [
+            ["Admin → Sub-Franchisee", "60%", "₱600", "— (Admin collects cash)", "₱600 cash collected"],
+            ["Sub-Franchisee → Franchisee", "70%", "₱700", "₱600 (bought at 60%)", "₱100 spread"],
+            ["Franchisee → Retailer", "80%", "₱800", "₱700 (bought at 70%)", "₱100 spread"],
+            ["Retailer → customer", "n/a (sale, not a load)", "customer payment", "credits consumed", "No load spread — commission only"],
+        ],
+    )
+    add_para(
+        doc,
+        "Guide example — Sub New Credits Request: ₱30,000 at 60% → 50,000 credits. Direct Release ₱7,000 at 70% → 10,000 credits; Sub cost ₱6,000; Sub IC earnings ₱1,000. Retailer request ₱1,600 at 80% → 2,000 credits.",
+    )
+
+    heading(doc, "Demo internet sale", 3)
+    add_para(
+        doc,
+        "Record demo sale burns Available Credits at 97% of the customer payment. If credits required are more than Available Credits, the sale is blocked.",
+    )
+    add_table(
+        doc,
+        ["Line", "Formula", "On a ₱1,000 sale"],
+        [
+            ["Credits consumed", "ROUND(payment × 97%, 2)", "₱970.00"],
+            ["Commission pool / sale margin", "ROUND(payment − credits consumed, 2)", "₱30.00"],
+        ],
+    )
+
+    heading(doc, "Commission split", 3)
+    add_para(
+        doc,
+        "Each party’s commission is ROUND(pool × their % ÷ 100, 2). Platform gets the remainder so the four shares always add up to the pool (leftover cents). When a Sub-Franchisee exists, Commission Settings keeps platform at 40% and fills Sub-Franchisee % = 100% − retailer − franchisee − platform.",
+    )
+    add_table(
+        doc,
+        ["Retailer (demo seed)", "Retailer", "Franchisee", "Sub-Franchisee", "Platform"],
+        [
+            ["Retailer A / C", "25%", "20%", "15% (remainder)", "40%"],
+            ["Retailer B", "30%", "15%", "15% (remainder)", "40%"],
+            ["New settings dialog default", "30%", "20%", "10% (remainder)", "40%"],
+        ],
+    )
+    add_table(
+        doc,
+        ["Party on a ₱1,000 Retailer A sale", "% of the ₱30 pool", "Amount"],
+        [
+            ["Retailer A", "25%", "₱7.50"],
+            ["Franchisee A", "20%", "₱6.00"],
+            ["Northern Mindanao Sub-Franchisee", "15%", "₱4.50"],
+            ["eSariSari platform (remainder)", "40%", "₱12.00"],
+            ["Total", "100%", "₱30.00"],
+        ],
+    )
+    add_para(
+        doc,
+        "Sub / Franchisee Revenue Total earnings = Internet Credits earnings (spreads in the period) + Sales Commission (credited shares in the period). Retailers have no load-spread stream — only their commission, sales volume, and credits consumed.",
+    )
+
+    heading(doc, "Available Credits and alerts", 3)
+    add_table(
+        doc,
+        ["What", "Formula", "Example"],
+        [
+            [
+                "Available Credits",
+                "opening + credits received − credits released − credits consumed on sales",
+                "Retailer A: 6,250 received − 970 consumed = ₱5,280",
+            ],
+            ["Sufficient", "available > ₱5,000", "₱5,280"],
+            ["Low Balance", "₱0 < available ≤ ₱5,000", "Retailer B ₱2,500 — amber banner"],
+            ["Zero Balance", "available ≤ ₱0", "Fresh franchisee / retailer — red banner"],
+        ],
+    )
+
     heading(doc, "2. Sign in", 1)
     add_para(doc, "Open the app and use the Sign In card. Demo accounts sit under the form.")
     shot(doc, "login.png", "Figure 1. Sign In screen with demo accounts.")
@@ -514,6 +616,7 @@ def build():
         doc,
         [
             "Open the app: https://prlusterio.github.io/esari-finops-mvp/login",
+            "Optional: at the bottom of Sign In, open the user guide, download Word, or download Excel (the computations workbook). After you sign in, the same Excel file is also under your name → Download computations (Excel).",
             "Under Demo Accounts, click Sub-Franchisee, Franchisee A, or Retailer A. That fills the email only — not the password.",
             "Type the shared demo password: password123. (Admin is marked Restricted and is not used in this guide.)",
             "Click Sign In.",
@@ -1210,6 +1313,13 @@ def build():
     OUTPUT_HTML.write_text(HTML.render(), encoding="utf-8")
     print(f"Wrote {OUTPUT}")
     print(f"Wrote {OUTPUT_HTML}")
+
+    import sys
+
+    sys.path.insert(0, str(ROOT))
+    from _generate_computations_xlsx import build as build_xlsx
+
+    build_xlsx()
 
 
 if __name__ == "__main__":

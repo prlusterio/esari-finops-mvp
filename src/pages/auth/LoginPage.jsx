@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import {
+  COMPUTATIONS_XLSX_HREF,
   DEMO_ACCOUNTS,
   DEMO_PASSWORD,
   USER_GUIDE_DOCX_HREF,
@@ -136,13 +137,20 @@ export default function LoginPage() {
             >
               Open the user guide
             </a>
-            {' '}
-            in your browser, or{' '}
+            {', '}
             <a
               href={USER_GUIDE_DOCX_HREF}
               className="font-medium text-foreground underline-offset-4 hover:underline"
             >
               download Word
+            </a>
+            {', or '}
+            <a
+              href={COMPUTATIONS_XLSX_HREF}
+              download="esari-computations.xlsx"
+              className="font-medium text-foreground underline-offset-4 hover:underline"
+            >
+              download Excel
             </a>
             .
           </p>

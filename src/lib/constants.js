@@ -142,3 +142,6 @@ export const USER_GUIDE_HREF = `${import.meta.env.BASE_URL}user-guide.html`
 
 /** Word copy of the same guide. */
 export const USER_GUIDE_DOCX_HREF = `${import.meta.env.BASE_URL}user-guide.docx`
+
+/** Workbook of app formulas (loads, spreads, demo sale, commissions). */
+export const COMPUTATIONS_XLSX_HREF = `${import.meta.env.BASE_URL}esari-computations.xlsx`

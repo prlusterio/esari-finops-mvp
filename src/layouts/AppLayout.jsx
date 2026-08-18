@@ -3,13 +3,18 @@ import { Link, Outlet, useNavigate } from 'react-router-dom'
 import {
   ChevronDown,
   BookOpen,
+  FileSpreadsheet,
   LogOut,
   Menu,
   RefreshCcw,
   UserRound,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { ROLE_LABELS, USER_GUIDE_HREF } from '@/lib/constants'
+import {
+  COMPUTATIONS_XLSX_HREF,
+  ROLE_LABELS,
+  USER_GUIDE_HREF,
+} from '@/lib/constants'
 import { SidebarNav } from '@/components/shared/SidebarNav'
 import { NotificationBell } from '@/components/shared/NotificationBell'
 import { Badge } from '@/components/ui/badge'
@@ -117,7 +122,7 @@ export default function AppLayout() {
                   <ChevronDown className="h-4 w-4 opacity-60" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuContent align="end" className="w-64">
                 <DropdownMenuLabel>
                   <div className="truncate font-medium">{user?.name}</div>
                   <div className="truncate text-xs font-normal text-muted-foreground">
@@ -140,6 +145,16 @@ export default function AppLayout() {
                   >
                     <BookOpen className="h-4 w-4" />
                     User Guide
+                  </a>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <a
+                    href={COMPUTATIONS_XLSX_HREF}
+                    download="esari-computations.xlsx"
+                    className="cursor-pointer"
+                  >
+                    <FileSpreadsheet className="h-4 w-4" />
+                    Download computations (Excel)
                   </a>
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => setResetOpen(true)}>
