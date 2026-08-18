@@ -140,7 +140,7 @@ export const ADMIN_DEMO_PASSWORD = 'abc12345678'
 /** HTML user guide on GitHub Pages / local preview. */
 export const USER_GUIDE_HREF = `${import.meta.env.BASE_URL}user-guide.html`
 
-/** Word copy of the same guide. */
+/** Word copy of the user guide. */
 export const USER_GUIDE_DOCX_HREF = `${import.meta.env.BASE_URL}user-guide.docx`
 
 /** Workbook of app formulas (loads, spreads, demo sale, commissions). */

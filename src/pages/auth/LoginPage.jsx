@@ -142,7 +142,7 @@ export default function LoginPage() {
               href={USER_GUIDE_DOCX_HREF}
               className="font-medium text-foreground underline-offset-4 hover:underline"
             >
-              download Word
+              download User Guide Word copy
             </a>
             {', or '}
             <a

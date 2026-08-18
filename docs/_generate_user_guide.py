@@ -398,7 +398,7 @@ def build():
     )
     add_para(doc, "18 August 2026  ·  Demo environment", size=10, italic=True, color=MUTED)
     HTML.add(
-        '<p class="download"><a href="user-guide.docx">Download Word copy</a> · <a href="esari-computations.xlsx" download="esari-computations.xlsx">Download computations (Excel)</a></p>'
+        '<p class="download"><a href="user-guide.docx">Download User Guide Word copy</a> · <a href="esari-computations.xlsx" download="esari-computations.xlsx">Download computations (Excel)</a></p>'
     )
 
     callout(
@@ -616,7 +616,7 @@ def build():
         doc,
         [
             "Open the app: https://prlusterio.github.io/esari-finops-mvp/login",
-            "Optional: at the bottom of Sign In, open the user guide, download Word, or download Excel (the computations workbook). After you sign in, the same Excel file is also under your name → Download computations (Excel).",
+            "Optional: at the bottom of Sign In, open the user guide, download User Guide Word copy, or download Excel (the computations workbook). After you sign in, the same Excel file is also under your name → Download computations (Excel).",
             "Under Demo Accounts, click Sub-Franchisee, Franchisee A, or Retailer A. That fills the email only — not the password.",
             "Type the shared demo password: password123. (Admin is marked Restricted and is not used in this guide.)",
             "Click Sign In.",
