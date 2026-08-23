@@ -37,6 +37,16 @@ export const STORAGE_KEYS = {
   DEPOSIT_RATES: 'esarisari_deposit_rates',
   /** Per-organization read state for in-app notifications */
   NOTIFICATION_READS: 'esarisari_notification_reads',
+  /** Admin financials dashboard collection status (upfront / monthly) */
+  FRANCHISE_COLLECTIONS: 'esarisari_franchise_collections',
+  /** Franchise onboarding step-3 revenue-split defaults */
+  ONBOARDING_REVENUE_SPLIT: 'esarisari_onboarding_revenue_split',
+  /** Franchise onboarding step-2 client type (Sub-Franchisor | Franchisee) */
+  ONBOARDING_CLIENT_TYPE: 'esarisari_onboarding_client_type',
+  /** Franchise onboarding step-1 client credentials */
+  ONBOARDING_CLIENT_INFO: 'esarisari_onboarding_client_info',
+  /** Franchise onboarding step-2 packages, fees, and territory snapshot */
+  ONBOARDING_FRANCHISE_SETUP: 'esarisari_onboarding_franchise_setup',
 }
 
 /** Bump when operating wallet seed balances change and existing demos should realign once. */
@@ -142,6 +152,12 @@ export const USER_GUIDE_HREF = `${import.meta.env.BASE_URL}user-guide.html`
 
 /** Word copy of the user guide. */
 export const USER_GUIDE_DOCX_HREF = `${import.meta.env.BASE_URL}user-guide.docx`
+
+/** HTML admin franchise-module user guide. */
+export const ADMIN_USER_GUIDE_HREF = `${import.meta.env.BASE_URL}admin-user-guide.html`
+
+/** Word copy of the admin user guide. */
+export const ADMIN_USER_GUIDE_DOCX_HREF = `${import.meta.env.BASE_URL}admin-user-guide.docx`
 
 /** Workbook of app formulas (loads, spreads, demo sale, commissions). */
 export const COMPUTATIONS_XLSX_HREF = `${import.meta.env.BASE_URL}esari-computations.xlsx`

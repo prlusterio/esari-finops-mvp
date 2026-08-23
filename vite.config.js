@@ -10,6 +10,9 @@ const DOCS_DIR = path.resolve(__dirname, 'docs')
 const USER_GUIDE_DOCX = path.join(DOCS_DIR, 'user-guide.docx')
 const USER_GUIDE_HTML = path.join(DOCS_DIR, 'user-guide.html')
 const USER_GUIDE_ASSETS = path.join(DOCS_DIR, 'user-guide-assets')
+const ADMIN_USER_GUIDE_DOCX = path.join(DOCS_DIR, 'admin-user-guide.docx')
+const ADMIN_USER_GUIDE_HTML = path.join(DOCS_DIR, 'admin-user-guide.html')
+const ADMIN_USER_GUIDE_ASSETS = path.join(DOCS_DIR, 'admin-user-guide-assets')
 const COMPUTATIONS_XLSX = path.join(DOCS_DIR, 'esari-computations.xlsx')
 
 const MIME = {
@@ -56,6 +59,14 @@ function publishUserGuide() {
           sendFile(res, USER_GUIDE_DOCX)
           return
         }
+        if (url === '/admin-user-guide.html' && existsSync(ADMIN_USER_GUIDE_HTML)) {
+          sendFile(res, ADMIN_USER_GUIDE_HTML)
+          return
+        }
+        if (url === '/admin-user-guide.docx' && existsSync(ADMIN_USER_GUIDE_DOCX)) {
+          sendFile(res, ADMIN_USER_GUIDE_DOCX)
+          return
+        }
         if (url === '/esari-computations.xlsx' && existsSync(COMPUTATIONS_XLSX)) {
           sendFile(res, COMPUTATIONS_XLSX, {
             downloadName: 'esari-computations.xlsx',
@@ -65,6 +76,14 @@ function publishUserGuide() {
         if (url.startsWith('/user-guide-assets/')) {
           const relative = url.slice('/user-guide-assets/'.length)
           const filePath = safeJoin(USER_GUIDE_ASSETS, relative)
+          if (filePath && existsSync(filePath)) {
+            sendFile(res, filePath)
+            return
+          }
+        }
+        if (url.startsWith('/admin-user-guide-assets/')) {
+          const relative = url.slice('/admin-user-guide-assets/'.length)
+          const filePath = safeJoin(ADMIN_USER_GUIDE_ASSETS, relative)
           if (filePath && existsSync(filePath)) {
             sendFile(res, filePath)
             return
@@ -86,6 +105,17 @@ function publishUserGuide() {
       }
       if (existsSync(USER_GUIDE_ASSETS)) {
         cpSync(USER_GUIDE_ASSETS, path.join(dist, 'user-guide-assets'), {
+          recursive: true,
+        })
+      }
+      if (existsSync(ADMIN_USER_GUIDE_HTML)) {
+        copyFileSync(ADMIN_USER_GUIDE_HTML, path.join(dist, 'admin-user-guide.html'))
+      }
+      if (existsSync(ADMIN_USER_GUIDE_DOCX)) {
+        copyFileSync(ADMIN_USER_GUIDE_DOCX, path.join(dist, 'admin-user-guide.docx'))
+      }
+      if (existsSync(ADMIN_USER_GUIDE_ASSETS)) {
+        cpSync(ADMIN_USER_GUIDE_ASSETS, path.join(dist, 'admin-user-guide-assets'), {
           recursive: true,
         })
       }

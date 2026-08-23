@@ -1,4 +1,14 @@
 import { STORAGE_KEYS } from '@/lib/constants'
+import {
+  DEFAULT_ONBOARDING_CLIENT_TYPE,
+  DEFAULT_ONBOARDING_FRANCHISE_SETUP,
+  DEFAULT_REVENUE_SPLIT_DEFAULTS,
+  EMPTY_ONBOARDING_CLIENT_INFO,
+  parseOnboardingClientInfo,
+  parseOnboardingClientType,
+  parseOnboardingFranchiseSetup,
+  parseOnboardingRevenueSplit,
+} from '@/lib/onboardingSetup'
 
 function safeParse(raw, fallback) {
   if (raw === null || raw === undefined) {
@@ -85,6 +95,94 @@ const revenueSharing = {
 const commissionSettings = createCollectionHelpers(STORAGE_KEYS.COMMISSION_SETTINGS)
 const depositRates = createCollectionHelpers(STORAGE_KEYS.DEPOSIT_RATES)
 
+const onboardingClientInfo = {
+  get() {
+    const result = readObjectOrArray(STORAGE_KEYS.ONBOARDING_CLIENT_INFO, null)
+    return parseOnboardingClientInfo(result.data) ?? EMPTY_ONBOARDING_CLIENT_INFO
+  },
+  save(data) {
+    const parsed = parseOnboardingClientInfo(data)
+    write(
+      STORAGE_KEYS.ONBOARDING_CLIENT_INFO,
+      parsed ?? EMPTY_ONBOARDING_CLIENT_INFO,
+    )
+  },
+  clear() {
+    localStorage.removeItem(STORAGE_KEYS.ONBOARDING_CLIENT_INFO)
+  },
+}
+
+const onboardingRevenueSplit = {
+  get() {
+    const result = readObjectOrArray(STORAGE_KEYS.ONBOARDING_REVENUE_SPLIT, null)
+    return parseOnboardingRevenueSplit(result.data) ?? DEFAULT_REVENUE_SPLIT_DEFAULTS
+  },
+  save(data) {
+    const parsed = parseOnboardingRevenueSplit(data)
+    write(
+      STORAGE_KEYS.ONBOARDING_REVENUE_SPLIT,
+      parsed ?? DEFAULT_REVENUE_SPLIT_DEFAULTS,
+    )
+  },
+  clear() {
+    localStorage.removeItem(STORAGE_KEYS.ONBOARDING_REVENUE_SPLIT)
+  },
+}
+
+const onboardingClientType = {
+  get() {
+    const result = safeParse(
+      localStorage.getItem(STORAGE_KEYS.ONBOARDING_CLIENT_TYPE),
+      DEFAULT_ONBOARDING_CLIENT_TYPE,
+    )
+    return parseOnboardingClientType(result.data)
+  },
+  save(data) {
+    write(STORAGE_KEYS.ONBOARDING_CLIENT_TYPE, parseOnboardingClientType(data))
+  },
+  clear() {
+    localStorage.removeItem(STORAGE_KEYS.ONBOARDING_CLIENT_TYPE)
+  },
+}
+
+const onboardingFranchiseSetup = {
+  get() {
+    const result = readObjectOrArray(STORAGE_KEYS.ONBOARDING_FRANCHISE_SETUP, null)
+    return parseOnboardingFranchiseSetup(result.data)
+  },
+  save(data) {
+    write(
+      STORAGE_KEYS.ONBOARDING_FRANCHISE_SETUP,
+      parseOnboardingFranchiseSetup({
+        ...DEFAULT_ONBOARDING_FRANCHISE_SETUP,
+        ...(data && typeof data === 'object' ? data : {}),
+      }),
+    )
+  },
+  clear() {
+    localStorage.removeItem(STORAGE_KEYS.ONBOARDING_FRANCHISE_SETUP)
+  },
+}
+
+const franchiseCollections = {
+  get() {
+    const result = readObjectOrArray(STORAGE_KEYS.FRANCHISE_COLLECTIONS, {})
+    if (!result.data || Array.isArray(result.data) || typeof result.data !== 'object') {
+      return {}
+    }
+    return result.data
+  },
+  save(data) {
+    write(
+      STORAGE_KEYS.FRANCHISE_COLLECTIONS,
+      data && typeof data === 'object' && !Array.isArray(data) ? data : {},
+    )
+  },
+  clear() {
+    localStorage.removeItem(STORAGE_KEYS.FRANCHISE_COLLECTIONS)
+  },
+}
+
 export function getUsers() {
   return users.get()
 }
@@ -147,6 +245,46 @@ export function getDepositRates() {
 
 export function saveDepositRates(data) {
   depositRates.save(data)
+}
+
+export function getFranchiseCollections() {
+  return franchiseCollections.get()
+}
+
+export function saveFranchiseCollections(data) {
+  franchiseCollections.save(data)
+}
+
+export function getOnboardingClientInfo() {
+  return onboardingClientInfo.get()
+}
+
+export function saveOnboardingClientInfo(data) {
+  onboardingClientInfo.save(data)
+}
+
+export function getOnboardingRevenueSplit() {
+  return onboardingRevenueSplit.get()
+}
+
+export function saveOnboardingRevenueSplit(data) {
+  onboardingRevenueSplit.save(data)
+}
+
+export function getOnboardingClientType() {
+  return onboardingClientType.get()
+}
+
+export function saveOnboardingClientType(data) {
+  onboardingClientType.save(data)
+}
+
+export function getOnboardingFranchiseSetup() {
+  return onboardingFranchiseSetup.get()
+}
+
+export function saveOnboardingFranchiseSetup(data) {
+  onboardingFranchiseSetup.save(data)
 }
 
 export function getTransactions() {
@@ -243,6 +381,11 @@ export function clearAllBusinessData() {
   localStorage.removeItem(STORAGE_KEYS.INTERNET_CREDITS_SEED_VERSION)
   localStorage.removeItem(STORAGE_KEYS.NETWORK_SEED_VERSION)
   localStorage.removeItem(STORAGE_KEYS.NOTIFICATION_READS)
+  localStorage.removeItem(STORAGE_KEYS.FRANCHISE_COLLECTIONS)
+  localStorage.removeItem(STORAGE_KEYS.ONBOARDING_REVENUE_SPLIT)
+  localStorage.removeItem(STORAGE_KEYS.ONBOARDING_CLIENT_TYPE)
+  localStorage.removeItem(STORAGE_KEYS.ONBOARDING_CLIENT_INFO)
+  localStorage.removeItem(STORAGE_KEYS.ONBOARDING_FRANCHISE_SETUP)
 }
 
 export function collectionNeedsSeed(name) {

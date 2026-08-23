@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Store } from 'lucide-react'
 import { ROLE_LABELS, ROLES } from '@/lib/constants'
 import { getNavItemsForRole } from '@/lib/permissions'
@@ -16,6 +16,7 @@ function getPlatformSubtitle(role) {
 export function SidebarNav({ role, collapsed = false, onNavigate, onToggleCollapse, showCollapse = false }) {
   const items = getNavItemsForRole(role)
   const platformSubtitle = getPlatformSubtitle(role)
+  const { pathname } = useLocation()
 
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
@@ -78,15 +79,18 @@ export function SidebarNav({ role, collapsed = false, onNavigate, onToggleCollap
               to={item.path}
               onClick={onNavigate}
               title={item.title}
-              className={({ isActive }) =>
-                cn(
+              className={({ isActive }) => {
+                const active = item.activePathPrefix
+                  ? pathname.startsWith(item.activePathPrefix)
+                  : isActive
+                return cn(
                   'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors',
                   collapsed && 'justify-center px-2',
-                  isActive
+                  active
                     ? 'bg-sidebar-active text-white'
                     : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-white',
                 )
-              }
+              }}
             >
               <Icon className="h-4 w-4 shrink-0" />
               {!collapsed && <span className="truncate">{item.title}</span>}

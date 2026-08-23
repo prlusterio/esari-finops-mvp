@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>eSariSari Admin User Guide</title>
+  <style>
+    :root {
+      --navy: #0f172a;
+      --blue: #1d4ed8;
+      --muted: #475569;
+      --line: #e2e8f0;
+      --bg: #f8fafc;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: Calibri, "Segoe UI", system-ui, sans-serif;
+      color: var(--navy);
+      background: var(--bg);
+      line-height: 1.5;
+    }
+    .wrap {
+      display: grid;
+      grid-template-columns: 16rem minmax(0, 48rem);
+      gap: 2rem;
+      max-width: 72rem;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 4rem;
+    }
+    nav {
+      position: sticky;
+      top: 1rem;
+      align-self: start;
+      max-height: calc(100vh - 2rem);
+      overflow: auto;
+      padding-right: 0.5rem;
+    }
+    nav .label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+    nav a {
+      display: block;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      padding: 0.2rem 0;
+    }
+    nav a:hover { color: var(--blue); }
+    nav .toc-h1 { font-weight: 700; color: var(--navy); margin-top: 0.6rem; }
+    nav .toc-h2 { padding-left: 0.75rem; font-size: 0.8rem; }
+    article {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      padding: 2rem 1.75rem 3rem;
+    }
+    .kicker { color: var(--blue); font-weight: 700; margin: 0; }
+    .lede { color: var(--muted); margin: 0 0 0.5rem; }
+    h1.cover { font-size: 2.25rem; margin: 0.25rem 0 0.5rem; }
+    h1 { font-size: 1.55rem; margin: 2rem 0 0.6rem; }
+    h2 { font-size: 1.2rem; margin: 1.5rem 0 0.5rem; }
+    h3 { font-size: 1.05rem; margin: 1.25rem 0 0.4rem; }
+    p { margin: 0 0 0.85rem; }
+    p.muted { color: var(--muted); font-style: italic; }
+    ol, ul { margin: 0 0 1rem; padding-left: 1.25rem; }
+    li { margin: 0.25rem 0; }
+    ol li::marker { color: var(--blue); font-weight: 700; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      margin: 0 0 1.1rem;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 0.45rem 0.55rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: var(--navy); color: #fff; font-size: 0.78rem; }
+    tr:nth-child(even) td { background: #f8fafc; }
+    .callout {
+      border: 1px solid #c7d2fe;
+      border-radius: 0.75rem;
+      padding: 0.85rem 1rem;
+      margin: 0 0 1rem;
+    }
+    .callout strong { color: var(--blue); display: block; margin-bottom: 0.25rem; }
+    figure { margin: 1rem 0 1.25rem; text-align: center; }
+    figure img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid var(--line);
+      border-radius: 0.5rem;
+    }
+    figcaption { color: var(--muted); font-size: 0.85rem; font-style: italic; margin-top: 0.4rem; }
+    .missing { color: #b45309; font-style: italic; }
+    .download { font-size: 0.9rem; margin: 0 0 1.25rem; }
+    .download a { color: var(--blue); }
+    @media (max-width: 860px) {
+      .wrap { grid-template-columns: 1fr; }
+      nav { position: static; max-height: none; }
+    }
+    @media print {
+      nav { display: none; }
+      .wrap { display: block; max-width: none; padding: 0; }
+      article { border: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav>
+      <div class="label">Contents</div>
+      <a class="toc-h1" href="#1-what-this-guide-covers">1. What this guide covers</a>
+<a class="toc-h1" href="#2-sign-in-as-admin">2. Sign in as Admin</a>
+<a class="toc-h1" href="#3-financials-dashboard">3. Financials Dashboard</a>
+<a class="toc-h2" href="#3-1-general-kpis">3.1 General KPIs</a>
+<a class="toc-h2" href="#3-2-confirm-collection">3.2 Confirm Collection</a>
+<a class="toc-h1" href="#4-clients">4. Clients</a>
+<a class="toc-h2" href="#4-1-client-list">4.1 Client list</a>
+<a class="toc-h2" href="#4-2-client-details">4.2 Client Details</a>
+<a class="toc-h1" href="#5-add-a-new-client-onboarding">5. Add a new client (onboarding)</a>
+<a class="toc-h2" href="#5-1-step-1-client-info">5.1 Step 1 — Client Info</a>
+<a class="toc-h2" href="#5-2-step-2-franchise-setup">5.2 Step 2 — Franchise Setup</a>
+<a class="toc-h2" href="#5-3-step-3-revenue-split">5.3 Step 3 — Revenue Split</a>
+<a class="toc-h2" href="#5-4-step-4-review">5.4 Step 4 — Review</a>
+<a class="toc-h1" href="#6-reset-demo-data-and-logout">6. Reset Demo Data and logout</a>
+<a class="toc-h2" href="#6-1-reset-demo-data">6.1 Reset Demo Data</a>
+<a class="toc-h2" href="#6-2-logout">6.2 Logout</a>
+<a class="toc-h1" href="#7-field-meanings">7. Field meanings</a>
+<a class="toc-h1" href="#8-common-mistakes">8. Common mistakes</a>
+    </nav>
+    <article>
+      <p class="kicker" style="font-weight:700">eSariSari</p>
+<p class="lede">Franchise financial operations platform</p>
+<h1 class="cover">Admin User Guide</h1>
+<p class="kicker" style="font-weight:600">Platform Admin  ·  Financials Dashboard  ·  Clients</p>
+<p>A click-by-click walkthrough of the Admin franchise module: sign in, read the Financials Dashboard, confirm collections, open seeded clients, and add a new client through the four-step onboarding wizard. Internet Credits, wallets, sales, and downline roles are covered in the separate User Guide — not in this document.</p>
+<p class="muted">24 August 2026  ·  Demo environment</p>
+<p class="download"><a href="admin-user-guide.docx">Download Admin User Guide Word copy</a> · <a href="user-guide.html">Open the Internet Credits User Guide</a></p>
+<div class="callout" style="background:#eef2ff"><strong>About this demo</strong>This is a browser-only demo. Data lives in localStorage. There is no backend. Reset Demo Data restores the seeded client portfolio and clears onboarding drafts and collection marks. Screenshots show layout; peso amounts change as you confirm collections.</div>
+<h1 id="1-what-this-guide-covers">1. What this guide covers</h1>
+<p>Use this guide when you are signed in as Platform Admin. The Admin home page is the Financials Dashboard. Clients is the franchise portfolio and the entry point for onboarding.</p>
+<table><thead><tr><th>In this guide</th><th>Not in this guide</th></tr></thead><tbody><tr><td>Financials Dashboard KPIs and Confirm Collection</td><td>Internet Credits loads, Direct Release, and deposit rates</td></tr><tr><td>Clients list, client details, and shared collection history</td><td>Recording a retailer demo sale or reading Sales Commission</td></tr><tr><td>Add New Client — Client Info, Franchise Setup, Revenue Split, Review</td><td>Sub-Franchisee, Franchisee, and Retailer day-to-day screens</td></tr></tbody></table>
+<div class="callout" style="background:#ecfdf5"><strong>Two separate user guides</strong>Open User Guide (or user-guide.html) for Internet Credits and the Sub / Fran / Retailer walkthrough. Open Admin User Guide (this file) for franchise setup, collections, and onboarding.</div>
+<h1 id="2-sign-in-as-admin">2. Sign in as Admin</h1>
+<p>The Admin demo account is marked Restricted on the Sign In page. Clicking a demo account fills the email only — you still type the password.</p>
+<table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Email</td><td>admin@esarisari.local</td></tr><tr><td>Password</td><td>abc12345678</td></tr><tr><td>Other demo accounts</td><td>password123</td></tr></tbody></table>
+<ol><li>Open the app and stay on Sign In.</li><li>Under Demo Accounts, click Admin (Restricted).</li><li>Type abc12345678 in Password. Do not use password123 for Admin.</li><li>Click Sign In.</li></ol>
+<figure><img src="admin-user-guide-assets/admin-01-login.png" alt="Sign In with the Restricted Admin demo account selected." /><figcaption>Sign In with the Restricted Admin demo account selected.</figcaption></figure>
+<p>After a successful sign-in you land on Financials Dashboard. The sidebar for Admin is Dashboard, Clients, Wallets, Internet Credits, Deposit Rates, Commission Settings, Transactions, Revenue, and Reports. Franchises and Organizations are not in the sidebar.</p>
+<h1 id="3-financials-dashboard">3. Financials Dashboard</h1>
+<p>Dashboard is the Admin home. It tracks setup fees and monthly collections for the seeded franchise portfolio. Open Franchise Setup in the page header jumps to onboarding step 1 (same wizard as Add New Client).</p>
+<figure><img src="admin-user-guide-assets/admin-02-dashboard.png" alt="Financials Dashboard — General KPIs, commitments by status, and collections." /><figcaption>Financials Dashboard — General KPIs, commitments by status, and collections.</figcaption></figure>
+<h2 id="3-1-general-kpis">3.1 General KPIs</h2>
+<table><thead><tr><th>Card</th><th>What it means</th></tr></thead><tbody><tr><td>Active Upfront</td><td>One-time setup due from Activated clients, plus how many of those upfront items are already collected.</td></tr><tr><td>Active Billable Monthly</td><td>Fixed monthly fees due from Activated clients for the selected month. Cost-deduction-only and % of gross sales items are not in this billable total.</td></tr><tr><td>Activated Portfolio</td><td>Count of Activated clients and their configured upfront / monthly commitments.</td></tr><tr><td>Coverage</td><td>Territory and area count across the portfolio, including territories still missing a boundary.</td></tr></tbody></table>
+<p>Financial Commitments by Status groups the same configured amounts by activation status (Activated, Pending Activation, In Progress, Pending Review). Only Activated accounts can receive Confirm Collection.</p>
+<h2 id="3-2-confirm-collection">3.2 Confirm Collection</h2>
+<p>Collections Overview and the collections tables show Activated accounts only. Use Confirm Collection on an Upfront or Billable monthly row to record cash received.</p>
+<ol><li>Stay on Financials Dashboard.</li><li>Find an Activated row that still shows Confirm Collection (not the Collected badge).</li><li>Click Confirm Collection.</li><li>For upfront: enter the amount collected. Partial payments are saved. The row is marked Collected only when the full upfront amount is covered.</li><li>For monthly: choose the start period if needed, enter the amount, then confirm. Extra cash can roll into later months.</li><li>Click Confirm Collection in the dialog. Cancel leaves the ledger unchanged.</li></ol>
+<figure><img src="admin-user-guide-assets/admin-03-dashboard-confirm.png" alt="Confirm Collection dialog — amount collected, remaining due, and applied preview." /><figcaption>Confirm Collection dialog — amount collected, remaining due, and applied preview.</figcaption></figure>
+<div class="callout" style="background:#eef2ff"><strong>Shared with Client Details</strong>Dashboard collection marks are stored in the same localStorage key as Client Details (esarisari_franchise_collections). Confirming a payment on one screen updates the other after a refresh or navigation.</div>
+<h1 id="4-clients">4. Clients</h1>
+<p>Open Clients in the sidebar. This is the franchise / sub-franchise portfolio. Seeded demo rows include Surigao City Service Hub (Activated Sub-Franchisor) and Siargao General Luna Operator (Franchisee, still in progress).</p>
+<figure><img src="admin-user-guide-assets/admin-04-clients.png" alt="Clients list — type, status, territories, upfront, billable monthly, and revenue split." /><figcaption>Clients list — type, status, territories, upfront, billable monthly, and revenue split.</figcaption></figure>
+<h2 id="4-1-client-list">4.1 Client list</h2>
+<table><thead><tr><th>Column</th><th>Meaning</th></tr></thead><tbody><tr><td>Client</td><td>Display name and last-updated time.</td></tr><tr><td>Type</td><td>Sub-Franchisor or Franchisee.</td></tr><tr><td>Status</td><td>Activated, Pending Activation, Pending Review, or In Progress.</td></tr><tr><td>Territories</td><td>Count of assigned coverage territories.</td></tr><tr><td>Upfront Setup</td><td>Package unit fees plus enabled one-time fees.</td></tr><tr><td>Billable Monthly</td><td>Fixed monthly fees that are billed (excludes cost-deduction-only and % gross sales).</td></tr><tr><td>Revenue Split</td><td>Company % + this client %. A valid split shows 100%. Downline shares are not set by admin.</td></tr></tbody></table>
+<ol><li>Click View on a row to open Client Details.</li><li>Click Add New Client to start the onboarding wizard at Client Info (step 1).</li></ol>
+<h2 id="4-2-client-details">4.2 Client Details</h2>
+<p>Client Details shows setup, fees, territories, the revenue-split math, and — for Activated clients — a financial history you can collect against.</p>
+<figure><img src="admin-user-guide-assets/admin-05-client-detail.png" alt="Client Details for an Activated account — setup totals, split, and history." /><figcaption>Client Details for an Activated account — setup totals, split, and history.</figcaption></figure>
+<ul><li>Upfront Setup, Billable Fixed Monthly, and Revenue Split cards summarize the configured deal.</li><li>Revenue Split Breakdown starts from a demo gross sale, subtracts monthly fees tagged as cost deductions, then applies the company vs this-client split to net revenue.</li><li>Financial History (Activated only) lists unpaid and collected items. Confirm Collection here requires an amount and a payment reference.</li><li>Use the date filters to narrow history. Back to Clients returns to the list.</li></ul>
+<h1 id="5-add-a-new-client-onboarding">5. Add a new client (onboarding)</h1>
+<p>Onboarding is four steps. Each step saves to localStorage as you type or change a control, so Back and Continue keep your draft. Reset Demo Data clears the draft.</p>
+<table><thead><tr><th>Step</th><th>Screen</th><th>Saves</th></tr></thead><tbody><tr><td>1</td><td>Client Info</td><td>Admin login, company profile, optional contact person</td></tr><tr><td>2</td><td>Franchise Setup</td><td>Client type, packages, one-time fees, monthly fees, territory</td></tr><tr><td>3</td><td>Revenue Split</td><td>Company vs this client only. Downline shares are not set here.</td></tr><tr><td>4</td><td>Review</td><td>Read-only summary, then Create Franchisee</td></tr></tbody></table>
+<p>Start from Clients → Add New Client, or from Financials Dashboard → Open Franchise Setup. Both open step 1.</p>
+<h2 id="5-1-step-1-client-info">5.1 Step 1 — Client Info</h2>
+<p>Enter the client admin login, the legal company profile, and an optional operations contact. Continue to Step 2 is blocked until required fields pass validation.</p>
+<figure><img src="admin-user-guide-assets/admin-06-onboarding-step-1.png" alt="Client Info — Admin Profile, Company Profile, and Contact Person." /><figcaption>Client Info — Admin Profile, Company Profile, and Contact Person.</figcaption></figure>
+<table><thead><tr><th>Section</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td>Admin Profile</td><td>First name, last name, email, password, confirm password</td><td>Password must be at least 8 characters and must match confirm.</td></tr><tr><td>Company Profile</td><td>Name, registration number, corporate email, address 1, address 2, city, state/province/region, country, postal/ZIP</td><td>Postal/ZIP is 1–5 digits. Tax ID and company phone are optional.</td></tr><tr><td>Contact Person</td><td>None</td><td>Full name, email, and phone are optional.</td></tr></tbody></table>
+<ol><li>Fill Admin Profile and Company Profile.</li><li>Add a Contact Person if you have one.</li><li>Click Continue to Step 2. Fix any red field messages before the wizard advances.</li></ol>
+<h2 id="5-2-step-2-franchise-setup">5.2 Step 2 — Franchise Setup</h2>
+<p>Choose whether this client is a Sub-Franchisor or a Franchisee, then configure packages, fees, and coverage.</p>
+<figure><img src="admin-user-guide-assets/admin-07-onboarding-step-2.png" alt="Franchise Setup — client type, packages, fees, and territory." /><figcaption>Franchise Setup — client type, packages, fees, and territory.</figcaption></figure>
+<ul><li>Client type: Sub-Franchisor oversees franchisees in a territory. Franchisee operates units. This choice only changes the client label on step 3 (Sub-franchisor vs Franchisee).</li><li>Packages: eNeighborhood (₱20,000 / unit), eBarangay (₱200,000 / unit), eLGU (₱2,000,000 / unit). Set quantity and a primary package.</li><li>One-time fees default to Franchise Fee, Setup &amp; Training, and Legal &amp; Documentation. Toggle or edit amounts. Enabled fees roll into upfront due.</li><li>Monthly operational fees can be Fixed monthly, % of gross sales, or cost deductions. Billable monthly on Dashboard / Clients excludes cost-deduction-only and % gross sales lines.</li><li>Territory and areas assign coverage. A missing boundary is flagged on the Dashboard Coverage card for seeded clients.</li></ul>
+<ol><li>Select Sub-Franchisor or Franchisee.</li><li>Adjust package quantities and the primary package if needed.</li><li>Review one-time and monthly fees.</li><li>Select a territory and areas.</li><li>Click Continue to Step 3. Use Back to Client Info if you need to change the company record.</li></ol>
+<h2 id="5-3-step-3-revenue-split">5.3 Step 3 — Revenue Split</h2>
+<p>Admin sets only the contract between eSariSari (company) and this client. Changing one percentage fills the other so the two always add up to 100%. Downline shares are not editable here.</p>
+<figure><img src="admin-user-guide-assets/admin-08-onboarding-step-3.png" alt="Revenue Split — company vs this client only." /><figcaption>Revenue Split — company vs this client only.</figcaption></figure>
+<table><thead><tr><th>Client type</th><th>Admin sets</th><th>Not set by admin</th></tr></thead><tbody><tr><td>Sub-Franchisor</td><td>Company % and this sub-franchisor %</td><td>Franchisee and retailer shares (sub-franchisor → franchisee → retailers)</td></tr><tr><td>Franchisee</td><td>Company % and this franchisee %</td><td>Retailer shares (franchisee → retailers)</td></tr></tbody></table>
+<ol><li>Edit Company or the client share. The other value updates so the total stays 100%.</li><li>Default is Company 40% / client 60%. Use Reset defaults to restore that.</li><li>Click Continue to Review.</li></ol>
+<h2 id="5-4-step-4-review">5.4 Step 4 — Review</h2>
+<p>Review is read-only. Each card has an Edit link back to the step that owns those fields. Check client type, admin and company profile, packages, territory, fees, and the split bar.</p>
+<figure><img src="admin-user-guide-assets/admin-09-onboarding-step-4.png" alt="Review — confirm the draft, then Create Franchisee." /><figcaption>Review — confirm the draft, then Create Franchisee.</figcaption></figure>
+<ol><li>Scan every card. Use Edit if a value is wrong.</li><li>Click Create Franchisee.</li><li>If Client Info is incomplete or the split is not 100%, fix the message and try again.</li><li>On success the button becomes Franchisee created and a green note appears.</li></ol>
+<div class="callout" style="background:#fef3c7"><strong>Demo limit</strong>Create Franchisee confirms the review in this session only. The new client is not written into the Clients list or the Financials Dashboard portfolio. Seeded clients stay as they are. Saving a new client into the live portfolio is not wired in this demo yet.</div>
+<h1 id="6-reset-demo-data-and-logout">6. Reset Demo Data and logout</h1>
+<figure><img src="admin-user-guide-assets/admin-10-user-menu.png" alt="Name menu — Profile, both user guides, Reset Demo Data, and Logout." /><figcaption>Name menu — Profile, both user guides, Reset Demo Data, and Logout.</figcaption></figure>
+<p>Open your name at the top right. Admin sees User Guide (Internet Credits) and Admin User Guide (this document), plus Download computations (Excel), Reset Demo Data, Profile, and Logout.</p>
+<h2 id="6-1-reset-demo-data">6.1 Reset Demo Data</h2>
+<p>Reset restores the seeded network, wallets, empty Internet Credits / sales history, the seeded client portfolio, and collection marks. It also clears the onboarding draft (client info, franchise setup, and revenue split).</p>
+<ol><li>Click your name at the top right.</li><li>Click Reset Demo Data.</li><li>Confirm Reset Demo Data in the dialog.</li></ol>
+<div class="callout" style="background:#eef2ff"><strong>Training tip</strong>Reset before a live walkthrough so Dashboard collections and the onboarding draft match this guide. Do not reset mid-demo unless you intend to wipe the session.</div>
+<h2 id="6-2-logout">6.2 Logout</h2>
+<ol><li>Click your name at the top right.</li><li>Click Logout.</li><li>Sign in again as Admin, or use another demo account for the Internet Credits guide.</li></ol>
+<h1 id="7-field-meanings">7. Field meanings</h1>
+<table><thead><tr><th>Term</th><th>Meaning</th></tr></thead><tbody><tr><td>Activated</td><td>Client is live. Dashboard and Client Details can Confirm Collection.</td></tr><tr><td>Upfront / one-time</td><td>Package unit fees plus enabled one-time franchise fees.</td></tr><tr><td>Billable fixed monthly</td><td>Monthly fees billed as a peso amount. Excludes cost-deduction-only and % of gross sales.</td></tr><tr><td>Cost deduction</td><td>A monthly fee subtracted from gross sales before the revenue split.</td></tr><tr><td>% of gross sales</td><td>A fee expressed as a percent of sales. Tracked on the client record; not in the billable monthly KPI.</td></tr><tr><td>Revenue split</td><td>Company + this client. Must equal 100%. Downline retailer / franchisee shares are set by the client.</td></tr><tr><td>Net revenue for sharing</td><td>Demo gross sale minus standard cost deductions.</td></tr></tbody></table>
+<h1 id="8-common-mistakes">8. Common mistakes</h1>
+<ul><li>Using password123 on the Admin account — Admin is Restricted and uses abc12345678.</li><li>Looking for Franchises or Organizations in the sidebar — those items were removed. Use Clients.</li><li>Expecting Confirm Collection on a non-Activated client — only Activated rows can be collected.</li><li>Treating Create Franchisee as a new row on Clients — the demo confirms the review only; the portfolio stays seeded.</li><li>Trying to set retailer or franchisee downline shares on step 3 — those belong to the client, not platform admin.</li><li>Mixing this guide with Internet Credits work — loads, sales, and commissions are in the other User Guide.</li><li>Using Reset Demo Data during a live collection walkthrough — it wipes payment marks and the onboarding draft.</li></ul>
+<p class="muted">This guide matches the eSariSari Admin module as of 24 August 2026. It does not replace the Internet Credits User Guide. Screenshots are layout references; live numbers depend on collections you confirm in this session.</p>
+    </article>
+  </div>
+</body>
+</html>

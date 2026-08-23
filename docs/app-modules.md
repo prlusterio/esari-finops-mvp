@@ -86,19 +86,19 @@ Read state is per organization in `localStorage`.
 
 | Role | Lands on |
 |------|----------|
-| Admin | `/wallets` |
+| Admin | `/dashboard` |
 | Sub-Franchisee | `/wallet-management` |
 | Franchisee | `/wallet-management` |
 | Retailer | `/wallet` |
 
 ### Nav vs routes
 
-Greyed-out items stay visible but `canAccessRoute` blocks them. Dashboard exists as a page with role-specific cards, but it is disabled for **every** role including Admin, and the route is Admin-only — so it is unreachable in v1.
+Greyed-out items stay visible but `canAccessRoute` blocks them. Dashboard is Admin-only and live as the Financials Dashboard (franchise setup fees and collections). Other roles still see a greyed Dashboard item.
 
 | Nav item | Path | Who sees it | Live? |
 |----------|------|-------------|-------|
-| Dashboard | `/dashboard` | All (greyed) | No — disabled |
-| Organizations | `/organizations` | Admin (greyed) | No — placeholder |
+| Dashboard | `/dashboard` | Admin live; Sub/Fran/Retailer greyed | Yes — Admin Financials Dashboard |
+| Clients | `/franchise-setup/clients` | Admin | Yes — list + details; **Add New Client** opens onboarding (`/franchise-setup/onboarding/step-1` … `/step-4`) |
 | Franchisees | `/franchisees` | Sub (greyed) | No — no route; page file is a placeholder |
 | Retailers | `/retailers` | Fran (greyed) | No — placeholder; route exists but blocked |
 | Wallets | `/wallets` | Admin | Yes |
@@ -269,12 +269,43 @@ Network tables (Admin/Sub/Fran as scoped): Franchisee Commissions and Retailer C
 
 | Surface | Status |
 |---------|--------|
-| Dashboard page | Built, **nav-disabled for all roles**, Admin-only route also blocked by `disabledRoles` |
-| Organizations | Placeholder copy only; nav disabled |
+| Organizations | Placeholder copy only; removed from sidebar nav |
 | Franchisees | Placeholder file; **no route** in `AppRoutes.jsx`; nav disabled |
 | Retailers | Placeholder; route exists, nav disabled so unreachable |
 | `SubFranchiseeFundingPage.jsx` | Deprecated wrapper around FundingWorkspacePage |
 | `RevenueSharingPage.jsx` | Orphan; `/revenue-sharing` redirects to Commission Settings |
+
+---
+
+### 4.9 Financials Dashboard (`/dashboard`)
+
+**Who:** Admin. This is now the Admin home path.
+
+**Purpose:** Franchise setup fee collections for the new business model — upfront package/one-time fees and billable fixed monthly fees. Cost-deduction monthly items are excluded from collection.
+
+Demo portfolio lives in `src/data/franchiseFinancials.js`. Collection status (partial and full) persists in `localStorage` (`esarisari_franchise_collections`) and resets with Reset Demo Data. The Clients detail page reads and writes this same ledger for upfront and billable monthly collections.
+
+KPIs: active upfront, active billable monthly, activated portfolio, coverage. Tables: commitments by status, top upfront, top monthly. Confirm Collection dialogs apply partial payments and can roll monthly amounts into future periods. Header action **Open Franchise Setup** still goes to `/franchise-setup/onboarding/step-1`. The sidebar **Franchises** item is removed; onboarding starts from Clients via **Add New Client**.
+
+---
+
+### 4.10 Franchise Setup (`/franchise-setup/onboarding/step-1` … `/step-4`)
+
+**Who:** Admin.
+
+**Purpose:** Port of franchise-portal / admin-v3 client onboarding. Step 1 (Client Info) collects admin credentials, company profile, and contact person. Step 2 is franchise setup — client type, package units, territories/areas, one-time fees, and monthly/operational fees. Step 3 is Revenue Sharing — **company vs this client only** (must total 100%). Admin does not set downline shares (sub-franchisor → franchisee → retailers, or franchisee → retailers). Step 4 is Review — confirmation of client type, profiles, packages, territory, fees, and the two-way split, with Create Franchisee.
+
+Client Info persists in `localStorage` (`esarisari_onboarding_client_info`). Client type persists in `esarisari_onboarding_client_type`. Franchise setup snapshot persists in `esarisari_onboarding_franchise_setup`. Revenue-split defaults persist in `esarisari_onboarding_revenue_split`. All four reset with Reset Demo Data. Create Franchisee confirms the review in-session; it does not yet write the new client into the live Clients portfolio.
+
+---
+
+### 4.11 Clients (`/franchise-setup/clients`)
+
+**Who:** Admin.
+
+**Purpose:** Port of franchise-portal Clients list and Client Details. List shows the demo portfolio (upfront, billable monthly, company vs client split). Header action **Add New Client** opens onboarding at `/franchise-setup/onboarding/step-1`. Details show the admin revenue-split breakdown (company vs this client), financial history for activated accounts, Confirm Collection, and territories.
+
+Unknown client IDs show a not-found state. Upfront and billable monthly Confirm Collection writes the same `esarisari_franchise_collections` ledger as the Financials Dashboard, so both screens stay in sync (including Reset Demo Data). Gross sale / cost / payout confirms are stored on that same record as `historyPayments` and are not shown on the dashboard.
 
 ---
 
@@ -335,7 +366,7 @@ Verified leftovers — documented so they are not treated as product:
 |------|--------|
 | Reverse after release | UI off; helper still in `fundingActions.js` |
 | Transfer History tab | Off; Direct Release history is on existing IC tabs |
-| Dashboard / org / franchisee / retailer management | Nav stubs or placeholders |
+| Dashboard / org / franchisee / retailer management | Org / franchisee / retailer remain stubs; Admin Dashboard is live |
 | Buyer-submitted payment reference | Upline enters payment ref on release |
 | Hold / clarification status | Reject only |
 | User guide `.docx` | Regenerated 2026-08-18; screenshots may still show older sample rows |

@@ -10,6 +10,7 @@ import {
   Banknote,
   Percent,
   PieChart,
+  Users,
 } from 'lucide-react'
 import { ROLES } from './constants'
 
@@ -24,19 +25,14 @@ export const NAV_ITEMS = [
     path: '/dashboard',
     icon: LayoutDashboard,
     roles: [ROLES.ADMIN, ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE, ROLES.RETAILER],
-    disabledRoles: [
-      ROLES.ADMIN,
-      ROLES.SUBFRANCHISEE,
-      ROLES.FRANCHISEE,
-      ROLES.RETAILER,
-    ],
+    disabledRoles: [ROLES.SUBFRANCHISEE, ROLES.FRANCHISEE, ROLES.RETAILER],
   },
   {
-    title: 'Organizations',
-    path: '/organizations',
-    icon: Building2,
+    title: 'Clients',
+    path: '/franchise-setup/clients',
+    activePathPrefix: '/franchise-setup',
+    icon: Users,
     roles: [ROLES.ADMIN],
-    disabled: true,
   },
   {
     title: 'Franchisees',

@@ -10,6 +10,12 @@ import HomeRedirect from '@/routes/HomeRedirect'
 import LoginPage from '@/pages/auth/LoginPage'
 import DashboardPage from '@/pages/dashboard/DashboardPage'
 import OrganizationsPage from '@/pages/organizations/OrganizationsPage'
+import OnboardingStep1Page from '@/pages/onboarding/OnboardingStep1Page'
+import OnboardingStep2Page from '@/pages/onboarding/OnboardingStep2Page'
+import OnboardingStep3Page from '@/pages/onboarding/OnboardingStep3Page'
+import OnboardingStep4Page from '@/pages/onboarding/OnboardingStep4Page'
+import ClientsPage from '@/pages/clients/ClientsPage'
+import ClientDetailPage from '@/pages/clients/ClientDetailPage'
 import WalletsPage from '@/pages/wallets/WalletsPage'
 import WalletManagementPage from '@/pages/wallets/WalletManagementPage'
 import WalletPage from '@/pages/wallet/WalletPage'
@@ -61,6 +67,44 @@ export default function AppRoutes() {
 
           <Route element={<RoleRoute roles={[ROLES.ADMIN]} path="/organizations" />}>
             <Route path="/organizations" element={<OrganizationsPage />} />
+          </Route>
+
+          <Route
+            element={
+              <RoleRoute
+                roles={[ROLES.ADMIN]}
+                path="/franchise-setup/clients"
+              />
+            }
+          >
+            <Route
+              path="/franchise-setup/onboarding/step-1"
+              element={<OnboardingStep1Page />}
+            />
+            <Route
+              path="/franchise-setup/onboarding/step-2"
+              element={<OnboardingStep2Page />}
+            />
+            <Route
+              path="/franchise-setup/onboarding/step-3"
+              element={<OnboardingStep3Page />}
+            />
+            <Route
+              path="/franchise-setup/onboarding/step-4"
+              element={<OnboardingStep4Page />}
+            />
+          </Route>
+
+          <Route
+            element={
+              <RoleRoute roles={[ROLES.ADMIN]} path="/franchise-setup/clients" />
+            }
+          >
+            <Route path="/franchise-setup/clients" element={<ClientsPage />} />
+            <Route
+              path="/franchise-setup/clients/:clientId"
+              element={<ClientDetailPage />}
+            />
           </Route>
 
           <Route element={<RoleRoute roles={[ROLES.ADMIN]} path="/wallets" />}>

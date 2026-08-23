@@ -11,8 +11,10 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import {
+  ADMIN_USER_GUIDE_HREF,
   COMPUTATIONS_XLSX_HREF,
   ROLE_LABELS,
+  ROLES,
   USER_GUIDE_HREF,
 } from '@/lib/constants'
 import { SidebarNav } from '@/components/shared/SidebarNav'
@@ -147,6 +149,19 @@ export default function AppLayout() {
                     User Guide
                   </a>
                 </DropdownMenuItem>
+                {user?.role === ROLES.ADMIN ? (
+                  <DropdownMenuItem asChild>
+                    <a
+                      href={ADMIN_USER_GUIDE_HREF}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="cursor-pointer"
+                    >
+                      <BookOpen className="h-4 w-4" />
+                      Admin User Guide
+                    </a>
+                  </DropdownMenuItem>
+                ) : null}
                 <DropdownMenuItem asChild>
                   <a
                     href={COMPUTATIONS_XLSX_HREF}

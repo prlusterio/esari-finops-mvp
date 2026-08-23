@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import {
+  ADMIN_USER_GUIDE_DOCX_HREF,
+  ADMIN_USER_GUIDE_HREF,
   COMPUTATIONS_XLSX_HREF,
   DEMO_ACCOUNTS,
   DEMO_PASSWORD,
@@ -151,6 +153,25 @@ export default function LoginPage() {
               className="font-medium text-foreground underline-offset-4 hover:underline"
             >
               download Excel
+            </a>
+            .
+          </p>
+          <p className="mt-2 text-center text-xs text-muted-foreground">
+            Admin franchise setup:{' '}
+            <a
+              href={ADMIN_USER_GUIDE_HREF}
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-foreground underline-offset-4 hover:underline"
+            >
+              Open the admin user guide
+            </a>
+            {', or '}
+            <a
+              href={ADMIN_USER_GUIDE_DOCX_HREF}
+              className="font-medium text-foreground underline-offset-4 hover:underline"
+            >
+              download Admin User Guide Word copy
             </a>
             .
           </p>
