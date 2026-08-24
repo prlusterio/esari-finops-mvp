@@ -144,6 +144,23 @@ async function main() {
   await page.waitForTimeout(400)
   await shot(page, 'admin-09-onboarding-step-4.png', { fullPage: true })
 
+  await page.getByRole('button', { name: 'Create Franchisee' }).click()
+  await page.waitForURL('**/franchise-setup/clients')
+  await page.waitForTimeout(400)
+  await shot(page, 'admin-11-registered-client.png', { fullPage: true })
+  await shot(page, 'admin-04-clients.png', { fullPage: true })
+
+  await page.getByRole('link', { name: 'View' }).first().click()
+  await page.waitForURL('**/franchise-setup/clients/**')
+  await page.waitForTimeout(400)
+  await shot(page, 'admin-12-registered-client-detail.png', { fullPage: true })
+
+  await page.getByRole('button', { name: 'Activate Client' }).first().click()
+  await page.waitForTimeout(300)
+  await shot(page, 'admin-13-activate-client.png')
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Activate Client' }).click()
+  await page.waitForTimeout(400)
+
   await gotoPath(page, '/dashboard')
   await openUserMenu(page)
   await page.waitForTimeout(200)

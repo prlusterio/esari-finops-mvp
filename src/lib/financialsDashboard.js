@@ -1,5 +1,6 @@
 import { mockFranchises } from '@/data/franchiseFinancials'
 import { formatCurrency } from '@/lib/currency'
+import { getClientStatusOverrides, getRegisteredClients } from '@/services/storage'
 
 export const FRANCHISE_STATUS_ORDER = [
   'Activated',
@@ -23,8 +24,22 @@ const MOCK_MONTHLY_COLLECTED_IDS = new Set([
   'fr_sdn_sm_008',
 ])
 
+export function applyClientStatusOverride(franchise, overrides = getClientStatusOverrides()) {
+  const patch = overrides[franchise?.id]
+  if (!patch) return franchise
+  return {
+    ...franchise,
+    status: patch.status || franchise.status,
+    activatedAt: patch.activatedAt || franchise.activatedAt,
+    updatedAt: patch.updatedAt || franchise.updatedAt,
+  }
+}
+
 export function getFranchisePortfolio() {
-  return mockFranchises
+  const overrides = getClientStatusOverrides()
+  return [...getRegisteredClients(), ...mockFranchises].map((franchise) =>
+    applyClientStatusOverride(franchise, overrides),
+  )
 }
 
 export function isBillableFee(fee) {

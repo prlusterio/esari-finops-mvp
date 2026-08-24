@@ -206,7 +206,7 @@ These % are **stamped on the sale**. Changing settings later does not rewrite co
 
 ### 4.5 Transactions (`/transactions`)
 
-**Title:** Transactions Ledger. Completed sales only.
+**Title:** Transactions Ledger. Completed sales only. Admin sees a scope notice: this page is Internet Credits + sales commissions, not franchise setup collections (those stay on Financials Dashboard and Clients).
 
 **Retailer only:** **Record demo sale** — product/service + customer payment. Credits consumed = 95% product cost + 2% processing = **97%** of payment. Commission pool = remaining **3%**. Sale is blocked if Available Credits &lt; credits consumed. Shares come from that retailer’s Active Commission Settings (or the 30/20/10/40 default).
 
@@ -220,7 +220,7 @@ Transaction details: payment, credits consumed, sale margin, 4-tier distribution
 
 ### 4.6 Revenue (`/revenue`)
 
-Default period: this month. Search + date filters.
+Default period: this month. Search + date filters. Same Admin scope notice as Transactions: franchise setup collections are not on this page yet.
 
 **Admin / Sub / Fran cards:** Internet Credits earnings → Sales Commission → Total earnings.
 
@@ -241,7 +241,7 @@ The Internet Credits table has `id="internet-credits"`. Reports can open this pa
 
 ### 4.7 Reports (`/reports`)
 
-Default period: this month. Admin/Sub: network franchisee filters. Fran: retailer filter.
+Default period: this month. Admin/Sub: network franchisee filters. Fran: retailer filter. Same Admin scope notice as Transactions and Revenue.
 
 **Hero cards (Admin / Sub / Fran):** Internet Credits earnings → Sales Commission → Total earnings → Sales Volume.
 
@@ -295,7 +295,7 @@ KPIs: active upfront, active billable monthly, activated portfolio, coverage. Ta
 
 **Purpose:** Port of franchise-portal / admin-v3 client onboarding. Step 1 (Client Info) collects admin credentials, company profile, and contact person. Step 2 is franchise setup — client type, package units, territories/areas, one-time fees, and monthly/operational fees. Step 3 is Revenue Sharing — **company vs this client only** (must total 100%). Admin does not set downline shares (sub-franchisor → franchisee → retailers, or franchisee → retailers). Step 4 is Review — confirmation of client type, profiles, packages, territory, fees, and the two-way split, with Create Franchisee.
 
-Client Info persists in `localStorage` (`esarisari_onboarding_client_info`). Client type persists in `esarisari_onboarding_client_type`. Franchise setup snapshot persists in `esarisari_onboarding_franchise_setup`. Revenue-split defaults persist in `esarisari_onboarding_revenue_split`. All four reset with Reset Demo Data. Create Franchisee confirms the review in-session; it does not yet write the new client into the live Clients portfolio.
+Client Info persists in `localStorage` (`esarisari_onboarding_client_info`). Client type persists in `esarisari_onboarding_client_type`. Franchise setup snapshot persists in `esarisari_onboarding_franchise_setup`. Revenue-split defaults persist in `esarisari_onboarding_revenue_split`. Create Franchisee writes the client into `esarisari_registered_clients` and shows it at the top of the Clients list (and on the Financials Dashboard). Registered clients start as Pending Review. Activate Client on Client Details marks them Activated (`esarisari_client_status_overrides`, and the registered record). Reset Demo Data clears the onboarding draft, registered clients, and activation overlays; seeded portfolio rows remain.
 
 ---
 
@@ -303,7 +303,7 @@ Client Info persists in `localStorage` (`esarisari_onboarding_client_info`). Cli
 
 **Who:** Admin.
 
-**Purpose:** Port of franchise-portal Clients list and Client Details. List shows the demo portfolio (upfront, billable monthly, company vs client split). Header action **Add New Client** opens onboarding at `/franchise-setup/onboarding/step-1`. Details show the admin revenue-split breakdown (company vs this client), financial history for activated accounts, Confirm Collection, and territories.
+**Purpose:** Port of franchise-portal Clients list and Client Details. List shows registered clients from onboarding (`esarisari_registered_clients`, newest first) plus the seeded demo portfolio (upfront, billable monthly, company vs client split). Header action **Add New Client** opens onboarding at `/franchise-setup/onboarding/step-1`. Details show Company Profile for registered clients, **Activate Client** for any non-Activated row, the admin revenue-split breakdown (company vs this client), financial history for activated accounts, Confirm Collection, and territories.
 
 Unknown client IDs show a not-found state. Upfront and billable monthly Confirm Collection writes the same `esarisari_franchise_collections` ledger as the Financials Dashboard, so both screens stay in sync (including Reset Demo Data). Gross sale / cost / payout confirms are stored on that same record as `historyPayments` and are not shown on the dashboard.
 

@@ -350,6 +350,14 @@ export function parseOnboardingFranchiseSetup(raw) {
   }
 }
 
+export function formatPlainPhp(amount) {
+  const value = Number(amount)
+  return new Intl.NumberFormat('en-PH', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number.isFinite(value) ? value : 0)
+}
+
 export function formatOnboardingMonthlyFeeAmount(fee) {
   if (fee.billingType === 'PercentGrossSales') {
     return `${new Intl.NumberFormat('en-PH', {
@@ -416,10 +424,166 @@ export function parseAmount(input) {
   return Math.max(0, n)
 }
 
-export function formatPlainPhp(value) {
-  const safe = Math.abs(value) < 0.000_000_1 ? 0 : value
-  return new Intl.NumberFormat('en-PH', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(safe)
+export function publicOnboardingClientInfo(form) {
+  const parsed = parseOnboardingClientInfo(form) ?? EMPTY_ONBOARDING_CLIENT_INFO
+  return {
+    admin_first_name: parsed.admin_first_name,
+    admin_last_name: parsed.admin_last_name,
+    admin_email: parsed.admin_email,
+    company_name: parsed.company_name,
+    company_email: parsed.company_email,
+    company_phone: parsed.company_phone,
+    registration_number: parsed.registration_number,
+    tax_id: parsed.tax_id,
+    address_line_1: parsed.address_line_1,
+    address_line_2: parsed.address_line_2,
+    city_municipality: parsed.city_municipality,
+    state_province_region: parsed.state_province_region,
+    country: parsed.country,
+    postal: parsed.postal,
+    contact_person: parsed.contact_person,
+    contact_email: parsed.contact_email,
+    contact_phone: parsed.contact_phone,
+  }
+}
+
+const REGISTERED_CLIENT_STATUSES = [
+  'Activated',
+  'Pending Activation',
+  'Pending Review',
+  'In Progress',
+]
+
+function parsePackageSelections(raw) {
+  const byCode = new Map(
+    Array.isArray(raw)
+      ? raw
+          .filter((item) => item && typeof item === 'object')
+          .map((item) => [asTrimmedString(item.code), item])
+      : [],
+  )
+  return PACKAGE_OPTIONS.map((option) => {
+    const found = byCode.get(option.code)
+    return {
+      code: option.code,
+      unitFee: Math.max(0, asFiniteNumber(found?.unitFee, option.unitFee)),
+      quantity: Math.max(0, Math.floor(asFiniteNumber(found?.quantity, 0))),
+    }
+  })
+}
+
+function parseClientTerritories(raw) {
+  if (!Array.isArray(raw) || raw.length === 0) return []
+  return raw
+    .filter((item) => item && typeof item === 'object')
+    .map((item, index) => {
+      const territory = parseTerritory(item)
+      return {
+        ...territory,
+        id: territory.id || `territory_${index}`,
+        boundaryDefined: item.boundaryDefined === true,
+        areas: parseAreas(item.areas),
+      }
+    })
+    .filter((item) => item.coverageName)
+}
+
+export function parseRegisteredClient(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+  const id = asTrimmedString(raw.id)
+  const name = asTrimmedString(raw.name)
+  if (!id || !name) return null
+  const clientType = parseOnboardingClientType(raw.clientType)
+  const status = REGISTERED_CLIENT_STATUSES.includes(raw.status)
+    ? raw.status
+    : 'Pending Review'
+  const createdAt = asTrimmedString(raw.createdAt) || new Date().toISOString()
+  const updatedAt = asTrimmedString(raw.updatedAt) || createdAt
+  const splitSource =
+    raw.revenueSplit && typeof raw.revenueSplit === 'object'
+      ? {
+          company: raw.revenueSplit.companyPct ?? raw.revenueSplit.company,
+          client: raw.revenueSplit.clientPct ?? raw.revenueSplit.client,
+        }
+      : null
+  const split = coerceAdminRevenueSplit(splitSource) ?? {
+    ...DEFAULT_ADMIN_REVENUE_SPLIT,
+  }
+  const clientInfo = publicOnboardingClientInfo(raw.clientInfo)
+  const activatedAt = asTrimmedString(raw.activatedAt)
+  return {
+    id,
+    name,
+    clientType,
+    status,
+    currentStep: 4,
+    createdAt,
+    updatedAt,
+    ...(activatedAt ? { activatedAt } : {}),
+    packageSelections: parsePackageSelections(raw.packageSelections),
+    territories: parseClientTerritories(raw.territories),
+    oneTimeFees: parseNamedFees(raw.oneTimeFees, DEFAULT_ONBOARDING_ONE_TIME_FEES).map(
+      ({ name: feeName, amount, enabled }) => ({
+        name: feeName,
+        amount,
+        enabled,
+      }),
+    ),
+    monthlyFees: parseMonthlyFees(raw.monthlyFees).map(
+      ({ name: feeName, billingType, amount, treatment }) => ({
+        name: feeName,
+        billingType,
+        amount,
+        treatment,
+      }),
+    ),
+    revenueSplit: {
+      companyPct: split.company,
+      clientPct: split.client,
+    },
+    clientInfo,
+    source: 'registered',
+  }
+}
+
+export function buildRegisteredClientFromOnboarding({
+  clientInfo,
+  clientType,
+  setup,
+  revenueDefaults,
+}) {
+  const parsedInfo = publicOnboardingClientInfo(clientInfo)
+  const type = parseOnboardingClientType(clientType)
+  const franchiseSetup = parseOnboardingFranchiseSetup(setup)
+  const summary = summarizeOnboardingRevenueSplit(revenueDefaults, type)
+  const now = new Date().toISOString()
+  return parseRegisteredClient({
+    id: generateId('fr'),
+    name: parsedInfo.company_name,
+    clientType: type,
+    status: 'Pending Review',
+    createdAt: now,
+    updatedAt: now,
+    packageSelections: PACKAGE_OPTIONS.map((option) => ({
+      code: option.code,
+      unitFee: option.unitFee,
+      quantity: franchiseSetup.packageState.quantities[option.code] ?? 0,
+    })),
+    territories: franchiseSetup.territory
+      ? [
+          {
+            ...franchiseSetup.territory,
+            boundaryDefined: false,
+            areas: franchiseSetup.areas,
+          },
+        ]
+      : [],
+    oneTimeFees: franchiseSetup.oneTimeFees,
+    monthlyFees: franchiseSetup.monthlyFees,
+    revenueSplit: {
+      companyPct: summary.split.company,
+      clientPct: summary.split.client,
+    },
+    clientInfo: parsedInfo,
+  })
 }

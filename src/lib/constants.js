@@ -47,6 +47,10 @@ export const STORAGE_KEYS = {
   ONBOARDING_CLIENT_INFO: 'esarisari_onboarding_client_info',
   /** Franchise onboarding step-2 packages, fees, and territory snapshot */
   ONBOARDING_FRANCHISE_SETUP: 'esarisari_onboarding_franchise_setup',
+  /** Clients created from admin onboarding (merged with the seeded portfolio) */
+  REGISTERED_CLIENTS: 'esarisari_registered_clients',
+  /** Activation status overlays for registered and seeded clients */
+  CLIENT_STATUS_OVERRIDES: 'esarisari_client_status_overrides',
 }
 
 /** Bump when operating wallet seed balances change and existing demos should realign once. */

@@ -183,7 +183,10 @@ function CollectionAction({
 
 export default function DashboardPage() {
   const { user, dataVersion, bumpDataVersion } = useAuth()
-  const franchises = useMemo(() => getFranchisePortfolio(), [])
+  const franchises = useMemo(() => {
+    void dataVersion
+    return getFranchisePortfolio()
+  }, [dataVersion])
   const money = useMemo(() => computeMoney(franchises), [franchises])
   const [monthlyPeriod, setMonthlyPeriod] = useState(() => monthKey(new Date()))
   const monthlyPeriodOptions = useMemo(

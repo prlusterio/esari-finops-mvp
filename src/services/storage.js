@@ -1,13 +1,13 @@
 import { STORAGE_KEYS } from '@/lib/constants'
 import {
   DEFAULT_ONBOARDING_CLIENT_TYPE,
-  DEFAULT_ONBOARDING_FRANCHISE_SETUP,
   DEFAULT_REVENUE_SPLIT_DEFAULTS,
   EMPTY_ONBOARDING_CLIENT_INFO,
   parseOnboardingClientInfo,
   parseOnboardingClientType,
   parseOnboardingFranchiseSetup,
   parseOnboardingRevenueSplit,
+  parseRegisteredClient,
 } from '@/lib/onboardingSetup'
 
 function safeParse(raw, fallback) {
@@ -153,14 +153,59 @@ const onboardingFranchiseSetup = {
   save(data) {
     write(
       STORAGE_KEYS.ONBOARDING_FRANCHISE_SETUP,
-      parseOnboardingFranchiseSetup({
-        ...DEFAULT_ONBOARDING_FRANCHISE_SETUP,
-        ...(data && typeof data === 'object' ? data : {}),
-      }),
+      parseOnboardingFranchiseSetup(data),
     )
   },
   clear() {
     localStorage.removeItem(STORAGE_KEYS.ONBOARDING_FRANCHISE_SETUP)
+  },
+}
+
+const registeredClients = {
+  get() {
+    return readArray(STORAGE_KEYS.REGISTERED_CLIENTS)
+      .data.map(parseRegisteredClient)
+      .filter(Boolean)
+  },
+  save(data) {
+    write(
+      STORAGE_KEYS.REGISTERED_CLIENTS,
+      (Array.isArray(data) ? data : []).map(parseRegisteredClient).filter(Boolean),
+    )
+  },
+  clear() {
+    localStorage.removeItem(STORAGE_KEYS.REGISTERED_CLIENTS)
+  },
+}
+
+const clientStatusOverrides = {
+  get() {
+    const result = readObjectOrArray(STORAGE_KEYS.CLIENT_STATUS_OVERRIDES, {})
+    if (!result.data || Array.isArray(result.data) || typeof result.data !== 'object') {
+      return {}
+    }
+    const next = {}
+    Object.entries(result.data).forEach(([id, value]) => {
+      if (!id || !value || typeof value !== 'object') return
+      if (value.status !== 'Activated') return
+      const activatedAt = String(value.activatedAt || '').trim()
+      const updatedAt = String(value.updatedAt || activatedAt).trim()
+      next[id] = {
+        status: 'Activated',
+        ...(activatedAt ? { activatedAt } : {}),
+        ...(updatedAt ? { updatedAt } : {}),
+      }
+    })
+    return next
+  },
+  save(data) {
+    write(
+      STORAGE_KEYS.CLIENT_STATUS_OVERRIDES,
+      data && typeof data === 'object' && !Array.isArray(data) ? data : {},
+    )
+  },
+  clear() {
+    localStorage.removeItem(STORAGE_KEYS.CLIENT_STATUS_OVERRIDES)
   },
 }
 
@@ -287,6 +332,53 @@ export function saveOnboardingFranchiseSetup(data) {
   onboardingFranchiseSetup.save(data)
 }
 
+export function getRegisteredClients() {
+  return registeredClients.get()
+}
+
+export function addRegisteredClient(client) {
+  const parsed = parseRegisteredClient(client)
+  if (!parsed) return null
+  const next = [
+    parsed,
+    ...registeredClients.get().filter((item) => item.id !== parsed.id),
+  ]
+  registeredClients.save(next)
+  return parsed
+}
+
+export function getClientStatusOverrides() {
+  return clientStatusOverrides.get()
+}
+
+export function activateClient(clientId) {
+  const id = String(clientId || '').trim()
+  if (!id) return null
+  const now = new Date().toISOString()
+  const patch = { status: 'Activated', activatedAt: now, updatedAt: now }
+  clientStatusOverrides.save({
+    ...clientStatusOverrides.get(),
+    [id]: patch,
+  })
+  const registered = registeredClients.get()
+  const current = registered.find((item) => item.id === id)
+  if (current) {
+    registeredClients.save(
+      registered.map((item) =>
+        item.id === id ? parseRegisteredClient({ ...item, ...patch }) : item,
+      ),
+    )
+  }
+  return patch
+}
+
+export function clearOnboardingDraft() {
+  onboardingClientInfo.clear()
+  onboardingClientType.clear()
+  onboardingFranchiseSetup.clear()
+  onboardingRevenueSplit.clear()
+}
+
 export function getTransactions() {
   return transactions.get()
 }
@@ -386,6 +478,8 @@ export function clearAllBusinessData() {
   localStorage.removeItem(STORAGE_KEYS.ONBOARDING_CLIENT_TYPE)
   localStorage.removeItem(STORAGE_KEYS.ONBOARDING_CLIENT_INFO)
   localStorage.removeItem(STORAGE_KEYS.ONBOARDING_FRANCHISE_SETUP)
+  localStorage.removeItem(STORAGE_KEYS.REGISTERED_CLIENTS)
+  localStorage.removeItem(STORAGE_KEYS.CLIENT_STATUS_OVERRIDES)
 }
 
 export function collectionNeedsSeed(name) {

@@ -25,6 +25,7 @@ import {
 } from '@/services/storage'
 import { DateTimeCell } from '@/components/shared/DateTimeCell'
 import { InfoTooltip } from '@/components/shared/InfoTooltip'
+import { LedgerScopeNotice } from '@/components/shared/LedgerScopeNotice'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { StatCard } from '@/components/shared/StatCard'
 import { TablePagination } from '@/components/shared/TablePagination'
@@ -320,6 +321,8 @@ export default function RevenuePage() {
           { label: 'Revenue' },
         ]}
       />
+
+      <LedgerScopeNotice />
 
       <div className="mb-4 grid gap-4 sm:grid-cols-3">
         {isRetailer ? (

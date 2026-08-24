@@ -394,7 +394,7 @@ def build():
     )
     add_para(
         doc,
-        "A click-by-click walkthrough of the Admin franchise module: sign in, read the Financials Dashboard, confirm collections, open seeded clients, and add a new client through the four-step onboarding wizard. Internet Credits, wallets, sales, and downline roles are covered in the separate User Guide — not in this document.",
+        "A click-by-click walkthrough of the Admin franchise module: sign in, read the Financials Dashboard, confirm collections, open clients, and add a new client through the four-step onboarding wizard. Create Franchisee saves that client to this browser and shows it on the Clients list. Internet Credits, wallets, sales, and downline roles are covered in the separate User Guide — not in this document.",
         size=11,
         color=NAVY,
         space_after=10,
@@ -408,7 +408,7 @@ def build():
     callout(
         doc,
         "About this demo",
-        "This is a browser-only demo. Data lives in localStorage. There is no backend. Reset Demo Data restores the seeded client portfolio and clears onboarding drafts and collection marks. Screenshots show layout; peso amounts change as you confirm collections.",
+        "This is a browser-only demo. Data lives in localStorage. There is no backend. Reset Demo Data restores the seeded client portfolio, removes clients you registered, clears activation overlays, and clears onboarding drafts and collection marks. Screenshots show layout; peso amounts change as you confirm collections.",
         fill="EEF2FF",
     )
 
@@ -474,7 +474,7 @@ def build():
     heading(doc, "3. Financials Dashboard", 1)
     add_para(
         doc,
-        "Dashboard is the Admin home. It tracks setup fees and monthly collections for the seeded franchise portfolio. Open Franchise Setup in the page header jumps to onboarding step 1 (same wizard as Add New Client).",
+        "Dashboard is the Admin home. It tracks setup fees and monthly collections for the franchise portfolio — seeded demo clients plus any clients you register in this browser. Newly registered clients count under Pending Review. Open Franchise Setup in the page header jumps to onboarding step 1 (same wizard as Add New Client).",
     )
     shot(doc, "admin-02-dashboard.png", "Financials Dashboard — General KPIs, commitments by status, and collections.")
 
@@ -521,9 +521,9 @@ def build():
     heading(doc, "4. Clients", 1)
     add_para(
         doc,
-        "Open Clients in the sidebar. This is the franchise / sub-franchise portfolio. Seeded demo rows include Surigao City Service Hub (Activated Sub-Franchisor) and Siargao General Luna Operator (Franchisee, still in progress).",
+        "Open Clients in the sidebar. This is the franchise / sub-franchise portfolio: seeded demo rows plus any clients you create with Add New Client. Newly registered clients appear at the top as Pending Review. Seeded examples include Surigao City Service Hub (Activated Sub-Franchisor) and Siargao General Luna Operator (Franchisee, still in progress).",
     )
-    shot(doc, "admin-04-clients.png", "Clients list — type, status, territories, upfront, billable monthly, and revenue split.")
+    shot(doc, "admin-04-clients.png", "Clients list — newly registered clients appear first, then the seeded demo rows.")
 
     heading(doc, "4.1 Client list", 2)
     add_table(
@@ -550,7 +550,7 @@ def build():
     heading(doc, "4.2 Client Details", 2)
     add_para(
         doc,
-        "Client Details shows setup, fees, territories, the revenue-split math, and — for Activated clients — a financial history you can collect against.",
+        "Client Details shows setup, fees, territories, the revenue-split math, and — for Activated clients — a financial history you can collect against. Clients you registered also show a Company Profile card (admin, company, contact, and address from step 1). Seeded demo rows do not have that card.",
     )
     shot(doc, "admin-05-client-detail.png", "Client Details for an Activated account — setup totals, split, and history.")
     bullets(
@@ -563,10 +563,36 @@ def build():
         ],
     )
 
+    heading(doc, "4.3 Activate a client", 2)
+    add_para(
+        doc,
+        "Activation happens on Client Details. There is no separate activation page. Newly registered clients start as Pending Review. Seeded rows that are In Progress or Pending Review can be activated the same way.",
+    )
+    steps(
+        doc,
+        [
+            "Open Clients and click View on a row that is not Activated.",
+            "Click Activate Client in the page header, or in the Financial History empty state.",
+            "Confirm Activate Client in the dialog.",
+            "Status becomes Activated. Financial History appears, and Confirm Collection is enabled on this page and on the Financials Dashboard.",
+        ],
+    )
+    shot(
+        doc,
+        "admin-13-activate-client.png",
+        "Activate Client confirmation — marks the account live without creating a login.",
+    )
+    callout(
+        doc,
+        "What activation does",
+        "Activate Client saves Activated plus an activated-at timestamp in this browser. It does not create a sign-in account. Reset Demo Data removes activation overlays and registered clients; seeded demo rows return to their original statuses.",
+        fill="ECFDF5",
+    )
+
     heading(doc, "5. Add a new client (onboarding)", 1)
     add_para(
         doc,
-        "Onboarding is four steps. Each step saves to localStorage as you type or change a control, so Back and Continue keep your draft. Reset Demo Data clears the draft.",
+        "Onboarding is four steps. Each step saves a draft to localStorage as you type or change a control, so Back and Continue keep your place. Create Franchisee on step 4 writes the finished client into the Clients list. Reset Demo Data clears the draft and removes registered clients.",
     )
     add_table(
         doc,
@@ -575,7 +601,7 @@ def build():
             ["1", "Client Info", "Admin login, company profile, optional contact person"],
             ["2", "Franchise Setup", "Client type, packages, one-time fees, monthly fees, territory"],
             ["3", "Revenue Split", "Company vs this client only. Downline shares are not set here."],
-            ["4", "Review", "Read-only summary, then Create Franchisee"],
+            ["4", "Review", "Read-only summary, then Create Franchisee writes the client to the Clients list"],
         ],
     )
     add_para(
@@ -669,14 +695,25 @@ def build():
             "Scan every card. Use Edit if a value is wrong.",
             "Click Create Franchisee.",
             "If Client Info is incomplete or the split is not 100%, fix the message and try again.",
-            "On success the button becomes Franchisee created and a green note appears.",
+            "The app opens Clients. Your new row is at the top as Pending Review.",
+            "Click View on that row to confirm Company Profile and the rest of the setup.",
         ],
+    )
+    shot(
+        doc,
+        "admin-11-registered-client.png",
+        "Clients list after Create Franchisee — the new company is first, Pending Review.",
+    )
+    shot(
+        doc,
+        "admin-12-registered-client-detail.png",
+        "Client Details for a registered client — Company Profile from step 1.",
     )
     callout(
         doc,
-        "Demo limit",
-        "Create Franchisee confirms the review in this session only. The new client is not written into the Clients list or the Financials Dashboard portfolio. Seeded clients stay as they are. Saving a new client into the live portfolio is not wired in this demo yet.",
-        fill="FEF3C7",
+        "What gets saved",
+        "Create Franchisee writes the company record to this browser (esarisari_registered_clients) and opens Clients. Passwords are not stored. This does not create a sign-in account for the new client. Open View, then Activate Client, before Confirm Collection. Reset Demo Data removes registered clients, activation overlays, and the onboarding draft; seeded demo clients stay.",
+        fill="ECFDF5",
     )
 
     heading(doc, "6. Reset Demo Data and logout", 1)
@@ -688,7 +725,7 @@ def build():
     heading(doc, "6.1 Reset Demo Data", 2)
     add_para(
         doc,
-        "Reset restores the seeded network, wallets, empty Internet Credits / sales history, the seeded client portfolio, and collection marks. It also clears the onboarding draft (client info, franchise setup, and revenue split).",
+        "Reset restores the seeded network, wallets, empty Internet Credits / sales history, the seeded client portfolio, and collection marks. It also removes clients you registered, clears activation overlays, and clears the onboarding draft (client info, franchise setup, and revenue split).",
     )
     steps(
         doc,
@@ -701,7 +738,7 @@ def build():
     callout(
         doc,
         "Training tip",
-        "Reset before a live walkthrough so Dashboard collections and the onboarding draft match this guide. Do not reset mid-demo unless you intend to wipe the session.",
+        "Reset before a live walkthrough so Dashboard collections, the Clients list, and the onboarding draft match this guide. Do not reset mid-demo unless you intend to wipe the session — including any clients you just registered.",
         fill="EEF2FF",
     )
 
@@ -720,7 +757,7 @@ def build():
         doc,
         ["Term", "Meaning"],
         [
-            ["Activated", "Client is live. Dashboard and Client Details can Confirm Collection."],
+            ["Activated", "Client is live. Dashboard and Client Details can Confirm Collection. Use Activate Client on Client Details to get here."],
             ["Upfront / one-time", "Package unit fees plus enabled one-time franchise fees."],
             ["Billable fixed monthly", "Monthly fees billed as a peso amount. Excludes cost-deduction-only and % of gross sales."],
             ["Cost deduction", "A monthly fee subtracted from gross sales before the revenue split."],
@@ -736,11 +773,13 @@ def build():
         [
             "Using password123 on the Admin account — Admin is Restricted and uses abc12345678.",
             "Looking for Franchises or Organizations in the sidebar — those items were removed. Use Clients.",
-            "Expecting Confirm Collection on a non-Activated client — only Activated rows can be collected.",
-            "Treating Create Franchisee as a new row on Clients — the demo confirms the review only; the portfolio stays seeded.",
+            "Looking for franchise collections on Transactions, Revenue, or Reports — those pages are Internet Credits and sales only. Use Financials Dashboard or Clients.",
+            "Expecting Confirm Collection on a non-Activated client — open Client Details and click Activate Client first.",
+            "Treating Create Franchisee as a login for the new client — the company appears on Clients, but this demo does not create a sign-in account.",
+            "Expecting the new client to stay off the Clients list — Create Franchisee now saves it and shows it at the top as Pending Review.",
             "Trying to set retailer or franchisee downline shares on step 3 — those belong to the client, not platform admin.",
             "Mixing this guide with Internet Credits work — loads, sales, and commissions are in the other User Guide.",
-            "Using Reset Demo Data during a live collection walkthrough — it wipes payment marks and the onboarding draft.",
+            "Using Reset Demo Data during a live collection walkthrough — it wipes payment marks, the onboarding draft, registered clients, and activation overlays.",
         ],
     )
 

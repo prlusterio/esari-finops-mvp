@@ -1,10 +1,10 @@
-import { mockFranchises } from '@/data/franchiseFinancials'
 import {
   addMonthsToPeriodKey,
   allocateMonthlyPayment,
   applyUpfrontCollection,
   computeFranchiseMoney,
   emptyCollectionState,
+  getFranchisePortfolio,
   monthKey,
   monthLabel,
 } from '@/lib/financialsDashboard'
@@ -26,11 +26,11 @@ export function defaultHistoryEndDate(date = new Date()) {
 export const DEFAULT_HISTORY_END_DATE = defaultHistoryEndDate()
 
 export function getClientPortfolio() {
-  return mockFranchises
+  return getFranchisePortfolio()
 }
 
 export function getClientById(clientId) {
-  return mockFranchises.find((franchise) => franchise.id === clientId) ?? null
+  return getClientPortfolio().find((franchise) => franchise.id === clientId) ?? null
 }
 
 export function formatClientDate(date) {

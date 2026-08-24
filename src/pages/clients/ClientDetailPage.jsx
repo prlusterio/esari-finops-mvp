@@ -34,10 +34,21 @@ import { getHomePathForRole } from '@/lib/permissions'
 import {
   getFranchiseCollections,
   saveFranchiseCollections,
+  activateClient,
 } from '@/services/storage'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import {
   Card,
   CardContent,
@@ -84,12 +95,16 @@ function StatusBadge({ status }) {
 export default function ClientDetailPage() {
   const { user, dataVersion, bumpDataVersion } = useAuth()
   const { clientId } = useParams()
-  const selectedClient = getClientById(clientId)
+  const selectedClient = useMemo(() => {
+    void dataVersion
+    return getClientById(clientId)
+  }, [clientId, dataVersion])
   const [historyStartDate, setHistoryStartDate] = useState(
     DEFAULT_HISTORY_START_DATE,
   )
   const [historyEndDate, setHistoryEndDate] = useState(DEFAULT_HISTORY_END_DATE)
   const [paymentDraft, setPaymentDraft] = useState(null)
+  const [activateOpen, setActivateOpen] = useState(false)
 
   const collections = useMemo(() => {
     void dataVersion
@@ -197,6 +212,14 @@ export default function ClientDetailPage() {
   const collectedAmount = Math.max(0, Number(paymentDraft?.amountCollected) || 0)
   const confirmDisabled =
     collectedAmount <= 0 || !paymentDraft?.referenceNumber.trim()
+  const canActivate = selectedClient && selectedClient.status !== 'Activated'
+
+  function handleActivate() {
+    if (!selectedClient || !canActivate) return
+    activateClient(selectedClient.id)
+    bumpDataVersion()
+    setActivateOpen(false)
+  }
 
   if (!selectedClient) {
     return (
@@ -228,9 +251,16 @@ export default function ClientDetailPage() {
           { label: selectedClient.name },
         ]}
         actions={
-          <Button asChild variant="outline">
-            <Link to="/franchise-setup/clients">Back to Clients</Link>
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {canActivate ? (
+              <Button type="button" onClick={() => setActivateOpen(true)}>
+                Activate Client
+              </Button>
+            ) : null}
+            <Button asChild variant="outline">
+              <Link to="/franchise-setup/clients">Back to Clients</Link>
+            </Button>
+          </div>
         }
       />
 
@@ -244,11 +274,84 @@ export default function ClientDetailPage() {
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
                 Last updated {formatUpdatedAt(selectedClient.updatedAt)}
+                {selectedClient.status === 'Activated' && selectedClient.activatedAt
+                  ? ` • Activated ${formatUpdatedAt(selectedClient.activatedAt)}`
+                  : ''}
               </p>
             </div>
             <StatusBadge status={selectedClient.status} />
           </CardContent>
         </Card>
+
+        {selectedClient.clientInfo ? (
+          <Card>
+            <CardHeader className="border-b border-border px-4 py-3">
+              <CardTitle className="text-base">Company Profile</CardTitle>
+              <CardDescription>
+                Company profile and contacts saved during onboarding.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Admin
+                </div>
+                <div className="mt-1 text-sm font-medium">
+                  {[
+                    selectedClient.clientInfo.admin_first_name,
+                    selectedClient.clientInfo.admin_last_name,
+                  ]
+                    .filter(Boolean)
+                    .join(' ') || '—'}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {selectedClient.clientInfo.admin_email || '—'}
+                </div>
+              </div>
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Company
+                </div>
+                <div className="mt-1 text-sm font-medium">
+                  {selectedClient.clientInfo.company_name || selectedClient.name}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {selectedClient.clientInfo.registration_number || '—'}
+                </div>
+              </div>
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Contact
+                </div>
+                <div className="mt-1 text-sm font-medium">
+                  {selectedClient.clientInfo.contact_person || '—'}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {selectedClient.clientInfo.contact_email ||
+                    selectedClient.clientInfo.company_email ||
+                    '—'}
+                </div>
+              </div>
+              <div className="sm:col-span-2 lg:col-span-3">
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Address
+                </div>
+                <div className="mt-1 text-sm text-muted-foreground">
+                  {[
+                    selectedClient.clientInfo.address_line_1,
+                    selectedClient.clientInfo.address_line_2,
+                    selectedClient.clientInfo.city_municipality,
+                    selectedClient.clientInfo.state_province_region,
+                    selectedClient.clientInfo.postal,
+                    selectedClient.clientInfo.country,
+                  ]
+                    .filter(Boolean)
+                    .join(', ') || '—'}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
 
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
@@ -591,6 +694,15 @@ export default function ClientDetailPage() {
                   Financial history records are created only after the client
                   account is activated. This client is currently {selectedClient.status}.
                 </p>
+                {canActivate ? (
+                  <Button
+                    type="button"
+                    className="mt-4"
+                    onClick={() => setActivateOpen(true)}
+                  >
+                    Activate Client
+                  </Button>
+                ) : null}
               </div>
             </CardContent>
           )}
@@ -722,6 +834,25 @@ export default function ClientDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={activateOpen} onOpenChange={setActivateOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Activate {selectedClient.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This marks the client as live. Confirm Collection becomes available
+              on Client Details and the Financials Dashboard. It does not create a
+              sign-in account for the client.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleActivate}>
+              Activate Client
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

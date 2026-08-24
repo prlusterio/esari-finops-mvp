@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { CheckCircle2, CircleAlert } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { formatCurrency } from '@/lib/currency'
 import {
+  buildRegisteredClientFromOnboarding,
   formatOnboardingMonthlyFeeAmount,
   isOnboardingClientInfoComplete,
   monthlyFeeTreatmentLabel,
@@ -14,6 +15,8 @@ import {
 } from '@/lib/onboardingSetup'
 import { getHomePathForRole } from '@/lib/permissions'
 import {
+  addRegisteredClient,
+  clearOnboardingDraft,
   getOnboardingClientInfo,
   getOnboardingClientType,
   getOnboardingFranchiseSetup,
@@ -61,7 +64,8 @@ function ReviewCard({ title, description, editTo, children }) {
 }
 
 export default function OnboardingStep4Page() {
-  const { user } = useAuth()
+  const { user, bumpDataVersion } = useAuth()
+  const navigate = useNavigate()
   const clientInfo = getOnboardingClientInfo()
   const clientType = getOnboardingClientType()
   const setup = getOnboardingFranchiseSetup()
@@ -116,8 +120,22 @@ export default function OnboardingStep4Page() {
       setCreateError('Revenue split must total 100% before creating this franchisee.')
       return
     }
+    const client = buildRegisteredClientFromOnboarding({
+      clientInfo,
+      clientType,
+      setup,
+      revenueDefaults,
+    })
+    if (!client) {
+      setCreateError('Could not save this client. Check the review details and try again.')
+      return
+    }
+    addRegisteredClient(client)
+    clearOnboardingDraft()
+    bumpDataVersion()
     setCreateError('')
     setCreated(true)
+    navigate('/franchise-setup/clients')
   }
 
   return (
@@ -398,8 +416,7 @@ export default function OnboardingStep4Page() {
                 <div className="flex items-start gap-2 border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
                   <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
                   <span>
-                    Review confirmed. Saving this client into the live portfolio
-                    is not wired in this demo yet.
+                    Client saved. Opening the Clients list with this record.
                   </span>
                 </div>
               ) : null}

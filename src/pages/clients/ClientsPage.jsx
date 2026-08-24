@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useMemo } from 'react'
 import { Plus } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { ONBOARDING_STEP_PATHS } from '@/lib/onboardingSetup'
@@ -48,8 +49,11 @@ function StatusBadge({ status }) {
 }
 
 export default function ClientsPage() {
-  const { user } = useAuth()
-  const clients = getClientPortfolio()
+  const { user, dataVersion } = useAuth()
+  const clients = useMemo(() => {
+    void dataVersion
+    return getClientPortfolio()
+  }, [dataVersion])
 
   return (
     <div>
