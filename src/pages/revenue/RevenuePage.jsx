@@ -26,7 +26,6 @@ import {
 } from '@/services/storage'
 import { DateTimeCell } from '@/components/shared/DateTimeCell'
 import { InfoTooltip } from '@/components/shared/InfoTooltip'
-import { LedgerScopeNotice } from '@/components/shared/LedgerScopeNotice'
 import { FranchiseCollectionsPanel } from '@/components/shared/FranchiseCollectionsPanel'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { StatCard } from '@/components/shared/StatCard'
@@ -333,8 +332,6 @@ export default function RevenuePage() {
           { label: 'Revenue' },
         ]}
       />
-
-      <LedgerScopeNotice />
 
       <div
         className={cn(

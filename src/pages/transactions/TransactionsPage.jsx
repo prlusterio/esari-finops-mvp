@@ -22,7 +22,6 @@ import {
   getRevenueSharing,
   getTransactions,
 } from '@/services/storage'
-import { LedgerScopeNotice } from '@/components/shared/LedgerScopeNotice'
 import { FranchiseCollectionsPanel } from '@/components/shared/FranchiseCollectionsPanel'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { DummyTransactionDialog } from '@/components/shared/DummyTransactionDialog'
@@ -235,8 +234,6 @@ export default function TransactionsPage() {
           </>
         }
       />
-
-      <LedgerScopeNotice />
 
       <Card className="mb-4 shadow-sm">
         <CardContent

@@ -56,7 +56,6 @@ import {
   getWallets,
 } from '@/services/storage'
 import { FranchiseCollectionsPanel } from '@/components/shared/FranchiseCollectionsPanel'
-import { LedgerScopeNotice } from '@/components/shared/LedgerScopeNotice'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { StatCard } from '@/components/shared/StatCard'
 import { TransactionDetailsDialog } from '@/components/shared/TransactionDetailsDialog'
@@ -1095,8 +1094,6 @@ export default function ReportsPage() {
           { label: 'Reports' },
         ]}
       />
-
-      <LedgerScopeNotice />
 
       <Card className="mb-4 shadow-sm">
         <CardContent className={cn('grid gap-3 p-4', filterGridClass)}>

@@ -206,7 +206,7 @@ These % are **stamped on the sale**. Changing settings later does not rewrite co
 
 ### 4.5 Transactions (`/transactions`)
 
-**Title:** Transactions Ledger. Completed sales only. Admin sees a scope notice: Internet Credits and sales cards stay unchanged; franchise setup collections appear as a separate Admin section on this page (same ledger as Financials Dashboard and Client Details). Sub / Fran / Retailer stay IC + sales only.
+**Title:** Transactions Ledger. Completed sales only. Admin sees franchise setup collections as a separate section on this page (same ledger as Financials Dashboard and Client Details). Internet Credits and sales cards stay unchanged. Sub / Fran / Retailer stay IC + sales only.
 
 **Admin Franchise Setup Collections** card sits above the sales table and shares the page date range. Confirm Collection on unpaid/partial rows writes the same `upfrontPaid` / `monthlyPaidByPeriod` ledger. Collection rows are **not** mixed into the sales table.
 
@@ -222,7 +222,7 @@ Transaction details: payment, credits consumed, sale margin, 4-tier distribution
 
 ### 4.6 Revenue (`/revenue`)
 
-Default period: this month. Search + date filters. Same Admin scope notice as Transactions.
+Default period: this month. Search + date filters.
 
 **Admin / Sub / Fran cards:** Internet Credits earnings → Sales Commission → Total earnings. Admin also has a fourth **Franchise collections** card (cash collected in the selected period). That amount is **not** added into Total earnings.
 
@@ -245,7 +245,7 @@ The Internet Credits table has `id="internet-credits"`. Reports can open this pa
 
 ### 4.7 Reports (`/reports`)
 
-Default period: this month. Admin/Sub: network franchisee filters. Fran: retailer filter. Same Admin scope notice as Transactions and Revenue.
+Default period: this month. Admin/Sub: network franchisee filters. Fran: retailer filter.
 
 **Hero cards (Admin / Sub / Fran):** Internet Credits earnings → Sales Commission → Total earnings → Sales Volume. Admin also has a **Franchise collections** hero card (collected in period) plus **Collections by client** rollup and a line-item table with Confirm Collection. Collection cash is **not** added into Total earnings.
 
