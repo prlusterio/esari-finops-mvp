@@ -23,6 +23,7 @@ import {
   getTransactions,
 } from '@/services/storage'
 import { LedgerScopeNotice } from '@/components/shared/LedgerScopeNotice'
+import { FranchiseCollectionsPanel } from '@/components/shared/FranchiseCollectionsPanel'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { DummyTransactionDialog } from '@/components/shared/DummyTransactionDialog'
 import { TransactionDetailsDialog } from '@/components/shared/TransactionDetailsDialog'
@@ -345,6 +346,15 @@ export default function TransactionsPage() {
           ) : null}
         </CardContent>
       </Card>
+
+      {user?.role === ROLES.ADMIN ? (
+        <FranchiseCollectionsPanel
+          className="mb-4"
+          dateRange={appliedFilters.dateRange}
+          customDateRange={appliedFilters.customDateRange}
+          search={appliedFilters.search}
+        />
+      ) : null}
 
       <Card className="overflow-hidden shadow-sm">
         <CardContent className="p-0">

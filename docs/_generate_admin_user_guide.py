@@ -399,7 +399,7 @@ def build():
         color=NAVY,
         space_after=10,
     )
-    add_para(doc, "24 August 2026  ·  Demo environment", size=10, italic=True, color=MUTED)
+    add_para(doc, "1 September 2026  ·  Demo environment", size=10, italic=True, color=MUTED)
     HTML.add(
         '<p class="download"><a href="admin-user-guide.docx">Download Admin User Guide Word copy</a> · '
         '<a href="user-guide.html">Open the Internet Credits User Guide</a></p>'
@@ -432,6 +432,10 @@ def build():
             [
                 "Add New Client — Client Info, Franchise Setup, Revenue Split, Review",
                 "Sub-Franchisee, Franchisee, and Retailer day-to-day screens",
+            ],
+            [
+                "Franchise collections on Transactions, Revenue, and Reports (Admin)",
+                "Mixing collection cash into Internet Credits + sales Total earnings",
             ],
         ],
     )
@@ -513,9 +517,40 @@ def build():
     shot(doc, "admin-03-dashboard-confirm.png", "Confirm Collection dialog — amount collected, remaining due, and applied preview.")
     callout(
         doc,
-        "Shared with Client Details",
-        "Dashboard collection marks are stored in the same localStorage key as Client Details (esarisari_franchise_collections). Confirming a payment on one screen updates the other after a refresh or navigation.",
+        "One collection ledger",
+        "Dashboard, Client Details, Transactions, Revenue, and Reports all read and write esarisari_franchise_collections. Confirm Collection on any of those Admin screens updates the others after navigation. Reset Demo Data clears the same ledger.",
         fill="EEF2FF",
+    )
+
+    heading(doc, "3.3 Transactions, Revenue, and Reports", 2)
+    add_para(
+        doc,
+        "Admin can confirm the same franchise setup collections on Transactions, Revenue, and Reports. Those pages keep Internet Credits and sales as a separate stream. Collection cash is not added into Total earnings, and collection rows are not mixed into the sales table.",
+    )
+    add_table(
+        doc,
+        ["Page", "What Admin sees"],
+        [
+            ["Transactions", "Franchise Setup Collections card above the sales table. Shares the page date range. Confirm Collection on unpaid or partial rows."],
+            ["Revenue", "A fourth Franchise collections card (cash collected in the period) plus the same collections table. Internet Credits, Sales Commission, and Total earnings stay IC + sales only."],
+            ["Reports", "A Franchise collections hero card, Collections by client rollup, the same line-item table, and a Franchise collections CSV export."],
+        ],
+    )
+    steps(
+        doc,
+        [
+            "Confirm a partial upfront or monthly amount on Financials Dashboard.",
+            "Open Client Details — paid and remaining match.",
+            "Open Transactions, Revenue, or Reports (Admin). Choose All Time or a range that includes the payment date / month.",
+            "Confirm the remainder from Revenue (or Transactions / Reports). Enter an amount and a reference number.",
+            "Return to Dashboard and Client Details. The same paid / remaining values appear without a second write path.",
+        ],
+    )
+    callout(
+        doc,
+        "What is included",
+        "Activated clients only. Upfront = package fees + enabled one-time fees. Billable monthly = fixed monthly fees that are not cost deductions. Company vs client % is informational on the table. % of gross sales, cost-deduction-only fees, and Client Details demo Gross Sale / Cost Deduction / Revenue Share Payout rows stay off these pages.",
+        fill="ECFDF5",
     )
 
     heading(doc, "4. Clients", 1)
@@ -574,7 +609,7 @@ def build():
             "Open Clients and click View on a row that is not Activated.",
             "Click Activate Client in the page header, or in the Financial History empty state.",
             "Confirm Activate Client in the dialog.",
-            "Status becomes Activated. Financial History appears, and Confirm Collection is enabled on this page and on the Financials Dashboard.",
+            "Status becomes Activated. Financial History appears, and Confirm Collection is enabled on this page, the Financials Dashboard, and the Admin collections section on Transactions, Revenue, and Reports.",
         ],
     )
     shot(
@@ -757,7 +792,7 @@ def build():
         doc,
         ["Term", "Meaning"],
         [
-            ["Activated", "Client is live. Dashboard and Client Details can Confirm Collection. Use Activate Client on Client Details to get here."],
+            ["Activated", "Client is live. Dashboard, Client Details, and the Admin collections section on Transactions, Revenue, and Reports can Confirm Collection. Use Activate Client on Client Details to get here."],
             ["Upfront / one-time", "Package unit fees plus enabled one-time franchise fees."],
             ["Billable fixed monthly", "Monthly fees billed as a peso amount. Excludes cost-deduction-only and % of gross sales."],
             ["Cost deduction", "A monthly fee subtracted from gross sales before the revenue split."],
@@ -773,7 +808,7 @@ def build():
         [
             "Using password123 on the Admin account — Admin is Restricted and uses abc12345678.",
             "Looking for Franchises or Organizations in the sidebar — those items were removed. Use Clients.",
-            "Looking for franchise collections on Transactions, Revenue, or Reports — those pages are Internet Credits and sales only. Use Financials Dashboard or Clients.",
+            "Expecting franchise collections inside Total earnings or the sales table — those stay Internet Credits and sales. Admin collections are a separate section on Transactions, Revenue, and Reports.",
             "Expecting Confirm Collection on a non-Activated client — open Client Details and click Activate Client first.",
             "Treating Create Franchisee as a login for the new client — the company appears on Clients, but this demo does not create a sign-in account.",
             "Expecting the new client to stay off the Clients list — Create Franchisee now saves it and shows it at the top as Pending Review.",
@@ -785,7 +820,7 @@ def build():
 
     add_para(
         doc,
-        "This guide matches the eSariSari Admin module as of 24 August 2026. It does not replace the Internet Credits User Guide. Screenshots are layout references; live numbers depend on collections you confirm in this session.",
+        "This guide matches the eSariSari Admin module as of 1 September 2026. It does not replace the Internet Credits User Guide. Screenshots are layout references; live numbers depend on collections you confirm in this session.",
         italic=True,
         color=MUTED,
         space_before=12,

@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 /**
- * Scope note for Transactions, Revenue, and Reports: these ledgers are
- * Internet Credits + sales commissions, not franchise setup collections.
+ * Scope note for Transactions, Revenue, and Reports.
+ * Admin also sees franchise collections as a separate section on these pages.
  */
 export function LedgerScopeNotice({ className }) {
   const { user } = useAuth()
@@ -25,11 +25,13 @@ export function LedgerScopeNotice({ className }) {
         <Info className="mt-0.5 h-5 w-5 shrink-0 text-sky-700" />
         <div className="min-w-0">
           <p className="text-sm font-semibold text-sky-950">
-            Internet Credits and sales only
+            {isAdmin
+              ? 'Internet Credits, sales, and franchise collections'
+              : 'Internet Credits and sales only'}
           </p>
           <p className="mt-0.5 text-sm text-sky-900">
             {isAdmin
-              ? 'This page covers credit loads and retailer sales commissions. Franchise setup collections (upfront fees, billable monthly, and the company vs client split) are not included here yet. Use Financials Dashboard or Clients for those.'
+              ? 'Internet Credits and sales cards stay the same. Franchise setup collections are a separate Admin section on this page and write the same ledger as Financials Dashboard and Client Details. They are not added into Total earnings.'
               : 'This page covers Internet Credits loads and retailer sales commissions.'}
           </p>
         </div>

@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useSearchParams } from 'react-router-dom'
-import { Banknote, Coins, Eye, Filter, PieChart, Wallet } from 'lucide-react'
+import { Banknote, Coins, CreditCard, Eye, Filter, PieChart, Wallet } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { ROLE_LABELS, ROLES } from '@/lib/constants'
 import { buildCreditRevenueSnapshot } from '@/lib/creditEconomics'
 import { formatCurrency } from '@/lib/currency'
 import { formatReportPeriodLabel, parseRevenuePeriodSearch } from '@/lib/date'
+import { loadFranchiseCollectionView } from '@/lib/franchiseCollectionLedger'
 import { getParentOrganization } from '@/lib/funding'
 import { DEFAULT_PAGE_SIZE, paginateItems } from '@/lib/pagination'
 import { getHomePathForRole } from '@/lib/permissions'
@@ -26,6 +27,7 @@ import {
 import { DateTimeCell } from '@/components/shared/DateTimeCell'
 import { InfoTooltip } from '@/components/shared/InfoTooltip'
 import { LedgerScopeNotice } from '@/components/shared/LedgerScopeNotice'
+import { FranchiseCollectionsPanel } from '@/components/shared/FranchiseCollectionsPanel'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { StatCard } from '@/components/shared/StatCard'
 import { TablePagination } from '@/components/shared/TablePagination'
@@ -277,6 +279,16 @@ export default function RevenuePage() {
     appliedFilters.dateRange,
     appliedFilters.customDateRange,
   )
+  const isAdmin = user?.role === ROLES.ADMIN
+  const franchiseView = useMemo(() => {
+    if (!isAdmin) return null
+    void dataVersion
+    return loadFranchiseCollectionView({
+      dateRange: appliedFilters.dateRange,
+      customDateRange: appliedFilters.customDateRange,
+      search: appliedFilters.search,
+    })
+  }, [appliedFilters, dataVersion, isAdmin])
 
   const applyFilters = () => {
     setAppliedFilters({
@@ -324,7 +336,16 @@ export default function RevenuePage() {
 
       <LedgerScopeNotice />
 
-      <div className="mb-4 grid gap-4 sm:grid-cols-3">
+      <div
+        className={cn(
+          'mb-4 grid gap-4',
+          isRetailer
+            ? 'sm:grid-cols-3'
+            : isAdmin
+              ? 'sm:grid-cols-2 xl:grid-cols-4'
+              : 'sm:grid-cols-3',
+        )}
+      >
         {isRetailer ? (
           <>
             <StatCard
@@ -374,6 +395,16 @@ export default function RevenuePage() {
               descriptionBelowTitle
               icon={Coins}
             />
+            {isAdmin ? (
+              <StatCard
+                title="Franchise collections"
+                value={formatCurrency(franchiseView?.kpis.collected || 0)}
+                description={`Setup + billable monthly · pending ${formatCurrency(franchiseView?.kpis.remaining || 0)} · ${periodLabel}`}
+                descriptionBelowTitle
+                icon={CreditCard}
+                accent="wallet"
+              />
+            ) : null}
           </>
         )}
       </div>
@@ -445,6 +476,15 @@ export default function RevenuePage() {
           ) : null}
         </CardContent>
       </Card>
+
+      {isAdmin ? (
+        <FranchiseCollectionsPanel
+          className="mb-4"
+          dateRange={appliedFilters.dateRange}
+          customDateRange={appliedFilters.customDateRange}
+          search={appliedFilters.search}
+        />
+      ) : null}
 
       {showCreditTable ? (
         <Card

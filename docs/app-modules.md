@@ -206,7 +206,9 @@ These % are **stamped on the sale**. Changing settings later does not rewrite co
 
 ### 4.5 Transactions (`/transactions`)
 
-**Title:** Transactions Ledger. Completed sales only. Admin sees a scope notice: this page is Internet Credits + sales commissions, not franchise setup collections (those stay on Financials Dashboard and Clients).
+**Title:** Transactions Ledger. Completed sales only. Admin sees a scope notice: Internet Credits and sales cards stay unchanged; franchise setup collections appear as a separate Admin section on this page (same ledger as Financials Dashboard and Client Details). Sub / Fran / Retailer stay IC + sales only.
+
+**Admin Franchise Setup Collections** card sits above the sales table and shares the page date range. Confirm Collection on unpaid/partial rows writes the same `upfrontPaid` / `monthlyPaidByPeriod` ledger. Collection rows are **not** mixed into the sales table.
 
 **Retailer only:** **Record demo sale** — product/service + customer payment. Credits consumed = 95% product cost + 2% processing = **97%** of payment. Commission pool = remaining **3%**. Sale is blocked if Available Credits &lt; credits consumed. Shares come from that retailer’s Active Commission Settings (or the 30/20/10/40 default).
 
@@ -220,9 +222,11 @@ Transaction details: payment, credits consumed, sale margin, 4-tier distribution
 
 ### 4.6 Revenue (`/revenue`)
 
-Default period: this month. Search + date filters. Same Admin scope notice as Transactions: franchise setup collections are not on this page yet.
+Default period: this month. Search + date filters. Same Admin scope notice as Transactions.
 
-**Admin / Sub / Fran cards:** Internet Credits earnings → Sales Commission → Total earnings.
+**Admin / Sub / Fran cards:** Internet Credits earnings → Sales Commission → Total earnings. Admin also has a fourth **Franchise collections** card (cash collected in the selected period). That amount is **not** added into Total earnings.
+
+**Admin Franchise Setup Collections** table (same builder as Transactions and Reports): Confirm Collection writes `applyClientCollection` to `esarisari_franchise_collections`. Sales table stays IC/sales only.
 
 **Retailer cards:** Your Commission → Sales volume → Credits consumed. No Total earnings card (retailer has no load-spread stream).
 
@@ -243,7 +247,7 @@ The Internet Credits table has `id="internet-credits"`. Reports can open this pa
 
 Default period: this month. Admin/Sub: network franchisee filters. Fran: retailer filter. Same Admin scope notice as Transactions and Revenue.
 
-**Hero cards (Admin / Sub / Fran):** Internet Credits earnings → Sales Commission → Total earnings → Sales Volume.
+**Hero cards (Admin / Sub / Fran):** Internet Credits earnings → Sales Commission → Total earnings → Sales Volume. Admin also has a **Franchise collections** hero card (collected in period) plus **Collections by client** rollup and a line-item table with Confirm Collection. Collection cash is **not** added into Total earnings.
 
 The **Internet Credits earnings** card links to Revenue with the **same period** (`/revenue?range=…#internet-credits`). That is the line-item ledger (each release + ⓘ formula). Reports does **not** copy that table.
 
@@ -259,6 +263,7 @@ Network tables (Admin/Sub/Fran as scoped): Franchisee Commissions and Retailer C
 |--------|-----|----------|
 | Transactions | All | Payment, credits consumed, commission pool, split %, your share |
 | Sales Commission | All | Pool, your share %, your commission |
+| Franchise collections | Admin | Upfront and billable monthly collected vs remaining for Activated clients |
 | Internet Credits earnings | Admin / Sub / Fran | Cash in, credits, earnings, rates, cost basis |
 | Internet Credits Requests | Roles with funding export | Includes Type (Request vs Direct Release) |
 | Internet Credits Releases | Roles with funding export | Release ledger |

@@ -4,12 +4,17 @@ import {
   Eye,
   Banknote,
   Coins,
+  CreditCard,
   Receipt,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { ROLES, TRANSACTION_STATUS, TRANSACTION_STATUS_LABELS } from '@/lib/constants'
 import { formatCurrency, formatSignedCurrency } from '@/lib/currency'
 import { buildRevenuePageHref, formatReportPeriodLabel } from '@/lib/date'
+import {
+  franchiseCollectionEntriesToCsv,
+  loadFranchiseCollectionView,
+} from '@/lib/franchiseCollectionLedger'
 import { DEFAULT_PAGE_SIZE, paginateItems } from '@/lib/pagination'
 import { DateTimeCell } from '@/components/shared/DateTimeCell'
 import { SignedAmount } from '@/components/shared/SignedAmount'
@@ -50,6 +55,7 @@ import {
   getTransactions,
   getWallets,
 } from '@/services/storage'
+import { FranchiseCollectionsPanel } from '@/components/shared/FranchiseCollectionsPanel'
 import { LedgerScopeNotice } from '@/components/shared/LedgerScopeNotice'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { StatCard } from '@/components/shared/StatCard'
@@ -889,6 +895,18 @@ export default function ReportsPage() {
   const showCreditEarningsCard = user?.role !== ROLES.RETAILER
   const combinedEarnings =
     Math.round((creditEarnings + earningsPrimary + Number.EPSILON) * 100) / 100
+  const isAdmin = user?.role === ROLES.ADMIN
+  const franchiseView = useMemo(() => {
+    if (!isAdmin) return null
+    void dataVersion
+    return loadFranchiseCollectionView({
+      dateRange: appliedFilters.dateRange,
+      customDateRange: {
+        from: appliedFilters.customFrom,
+        to: appliedFilters.customTo,
+      },
+    })
+  }, [appliedFilters, dataVersion, isAdmin])
   const roleSlug = user?.role || 'export'
   const showViewerCommission = Boolean(config.showViewerCommissionColumn)
   const revenueCreditsHref = buildRevenuePageHref({
@@ -1304,6 +1322,30 @@ export default function ReportsPage() {
         </div>
       )}
 
+      {isAdmin ? (
+        <>
+          <div className="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard
+              title="Franchise collections"
+              value={formatCurrency(franchiseView?.kpis.collected || 0)}
+              description={`Setup + billable monthly · pending ${formatCurrency(franchiseView?.kpis.remaining || 0)} · ${periodLabel}`}
+              descriptionBelowTitle
+              icon={CreditCard}
+              accent="wallet"
+            />
+          </div>
+          <FranchiseCollectionsPanel
+            className="mb-4"
+            dateRange={appliedFilters.dateRange}
+            customDateRange={{
+              from: appliedFilters.customFrom,
+              to: appliedFilters.customTo,
+            }}
+            showRollup
+          />
+        </>
+      ) : null}
+
       {showCreditEarningsCard ? (
         <CreditEarningsByDownlineTable
           title="Internet Credits by downline"
@@ -1531,6 +1573,19 @@ export default function ReportsPage() {
                 downloadCsv(
                   `esarisari-sales-commission-report-${roleSlug}.csv`,
                   revenueEntriesToCsv(datasets.revenueEntries),
+                )
+              }
+            />
+          ) : null}
+          {isAdmin ? (
+            <ExportCard
+              title="Franchise collections"
+              description="Upfront and billable monthly collected versus remaining for Activated clients."
+              count={franchiseView?.entries.length || 0}
+              onExport={() =>
+                downloadCsv(
+                  `esarisari-franchise-collections-report-${roleSlug}.csv`,
+                  franchiseCollectionEntriesToCsv(franchiseView?.entries || []),
                 )
               }
             />
