@@ -14,7 +14,7 @@ import {
 } from '@/lib/constants'
 import { sumCreditedShareForOrg } from '@/lib/revenue'
 import {
-  DEFAULT_PLATFORM_FEE_PERCENTAGE,
+  DEFAULT_COMMISSION_SHARES,
   normalizeCommissionShares,
   resolveCommissionHierarchy,
 } from '@/lib/commission'
@@ -461,9 +461,9 @@ export function getSeedWallets() {
 export function getSeedRevenueSharing() {
   // Global fallback only — per-retailer splits live in commission settings.
   const defaults = normalizeCommissionShares({
-    retailerPercentage: 25,
-    franchiseePercentage: 20,
-    companyPercentage: DEFAULT_PLATFORM_FEE_PERCENTAGE,
+    retailerPercentage: DEFAULT_COMMISSION_SHARES.retailerPercentage,
+    franchiseePercentage: DEFAULT_COMMISSION_SHARES.franchiseePercentage,
+    companyPercentage: DEFAULT_COMMISSION_SHARES.companyPercentage,
   })
   return [
     {
@@ -484,11 +484,13 @@ export function getSeedCommissionSettings() {
   const orgById = Object.fromEntries(orgs.map((org) => [org.id, org]))
   const retailers = orgs.filter((org) => org.type === 'retailer')
 
-  // Different downline splits per retailer — only platform fee stays 40% when SF exists.
-  // Direct-to-admin paths set SF=0 and absorb remainder into platform share.
+  // Default sheet split: retailer 10 / franchisee 20 / sub 30 / platform 40 of sales.
   const sharePlans = [
-    { retailerPercentage: 25, franchiseePercentage: 20, status: 'active' },
-    { retailerPercentage: 30, franchiseePercentage: 15, status: 'active' },
+    {
+      retailerPercentage: DEFAULT_COMMISSION_SHARES.retailerPercentage,
+      franchiseePercentage: DEFAULT_COMMISSION_SHARES.franchiseePercentage,
+      status: 'active',
+    },
   ]
 
   return retailers.map((retailer, index) => {
@@ -499,7 +501,7 @@ export function getSeedCommissionSettings() {
       franchiseePercentage: hierarchy.hasFranchisee
         ? plan.franchiseePercentage
         : 0,
-      companyPercentage: DEFAULT_PLATFORM_FEE_PERCENTAGE,
+      companyPercentage: DEFAULT_COMMISSION_SHARES.companyPercentage,
       remainderTarget: hierarchy.remainderTarget,
     })
     const daysAgo = 5 + index * 8
@@ -516,6 +518,63 @@ export function getSeedCommissionSettings() {
       updatedAt: effective,
     }
   })
+}
+
+function migrateCommissionSettingsPreservingPlatform(
+  existing = [],
+  seed = [],
+  orgById = {},
+) {
+  const usedIds = new Set()
+  const next = seed.map((seedEntry) => {
+    const current =
+      existing.find((entry) => entry.id === seedEntry.id) ||
+      existing.find(
+        (entry) =>
+          entry.retailerOrganizationId === seedEntry.retailerOrganizationId,
+      )
+    if (!current) return seedEntry
+    usedIds.add(current.id)
+    const retailer = orgById[current.retailerOrganizationId]
+    const hierarchy = resolveCommissionHierarchy(retailer, orgById)
+    const aligned = normalizeCommissionShares({
+      retailerPercentage: DEFAULT_COMMISSION_SHARES.retailerPercentage,
+      franchiseePercentage: hierarchy.hasFranchisee
+        ? DEFAULT_COMMISSION_SHARES.franchiseePercentage
+        : 0,
+      companyPercentage: current.companyPercentage,
+      remainderTarget: hierarchy.remainderTarget,
+    })
+    return {
+      ...current,
+      ...aligned,
+      franchiseeOrganizationId: hierarchy.franchisee?.id || '',
+      subfranchiseeOrganizationId: hierarchy.subfranchisee?.id || '',
+    }
+  })
+
+  existing.forEach((entry) => {
+    if (usedIds.has(entry.id)) return
+    if (orgById[entry.retailerOrganizationId]?.type !== 'retailer') return
+    const retailer = orgById[entry.retailerOrganizationId]
+    const hierarchy = resolveCommissionHierarchy(retailer, orgById)
+    const aligned = normalizeCommissionShares({
+      retailerPercentage: DEFAULT_COMMISSION_SHARES.retailerPercentage,
+      franchiseePercentage: hierarchy.hasFranchisee
+        ? DEFAULT_COMMISSION_SHARES.franchiseePercentage
+        : 0,
+      companyPercentage: entry.companyPercentage,
+      remainderTarget: hierarchy.remainderTarget,
+    })
+    next.push({
+      ...entry,
+      ...aligned,
+      franchiseeOrganizationId: hierarchy.franchisee?.id || '',
+      subfranchiseeOrganizationId: hierarchy.subfranchisee?.id || '',
+    })
+  })
+
+  return next
 }
 
 export function getSeedDepositRates() {
@@ -735,7 +794,21 @@ export function initializeMockData() {
     localStorage.getItem(STORAGE_KEYS.COMMISSION_SETTINGS_SEED_VERSION) !==
       COMMISSION_SETTINGS_SEED_VERSION
   ) {
-    saveCommissionSettings(getSeedCommissionSettings())
+    const existing = collectionNeedsSeed('commissionSettings')
+      ? []
+      : getCommissionSettings()
+    const seed = getSeedCommissionSettings()
+    if (!existing.length) {
+      saveCommissionSettings(seed)
+    } else {
+      const organizations = getOrganizations()
+      const orgById = Object.fromEntries(
+        organizations.map((org) => [org.id, org]),
+      )
+      saveCommissionSettings(
+        migrateCommissionSettingsPreservingPlatform(existing, seed, orgById),
+      )
+    }
     localStorage.setItem(
       STORAGE_KEYS.COMMISSION_SETTINGS_SEED_VERSION,
       COMMISSION_SETTINGS_SEED_VERSION,
@@ -762,8 +835,10 @@ export function initializeMockData() {
         franchiseePercentage: hierarchy.hasFranchisee
           ? current.franchiseePercentage
           : 0,
-        companyPercentage: DEFAULT_PLATFORM_FEE_PERCENTAGE,
+        companyPercentage: current.companyPercentage,
+        subfranchiseePercentage: current.subfranchiseePercentage,
         remainderTarget: hierarchy.remainderTarget,
+        lockSubShare: hierarchy.hasSubfranchisee,
       })
       const nextEntry = {
         ...current,

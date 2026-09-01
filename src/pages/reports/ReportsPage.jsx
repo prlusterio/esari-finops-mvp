@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import {
   Download,
   Eye,
@@ -10,7 +10,7 @@ import {
 import { useAuth } from '@/context/AuthContext'
 import { ROLES, TRANSACTION_STATUS, TRANSACTION_STATUS_LABELS } from '@/lib/constants'
 import { formatCurrency, formatSignedCurrency } from '@/lib/currency'
-import { buildRevenuePageHref, formatReportPeriodLabel } from '@/lib/date'
+import { buildRevenuePageHref, formatDateLong, formatReportPeriodLabel } from '@/lib/date'
 import {
   franchiseCollectionEntriesToCsv,
   loadFranchiseCollectionView,
@@ -32,6 +32,8 @@ import {
   partyRevenueDetailEntriesToCsv,
   revenueEntriesToCsv,
   creditLoadEntriesToCsv,
+  buildSubFranchiseeRevenueShareReport,
+  subFranchiseeRevenueShareToCsv,
 } from '@/lib/reports'
 import {
   buildCreditRevenueSnapshot,
@@ -159,6 +161,7 @@ function NetworkRevenueTable({
   showParentColumn = false,
   showRetailerCount = false,
   showViewerCommission = false,
+  showPoolColumn = false,
   entityLabel = 'Organization',
   partyCommissionLabel = 'Their Commission',
   viewerCommissionLabel = 'Your Commission',
@@ -204,7 +207,9 @@ function NetworkRevenueTable({
                   ) : null}
                   <TableHead className="text-right">Txns</TableHead>
                   <TableHead className="text-right">Sales Volume</TableHead>
-                  <TableHead className="text-right">Commission pool</TableHead>
+                  {showPoolColumn ? (
+                    <TableHead className="text-right">Commission pool</TableHead>
+                  ) : null}
                   <TableHead className="text-right">{partyCommissionLabel}</TableHead>
                   {showViewerCommission ? (
                     <TableHead className="text-right">
@@ -241,9 +246,11 @@ function NetworkRevenueTable({
                     <TableCell className="text-right tabular-nums font-medium">
                       {formatCurrency(row.customerPayment)}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatCurrency(row.distributable)}
-                    </TableCell>
+                    {showPoolColumn ? (
+                      <TableCell className="text-right tabular-nums">
+                        {formatCurrency(row.distributable)}
+                      </TableCell>
+                    ) : null}
                     <TableCell className="text-right tabular-nums">
                       {formatCurrency(row.creditedRevenue)}
                     </TableCell>
@@ -293,9 +300,11 @@ function NetworkRevenueTable({
                   <TableCell className="text-right tabular-nums">
                     {formatCurrency(totals.customerPayment)}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatCurrency(totals.distributable)}
-                  </TableCell>
+                  {showPoolColumn ? (
+                    <TableCell className="text-right tabular-nums">
+                      {formatCurrency(totals.distributable)}
+                    </TableCell>
+                  ) : null}
                   <TableCell className="text-right tabular-nums">
                     {formatCurrency(totals.creditedRevenue)}
                   </TableCell>
@@ -497,12 +506,12 @@ function NetworkPartyRevenueDialog({
         </DialogHeader>
 
         <div className="space-y-4 overflow-y-auto px-6 py-4">
-          <div
-            className={cn(
-              'grid gap-3',
-              showViewerCommission ? 'sm:grid-cols-5' : 'sm:grid-cols-4',
-            )}
-          >
+            <div
+              className={cn(
+                'grid gap-3',
+                showViewerCommission ? 'sm:grid-cols-4' : 'sm:grid-cols-3',
+              )}
+            >
             <div className="rounded-lg border border-border px-3 py-2">
               <p className="text-xs text-muted-foreground">Transactions</p>
               <p className="mt-1 text-lg font-semibold tabular-nums">
@@ -513,12 +522,6 @@ function NetworkPartyRevenueDialog({
               <p className="text-xs text-muted-foreground">Sales Volume</p>
               <p className="mt-1 text-lg font-semibold tabular-nums">
                 {formatCurrency(party?.customerPayment ?? 0)}
-              </p>
-            </div>
-            <div className="rounded-lg border border-border px-3 py-2">
-              <p className="text-xs text-muted-foreground">Commission Pool</p>
-              <p className="mt-1 text-lg font-semibold tabular-nums">
-                {formatCurrency(party?.distributable ?? 0)}
               </p>
             </div>
             <div className="rounded-lg border border-border px-3 py-2">
@@ -556,7 +559,6 @@ function NetworkPartyRevenueDialog({
                         <TableHead>Retailer</TableHead>
                       ) : null}
                       <TableHead className="text-right">Sales Volume</TableHead>
-                      <TableHead className="text-right">Commission pool</TableHead>
                       <TableHead className="text-right">{partyCommissionLabel}</TableHead>
                       {showViewerCommission ? (
                         <TableHead className="text-right">
@@ -589,9 +591,6 @@ function NetworkPartyRevenueDialog({
                         ) : null}
                         <TableCell className="text-right tabular-nums">
                           {formatCurrency(entry.customerPayment)}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {formatCurrency(entry.distributableRevenue)}
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
                           {formatCurrency(entry.partyRevenue)}
@@ -721,6 +720,121 @@ function CreditEarningsByDownlineTable({
                   </TableCell>
                   <TableCell className="text-right font-semibold tabular-nums">
                     {formatCurrency(totals.earnings)}
+                  </TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function RevenueSharingSubTable({ report, periodLabel }) {
+  const groups = report?.groups || []
+  const total = report?.grandTotal || {
+    sales: 0,
+    subShare: 0,
+    franchiseeShare: 0,
+    retailerShare: 0,
+    totalRevenue: 0,
+  }
+
+  return (
+    <Card className="overflow-hidden shadow-sm">
+      <CardHeader className="border-b border-border px-4 py-3">
+        <CardTitle className="text-base font-semibold">
+          Revenue Sharing Sub-Franchisee
+        </CardTitle>
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          % of sales from each sale&apos;s Commission Settings · {periodLabel}.
+          Total Revenue is Sub + Franchisee + Retailer (platform fee is separate).
+        </p>
+      </CardHeader>
+      <CardContent className="p-0">
+        {groups.length === 0 ? (
+          <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+            No retailer sales in the selected period.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead>Date</TableHead>
+                  <TableHead>Franchisee / Retailers</TableHead>
+                  <TableHead className="text-right">Sales</TableHead>
+                  <TableHead className="text-right">
+                    Revenue Share Sub-Franchisee
+                  </TableHead>
+                  <TableHead className="text-right">
+                    Revenue Share Franchisee
+                  </TableHead>
+                  <TableHead className="text-right">
+                    Retailer Revenue Share
+                  </TableHead>
+                  <TableHead className="text-right">Total Revenue</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {groups.map((group) => (
+                  <Fragment key={group.franchiseeId}>
+                    <TableRow className="bg-slate-50 hover:bg-slate-50">
+                      <TableCell />
+                      <TableCell className="font-semibold">
+                        {group.franchiseeName} (Franchisee)
+                      </TableCell>
+                      <TableCell />
+                      <TableCell />
+                      <TableCell />
+                      <TableCell />
+                      <TableCell />
+                    </TableRow>
+                    {group.retailers.map((row) => (
+                      <TableRow key={row.retailerId}>
+                        <TableCell className="whitespace-nowrap">
+                          {formatDateLong(row.date)}
+                        </TableCell>
+                        <TableCell>{row.retailerName}</TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatCurrency(row.sales)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatCurrency(row.subShare)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatCurrency(row.franchiseeShare)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatCurrency(row.retailerShare)}
+                        </TableCell>
+                        <TableCell className="text-right font-medium tabular-nums">
+                          {formatCurrency(row.totalRevenue)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </Fragment>
+                ))}
+              </TableBody>
+              <TableFooter>
+                <TableRow>
+                  <TableCell />
+                  <TableCell className="font-semibold">Total</TableCell>
+                  <TableCell className="text-right font-semibold tabular-nums">
+                    {formatCurrency(total.sales)}
+                  </TableCell>
+                  <TableCell className="text-right font-semibold tabular-nums">
+                    {formatCurrency(total.subShare)}
+                  </TableCell>
+                  <TableCell className="text-right font-semibold tabular-nums">
+                    {formatCurrency(total.franchiseeShare)}
+                  </TableCell>
+                  <TableCell className="text-right font-semibold tabular-nums">
+                    {formatCurrency(total.retailerShare)}
+                  </TableCell>
+                  <TableCell className="text-right font-semibold tabular-nums">
+                    {formatCurrency(total.totalRevenue)}
                   </TableCell>
                 </TableRow>
               </TableFooter>
@@ -906,6 +1020,20 @@ export default function ReportsPage() {
       },
     })
   }, [appliedFilters, dataVersion, isAdmin])
+  const revenueShareReport = useMemo(() => {
+    if (!config.showRevenueShareTable) return null
+    void dataVersion
+    return buildSubFranchiseeRevenueShareReport({
+      transactions: datasets.transactions,
+      organizations,
+      revenueSharing: getRevenueSharing(),
+    })
+  }, [
+    config.showRevenueShareTable,
+    dataVersion,
+    datasets.transactions,
+    organizations,
+  ])
   const roleSlug = user?.role || 'export'
   const showViewerCommission = Boolean(config.showViewerCommissionColumn)
   const revenueCreditsHref = buildRevenuePageHref({
@@ -1373,6 +1501,12 @@ export default function ReportsPage() {
 
       {config.showFranchiseeRevenueTable || config.showRetailerRevenueTable ? (
         <div className="mb-4 space-y-4">
+          {config.showRevenueShareTable ? (
+            <RevenueSharingSubTable
+              report={revenueShareReport}
+              periodLabel={periodLabel}
+            />
+          ) : null}
           {config.showFranchiseeRevenueTable ? (
             <NetworkRevenueTable
               title="Franchisee Commissions"
@@ -1441,7 +1575,7 @@ export default function ReportsPage() {
                       ) : null}
                       <TableHead>Customer Payment</TableHead>
                       <TableHead>Credits Consumed</TableHead>
-                      <TableHead>Commission pool</TableHead>
+                      <TableHead>After credits</TableHead>
                       {txConfig.showShareColumns ? (
                         <TableHead>
                           {txConfig.yourShareLabel || 'Your Share'}
@@ -1549,7 +1683,7 @@ export default function ReportsPage() {
         <div className="grid gap-4 md:grid-cols-2">
           <ExportCard
             title="Transactions"
-            description="Sales volume, credits consumed, commission pool, and your commission share for your scope."
+            description="Sales volume, credits consumed, after-credits leftover, and your commission share for your scope."
             count={datasets.transactions.length}
             onExport={() =>
               downloadCsv(
@@ -1561,10 +1695,26 @@ export default function ReportsPage() {
               )
             }
           />
+          {config.showRevenueShareTable ? (
+            <ExportCard
+              title="Revenue Sharing Sub-Franchisee"
+              description="Sales and Sub / Franchisee / Retailer shares for the selected period (platform fee not included in Total Revenue)."
+              count={(revenueShareReport?.groups || []).reduce(
+                (sum, group) => sum + group.retailers.length,
+                0,
+              )}
+              onExport={() =>
+                downloadCsv(
+                  `esarisari-revenue-sharing-subfranchisee-${roleSlug}.csv`,
+                  subFranchiseeRevenueShareToCsv(revenueShareReport),
+                )
+              }
+            />
+          ) : null}
           {config.showRevenueExport ? (
             <ExportCard
               title="Sales Commission"
-              description="Commission pool, your share %, and your commission per sale for the selected period."
+              description="Sales, your share %, and your commission per sale for the selected period."
               count={datasets.revenueEntries.length}
               onExport={() =>
                 downloadCsv(

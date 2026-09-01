@@ -1,10 +1,11 @@
 import { ROLES, TRANSACTION_STATUS } from '@/lib/constants'
 import { filterItemsByDateRange } from '@/lib/date'
 
+/** Default stamps: % of customer payment (Sales), matching the client Sub-Franchisee sheet. */
 export const DEFAULT_SHARE_PERCENTAGES = {
-  retailer: 30,
+  retailer: 10,
   franchisee: 20,
-  subfranchisee: 10,
+  subfranchisee: 30,
   company: 40,
 }
 
@@ -33,8 +34,8 @@ export function pickRandomDemoProduct() {
 }
 
 /**
- * Credits consumed and sale margin for a retailer demo sale.
- * Matches the historical seed mix so Revenue / Reports stay comparable.
+ * Credits consumed for a retailer demo sale (inventory burn).
+ * Sale commission is a separate split of customer payment — see getSaleCommissionBase.
  */
 export function estimateDemoSaleCosts(customerPayment) {
   const payment = roundMoney(Number(customerPayment) || 0)
@@ -145,11 +146,8 @@ export function getTransactionCostBreakdown(tx) {
   const netWalletDeduction = roundMoney(
     Number(tx?.walletDeduction ?? baseCost + platformProcessingFee),
   )
-  const distributable = roundMoney(
-    Number(
-      tx?.distributableRevenue ??
-        Math.max(customerPayment - netWalletDeduction, 0),
-    ),
+  const leftoverAfterCredits = roundMoney(
+    Math.max(customerPayment - netWalletDeduction, 0),
   )
 
   return {
@@ -157,9 +155,14 @@ export function getTransactionCostBreakdown(tx) {
     baseCost,
     platformProcessingFee,
     netWalletDeduction,
-    distributable,
-    saleMargin: roundMoney(customerPayment - netWalletDeduction),
+    distributable: customerPayment,
+    saleMargin: leftoverAfterCredits,
   }
+}
+
+/** Share base for Commission Settings — customer payment, not the leftover after credits. */
+export function getSaleCommissionBase(tx) {
+  return roundMoney(Number(tx?.customerPayment) || 0)
 }
 
 /**
@@ -172,7 +175,7 @@ export function buildTransactionDistribution(
   const orgById = Object.fromEntries(organizations.map((org) => [org.id, org]))
   const percentages = resolveTransactionSharePercentages(tx, revenueSharing)
   const costs = getTransactionCostBreakdown(tx)
-  const distributable = costs.distributable
+  const distributable = getSaleCommissionBase(tx)
 
   const retailerAmount = roundMoney((distributable * percentages.retailer) / 100)
   const franchiseeAmount = roundMoney((distributable * percentages.franchisee) / 100)
@@ -312,7 +315,7 @@ export function getTransactionsPageConfig(role) {
 
   return {
     subtitle:
-      'Your transaction history with credits consumed, sale margin, and your commission share',
+      'Your transaction history with credits consumed and your commission share',
     searchLabel: 'Reference',
     searchPlaceholder: 'Search by reference',
     showRetailerColumn: false,
@@ -407,7 +410,7 @@ export function sortTransactionsNewest(transactions) {
 }
 
 export function getTransactionShareAmounts(tx, revenueSharing = []) {
-  const distributable = getTransactionCostBreakdown(tx).distributable
+  const distributable = getSaleCommissionBase(tx)
   const shares = resolveTransactionSharePercentages(tx, revenueSharing)
   const retailer = roundMoney((distributable * shares.retailer) / 100)
   const franchisee = roundMoney((distributable * shares.franchisee) / 100)
@@ -439,7 +442,7 @@ export function transactionsToCsv(
     'Retailer Code',
     'Customer Payment',
     'Credits Consumed',
-    'Commission Pool',
+    'After Credits',
     'Retailer %',
     'Franchisee %',
     'Sub-Franchisee %',

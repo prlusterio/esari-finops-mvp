@@ -2,7 +2,7 @@
 
 **Status:** Living product map for the **whole app**, not Internet Credits only  
 **Last verified:** 2026-08-18 against current code (`src/lib`, `src/pages`, `src/layouts`, `src/services`, `src/data/seed.js`)  
-**Related:** [Internet Credits business model review](./internet-credits-business-model-review.md) (deposit-rate lock + §11 IC details)
+**Related:** [Internet Credits business model review](./internet-credits-business-model-review.md) (deposit-rate lock + §11 IC details) · [Sale commission 3% pool baseline (revert notes)](./sale-commission-3pct-pool-baseline.md)
 
 This is a React / Vite demo that persists to `localStorage`. There is no backend. Reset Demo Data restores seed.
 
@@ -17,6 +17,8 @@ This is a React / Vite demo that persists to `localStorage`. There is no backend
 5. [Role matrix](#5-role-matrix)
 6. [Money math (both streams)](#6-money-math-both-streams)
 7. [Not in v1 / leftovers](#7-not-in-v1--leftovers)
+
+Sale-commission revert snapshot (3% pool vs client sheet): [sale-commission-3pct-pool-baseline.md](./sale-commission-3pct-pool-baseline.md).
 
 ---
 
@@ -57,7 +59,7 @@ Sales ledger starts empty (`TRANSACTIONS_SEED_VERSION = empty-demo-v1`). Interne
 
 Default deposit rates: **60%** Admin→Sub, **70%** Sub→Fran, **80%** Fran→Retailer.
 
-Default sale split (when a retailer has no Commission Settings row): **30% retailer / 20% franchisee / 10% sub-franchisee / 40% platform**. Shares are stamped onto each sale.
+Default sale split (when a retailer has no Commission Settings row): **10% retailer / 20% franchisee / 30% sub-franchisee / 40% platform** of sales. Platform fee is Admin-configurable. Shares are stamped onto each sale.
 
 ---
 
@@ -189,18 +191,23 @@ Copy on the page states that sale splits live in Commission Settings.
 
 **Who:** Admin and Sub-Franchisee. Franchisee and Retailer do not configure splits.
 
-**What it prices:** Each internet sale’s **commission pool**.
+**What it prices:** Each internet sale’s **customer payment (Sales)**. Credits consumed stay inventory (97% of payment) and are not the commission base.
 
 Per-retailer rows: retailer / franchisee / (sub) / platform %. Active vs Inactive. Adding an Active row for a retailer inactivates the previous Active row for that retailer.
 
+Default stamps (client Sub-Franchisee sheet): Retailer **10%** / Franchisee **20%** / Sub-Franchisee **30%** / Platform **40%** of sales.
+
 Normalization:
 
-- Full chain (retailer → fran → sub → platform): retailer + franchisee + **fixed platform 40%**; remainder → sub-franchisee
+- Full chain, **Admin:** retailer + franchisee + **Admin-configured platform fee**; remainder → sub-franchisee. Admin can edit the platform fee. Sub share is read-only in the Admin dialog.
+- Full chain, **Sub-Franchisee:** retailer, franchisee, and **Your Share** are editable. Platform fee stays Admin-set and read-only. The four percentages must total 100% of sales.
 - No sub in the chain: remainder → company (platform)
 
 Engineered paths exist for retailer or franchisee attached straight to Admin (`DIRECT_TO_ADMIN`). The current seed is a full chain only.
 
 These % are **stamped on the sale**. Changing settings later does not rewrite completed transactions.
+
+To restore the previous 3% pool model, see [sale-commission-3pct-pool-baseline.md](./sale-commission-3pct-pool-baseline.md).
 
 ---
 
@@ -210,9 +217,9 @@ These % are **stamped on the sale**. Changing settings later does not rewrite co
 
 **Admin Franchise Setup Collections** card sits above the sales table and shares the page date range. Confirm Collection on unpaid/partial rows writes the same `upfrontPaid` / `monthlyPaidByPeriod` ledger. Collection rows are **not** mixed into the sales table.
 
-**Retailer only:** **Record demo sale** — product/service + customer payment. Credits consumed = 95% product cost + 2% processing = **97%** of payment. Commission pool = remaining **3%**. Sale is blocked if Available Credits &lt; credits consumed. Shares come from that retailer’s Active Commission Settings (or the 30/20/10/40 default).
+**Retailer only:** **Record demo sale** — product/service + customer payment. Credits consumed = 95% product cost + 2% processing = **97%** of payment (inventory). Commission Settings split **sales** (customer payment), default 10 / 20 / 30 / 40. Sale is blocked if Available Credits &lt; credits consumed.
 
-Columns: Reference, Date, Retailer (Admin/Sub/Fran), Customer Payment, Credits Consumed, **Sale Margin** (same number as commission pool), Your Share / Platform Share, Status, View.
+Columns: Reference, Date, Retailer (Admin/Sub/Fran), Customer Payment, Credits Consumed, **Sale Margin** (leftover after credits; not the commission base), Your Share / Platform Share, Status, View.
 
 Filters: date range, retailer (uplines), search. Export CSV from this page.
 
@@ -255,14 +262,15 @@ The **Internet Credits earnings** card links to Revenue with the **same period**
 
 **Retailer:** Sales Commission + Sales Volume only (no Internet Credits earnings / Total earnings cards, no by-downline rollup).
 
-Network tables (Admin/Sub/Fran as scoped): Franchisee Commissions and Retailer Commissions use **Commission pool**, not “% of yours”.
+Network tables (Admin/Sub/Fran as scoped): Franchisee Commissions and Retailer Commissions show **Sales Volume** and each party’s share of sales. Admin and Sub also get a **Revenue Sharing Sub-Franchisee** grouped table (client sheet layout).
 
 **CSV exports** (counts follow the selected period):
 
 | Export | Who | Contents |
 |--------|-----|----------|
-| Transactions | All | Payment, credits consumed, commission pool, split %, your share |
-| Sales Commission | All | Pool, your share %, your commission |
+| Transactions | All | Payment, credits consumed, leftover after credits, split %, your share |
+| Revenue Sharing Sub-Franchisee | Admin / Sub | Sales, Sub / Franchisee / Retailer shares, Total Revenue (excludes platform) |
+| Sales Commission | All | Sales, your share %, your commission |
 | Franchise collections | Admin | Upfront and billable monthly collected vs remaining for Activated clients |
 | Internet Credits earnings | Admin / Sub / Fran | Cash in, credits, earnings, rates, cost basis |
 | Internet Credits Requests | Roles with funding export | Includes Type (Request vs Direct Release) |
@@ -355,11 +363,13 @@ Admin’s Internet Credits earnings on a load are the **cash collected**, not a 
 
 Demo sale on ₱1,000 customer payment:
 
-- Credits consumed = ₱950 + ₱20 = ₱970
-- Commission pool (sale margin) = ₱30
-- Default stamps: retailer ₱9, franchisee ₱6, sub ₱3, platform ₱12
+- Credits consumed = ₱950 + ₱20 = ₱970 (inventory)
+- Commission Settings apply to **₱1,000 sales**, not the ₱30 leftover
+- Default stamps: retailer ₱100, franchisee ₱200, sub ₱300, platform ₱400
 
-Retailer does **not** keep 100% of sale margin. Wallet’s “Sale Margin” card is the pool (all-time), not “Your Commission”.
+The leftover after credits is **not** the commission base. Wallet’s “Sale Margin” card is still payment minus credits (inventory leftover), not “Your Commission”.
+
+Revert snapshot for the previous 3% pool: [sale-commission-3pct-pool-baseline.md](./sale-commission-3pct-pool-baseline.md). The client Sub-Franchisee report Total Revenue is Sub + Franchisee + Retailer (60% of sales at default); platform fee is the other 40%.
 
 ---
 
@@ -375,7 +385,7 @@ Verified leftovers — documented so they are not treated as product:
 | Buyer-submitted payment reference | Upline enters payment ref on release |
 | Hold / clarification status | Reject only |
 | User guide `.docx` | Regenerated 2026-08-18; screenshots may still show older sample rows |
-| Transactions column **Sale Margin** | Same number as Reports **Commission pool**; naming not unified |
+| Transactions column **Sale Margin** | Leftover after credits (inventory); commission is % of sales, not this leftover |
 | Retailer Wallet “Min. ₱5,000” | Details modal no longer has a Minimum Balance card; this caption remains |
 | `RevenueSharingPage` | Dead code; live config is Commission Settings |
 

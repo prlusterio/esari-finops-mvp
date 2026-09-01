@@ -81,6 +81,35 @@ export function resolveCommissionHierarchy(retailerOrg, orgById = {}) {
   }
 }
 
+export function resolvePlatformPercentage(companyPercentage) {
+  const numeric = Number(companyPercentage)
+  if (Number.isFinite(numeric) && numeric >= 0) return numeric
+  return DEFAULT_PLATFORM_FEE_PERCENTAGE
+}
+
+/**
+ * Admin-configured platform fee for a retailer. 0 is a valid fee.
+ * Prefers the row being edited, then the Active row, then any stored row.
+ */
+export function pickStoredPlatformPercentage(
+  settings = [],
+  { retailerOrganizationId = '', entryId = '' } = {},
+) {
+  const list = Array.isArray(settings) ? settings : []
+  const current = entryId ? list.find((entry) => entry.id === entryId) : null
+  if (current != null && current.companyPercentage != null) {
+    return resolvePlatformPercentage(current.companyPercentage)
+  }
+  const forRetailer = list.filter(
+    (entry) => entry.retailerOrganizationId === retailerOrganizationId,
+  )
+  const preferred =
+    forRetailer.find((entry) => entry.status === COMMISSION_STATUS.ACTIVE) ||
+    forRetailer[0]
+  if (!preferred || preferred.companyPercentage == null) return null
+  return resolvePlatformPercentage(preferred.companyPercentage)
+}
+
 /**
  * Sub-franchisee / "your" share is whatever remains after platform fee + downline shares.
  */
@@ -102,13 +131,17 @@ export function computeSubFranchiseeShare({
 
 /**
  * When there is no sub-franchisee (direct-to-admin), platform absorbs the remainder.
- * Otherwise platform fee stays fixed and sub-franchisee gets the remainder.
+ * Otherwise Admin-configured platform fee is kept.
+ * Admin leaves sub-franchisee as the remainder. Sub users can type their own share
+ * (`lockSubShare`) so retailer + franchisee + sub + platform must equal 100%.
  */
 export function normalizeCommissionShares({
   retailerPercentage = 0,
   franchiseePercentage = 0,
+  subfranchiseePercentage,
   companyPercentage = DEFAULT_PLATFORM_FEE_PERCENTAGE,
   remainderTarget = REMAINDER_TARGET.SUBFRANCHISEE,
+  lockSubShare = false,
 } = {}) {
   const retailer = Number(retailerPercentage) || 0
   const franchisee = Number(franchiseePercentage) || 0
@@ -122,16 +155,19 @@ export function normalizeCommissionShares({
     }
   }
 
-  const platform = Number(companyPercentage) || DEFAULT_PLATFORM_FEE_PERCENTAGE
+  const platform = resolvePlatformPercentage(companyPercentage)
+  const sub = lockSubShare
+    ? roundPercent(Math.max(Number(subfranchiseePercentage) || 0, 0))
+    : computeSubFranchiseeShare({
+        retailerPercentage: retailer,
+        franchiseePercentage: franchisee,
+        companyPercentage: platform,
+      })
   return {
     retailerPercentage: roundPercent(retailer),
     franchiseePercentage: roundPercent(franchisee),
     companyPercentage: roundPercent(platform),
-    subfranchiseePercentage: computeSubFranchiseeShare({
-      retailerPercentage: retailer,
-      franchiseePercentage: franchisee,
-      companyPercentage: platform,
-    }),
+    subfranchiseePercentage: sub,
   }
 }
 
@@ -148,33 +184,37 @@ export function isCommissionSplitValid(shares) {
   const normalized = normalizeCommissionShares(shares)
   if (Number(shares.retailerPercentage || 0) < 0) return false
   if (Number(shares.franchiseePercentage || 0) < 0) return false
+  if (Number(shares.companyPercentage || 0) < 0) return false
+  if (Number(shares.subfranchiseePercentage || 0) < 0) return false
   if (normalized.subfranchiseePercentage < 0) return false
   if (normalized.companyPercentage < 0) return false
   return Math.abs(sumCommissionPercentages(normalized) - 100) < 0.01
 }
 
-export function buildCommissionPreview(shares, samplePayment = 100, sampleDeduction = 97) {
+/** Preview applies Commission Settings % to Sales (customer payment). Credits consumed stay inventory-only. */
+export function buildCommissionPreview(shares, samplePayment = 1000) {
   const payment = Number(samplePayment) || 0
-  const deduction = Number(sampleDeduction) || 0
-  const distributable = roundPercent(Math.max(payment - deduction, 0))
+  const costs = {
+    deduction: roundPercent(payment * 0.97),
+  }
 
   const retailerAmount = roundPercent(
-    (distributable * Number(shares.retailerPercentage || 0)) / 100,
+    (payment * Number(shares.retailerPercentage || 0)) / 100,
   )
   const franchiseeAmount = roundPercent(
-    (distributable * Number(shares.franchiseePercentage || 0)) / 100,
+    (payment * Number(shares.franchiseePercentage || 0)) / 100,
   )
   const subfranchiseeAmount = roundPercent(
-    (distributable * Number(shares.subfranchiseePercentage || 0)) / 100,
+    (payment * Number(shares.subfranchiseePercentage || 0)) / 100,
   )
   const companyAmount = roundPercent(
-    distributable - retailerAmount - franchiseeAmount - subfranchiseeAmount,
+    payment - retailerAmount - franchiseeAmount - subfranchiseeAmount,
   )
 
   return {
     payment,
-    deduction,
-    distributable,
+    deduction: costs.deduction,
+    distributable: payment,
     retailerAmount,
     franchiseeAmount,
     subfranchiseeAmount,
@@ -250,6 +290,7 @@ export function enrichCommissionRows(settings, organizations) {
       const shares = normalizeCommissionShares({
         ...entry,
         remainderTarget: hierarchy.remainderTarget,
+        lockSubShare: hierarchy.hasSubfranchisee,
       })
       const totalPercentage = sumCommissionPercentages(shares)
 

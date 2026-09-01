@@ -1,5 +1,5 @@
 import { FUNDING_STATUS, ROLES, TRANSACTION_STATUS } from '@/lib/constants'
-import { filterItemsByDateRange } from '@/lib/date'
+import { filterItemsByDateRange, formatDateLong } from '@/lib/date'
 import {
   getFundingDatasets,
   getFundingWorkspaceConfig,
@@ -15,6 +15,7 @@ import {
   filterTransactionsForRole,
   getActiveSharePercentages,
   getTransactionCostBreakdown,
+  getTransactionShareAmounts,
   sortTransactionsNewest,
   transactionsToCsv,
 } from '@/lib/transactions'
@@ -40,6 +41,7 @@ export function getReportsPageConfig(role) {
       showRetailerRevenueTable: true,
       showNetworkEarningsHero: true,
       showViewerCommissionColumn: true,
+      showRevenueShareTable: true,
       yourCommissionLabel: 'Sales Commission',
       viewerCommissionLabel: 'Platform Commission',
       creditEarningsLabel: 'Internet Credits earnings',
@@ -62,6 +64,7 @@ export function getReportsPageConfig(role) {
       showRetailerRevenueTable: true,
       showNetworkEarningsHero: true,
       showViewerCommissionColumn: true,
+      showRevenueShareTable: true,
       yourCommissionLabel: 'Sales Commission',
       viewerCommissionLabel: 'Your Commission',
       creditEarningsLabel: 'Internet Credits earnings',
@@ -407,7 +410,6 @@ export function partyRevenueDetailEntriesToCsv(
     'Retailer',
     'Retailer Code',
     'Sales Volume',
-    'Commission Pool',
     `${partyLabel} Commission`,
     ...(includeViewerCommission ? [viewerLabel] : []),
     'Status',
@@ -419,7 +421,6 @@ export function partyRevenueDetailEntriesToCsv(
     entry.retailerName,
     entry.retailerCode,
     entry.customerPayment,
-    entry.distributableRevenue,
     entry.partyRevenue,
     ...(includeViewerCommission ? [entry.viewerRevenue ?? 0] : []),
     entry.status,
@@ -537,7 +538,7 @@ export function revenueEntriesToCsv(entries) {
     'Reference',
     'Retailer',
     'Retailer Code',
-    'Commission Pool',
+    'Sales',
     'Your Share %',
     'Your Commission',
     'Status',
@@ -864,6 +865,169 @@ export function buildReportSnapshot({
     franchiseeRevenueRows,
     retailerRevenueRows,
   }
+}
+
+/**
+ * Client-sheet style Sub-Franchisee revenue sharing rollup.
+ * Shares are % of sales stamped on each sale. Total Revenue excludes platform fee.
+ */
+export function buildSubFranchiseeRevenueShareReport({
+  transactions = [],
+  organizations = [],
+  revenueSharing = [],
+} = {}) {
+  const orgById = Object.fromEntries(organizations.map((org) => [org.id, org]))
+  const byFranchisee = new Map()
+
+  transactions.forEach((tx) => {
+    const costs = getTransactionCostBreakdown(tx)
+    const split = getTransactionShareAmounts(tx, revenueSharing)
+    const franchiseeId = tx.franchiseeOrganizationId || '_direct'
+    const franchiseeName = orgById[franchiseeId]?.name || 'Direct to Admin'
+    const retailerId = tx.retailerOrganizationId || tx.id
+    const retailerName =
+      tx.retailerName || orgById[retailerId]?.name || 'Retailer'
+
+    if (!byFranchisee.has(franchiseeId)) {
+      byFranchisee.set(franchiseeId, {
+        franchiseeId,
+        franchiseeName,
+        retailers: new Map(),
+      })
+    }
+    const group = byFranchisee.get(franchiseeId)
+    const current = group.retailers.get(retailerId) || {
+      retailerId,
+      retailerName,
+      date: tx.createdAt,
+      sales: 0,
+      subShare: 0,
+      franchiseeShare: 0,
+      retailerShare: 0,
+      subPct: split.shares.subfranchisee,
+      franchiseePct: split.shares.franchisee,
+      retailerPct: split.shares.retailer,
+    }
+    current.sales = roundMoney(current.sales + costs.customerPayment)
+    current.subShare = roundMoney(current.subShare + split.subfranchisee)
+    current.franchiseeShare = roundMoney(
+      current.franchiseeShare + split.franchisee,
+    )
+    current.retailerShare = roundMoney(current.retailerShare + split.retailer)
+    if (String(tx.createdAt || '') > String(current.date || '')) {
+      current.date = tx.createdAt
+    }
+    group.retailers.set(retailerId, current)
+  })
+
+  const groups = [...byFranchisee.values()]
+    .map((group) => {
+      const retailers = [...group.retailers.values()]
+        .map((row) => ({
+          ...row,
+          totalRevenue: roundMoney(
+            row.subShare + row.franchiseeShare + row.retailerShare,
+          ),
+        }))
+        .sort((a, b) => a.retailerName.localeCompare(b.retailerName))
+      const totals = retailers.reduce(
+        (sum, row) => ({
+          sales: roundMoney(sum.sales + row.sales),
+          subShare: roundMoney(sum.subShare + row.subShare),
+          franchiseeShare: roundMoney(sum.franchiseeShare + row.franchiseeShare),
+          retailerShare: roundMoney(sum.retailerShare + row.retailerShare),
+          totalRevenue: roundMoney(sum.totalRevenue + row.totalRevenue),
+        }),
+        {
+          sales: 0,
+          subShare: 0,
+          franchiseeShare: 0,
+          retailerShare: 0,
+          totalRevenue: 0,
+        },
+      )
+      return { ...group, retailers, totals }
+    })
+    .sort((a, b) => a.franchiseeName.localeCompare(b.franchiseeName))
+
+  const grandTotal = groups.reduce(
+    (sum, group) => ({
+      sales: roundMoney(sum.sales + group.totals.sales),
+      subShare: roundMoney(sum.subShare + group.totals.subShare),
+      franchiseeShare: roundMoney(
+        sum.franchiseeShare + group.totals.franchiseeShare,
+      ),
+      retailerShare: roundMoney(sum.retailerShare + group.totals.retailerShare),
+      totalRevenue: roundMoney(sum.totalRevenue + group.totals.totalRevenue),
+    }),
+    {
+      sales: 0,
+      subShare: 0,
+      franchiseeShare: 0,
+      retailerShare: 0,
+      totalRevenue: 0,
+    },
+  )
+
+  return { groups, grandTotal }
+}
+
+export function subFranchiseeRevenueShareToCsv(report) {
+  const headers = [
+    'Date',
+    'Franchisee / Retailers',
+    'Sales',
+    'Revenue Share Sub-Franchisee',
+    'Revenue Share Franchisee',
+    'Retailer Revenue Share',
+    'Total Revenue',
+  ]
+  const lines = []
+  ;(report?.groups || []).forEach((group) => {
+    lines.push([
+      '',
+      `${group.franchiseeName} (Franchisee)`,
+      '',
+      '',
+      '',
+      '',
+      '',
+    ])
+    group.retailers.forEach((row) => {
+      lines.push([
+        formatDateLong(row.date),
+        row.retailerName,
+        row.sales.toFixed(2),
+        row.subShare.toFixed(2),
+        row.franchiseeShare.toFixed(2),
+        row.retailerShare.toFixed(2),
+        row.totalRevenue.toFixed(2),
+      ])
+    })
+  })
+  const total = report?.grandTotal || {
+    sales: 0,
+    subShare: 0,
+    franchiseeShare: 0,
+    retailerShare: 0,
+    totalRevenue: 0,
+  }
+  lines.push([
+    '',
+    'Total',
+    total.sales.toFixed(2),
+    total.subShare.toFixed(2),
+    total.franchiseeShare.toFixed(2),
+    total.retailerShare.toFixed(2),
+    total.totalRevenue.toFixed(2),
+  ])
+  return [headers, ...lines]
+    .map((row) =>
+      row
+        .map((value) => `"${String(value ?? '').replace(/"/g, '""')}"`)
+        .join(','),
+    )
+    .join('\n')
 }
 
 export function exportTransactionsCsv(

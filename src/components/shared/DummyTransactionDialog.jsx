@@ -135,8 +135,9 @@ export function DummyTransactionDialog({
                 </div>
               ) : (
                 <p className="mt-1 text-muted-foreground">
-                  Credits consumed are 97% of the payment (3% sale margin), then
-                  split by this retailer&apos;s commission settings.
+                  Credits consumed are 97% of the payment (inventory). Commission
+                  settings split the customer payment (sales), not the leftover
+                  after credits.
                 </p>
               )}
             </div>

@@ -2,7 +2,7 @@ import { ROLES, TRANSACTION_STATUS } from '@/lib/constants'
 import { filterItemsByDateRange } from '@/lib/date'
 import {
   getActiveSharePercentages,
-  getTransactionCostBreakdown,
+  getSaleCommissionBase,
   resolveTransactionSharePercentages,
 } from '@/lib/transactions'
 
@@ -45,7 +45,7 @@ export function getViewerShareAmount(tx, percentages, role) {
  * Prefers percentages stamped on the transaction (from that retailer's commission settings).
  */
 export function getTransactionShareAmounts(tx, percentages) {
-  const distributable = getTransactionCostBreakdown(tx).distributable
+  const distributable = getSaleCommissionBase(tx)
   const fallbackConfig = percentages
     ? [
         {
@@ -93,7 +93,7 @@ export function buildRevenueEntries({
       const franchisee =
         orgById[tx.franchiseeOrganizationId] ||
         (retailer?.parentId ? orgById[retailer.parentId] : null)
-      const distributable = getTransactionCostBreakdown(tx).distributable
+      const distributable = getSaleCommissionBase(tx)
       const yourRevenue = getViewerShareAmount(tx, percentages, role)
       const txShares = resolveTransactionSharePercentages(tx, revenueSharing)
       const sharePercentage = getViewerSharePercentage(txShares, role)

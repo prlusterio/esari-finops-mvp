@@ -279,7 +279,7 @@ export function buildCreditRevenueSnapshot({
       mode: 'sale_margin',
       title: 'Revenue',
       description:
-        'Commission pool on internet sales (customer payment minus credits consumed). Your credited share uses the distribution % on each sale.',
+        'Your credited share uses the distribution % on each sale. Credits consumed are inventory, not the commission base.',
       entries,
       kpis: {
         primaryLabel: 'Sale margin',

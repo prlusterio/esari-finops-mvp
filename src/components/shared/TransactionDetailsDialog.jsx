@@ -42,7 +42,7 @@ function downloadReceipt(tx, distribution, summary) {
     `Total Customer Payment: ${formatCurrency(costs.customerPayment)}`,
     `Credits Consumed: ${formatSignedCurrency(costs.netWalletDeduction, 'debit')}`,
     `Sale Margin: ${formatCurrency(costs.saleMargin ?? costs.customerPayment - costs.netWalletDeduction)}`,
-    `Distributable Revenue: ${formatCurrency(distributable)}`,
+    `Sales (share base): ${formatCurrency(distributable)}`,
     '',
     'Commission Distribution',
     ...(tiers || []).map(
@@ -208,7 +208,7 @@ export function TransactionDetailsDialog({
                   Commission Distribution
                 </h3>
                 <p className="mt-0.5 text-xs text-slate-400">
-                  Sale margin split by the percentages on this sale
+                  % of sales (customer payment) stamped on this sale
                 </p>
               </div>
               <p className="text-sm font-semibold text-slate-900">
@@ -252,9 +252,8 @@ export function TransactionDetailsDialog({
 
           <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
             <p className="text-sm leading-relaxed text-slate-500">
-              Sale margin (customer payment minus credits consumed) is the
-              commission pool. Deposit rates still price Internet Credits loads
-              separately — they do not replace this per-sale split.
+              Commission settings split customer payment (sales). Credits consumed
+              are inventory for the load, not the commission base.
             </p>
           </div>
         </div>

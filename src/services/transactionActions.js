@@ -72,7 +72,9 @@ function resolveSharesForRetailer(retailer, orgById, settings) {
           : 0,
         companyPercentage:
           configured.companyPercentage ?? DEFAULT_PLATFORM_FEE_PERCENTAGE,
+        subfranchiseePercentage: configured.subfranchiseePercentage,
         remainderTarget: hierarchy.remainderTarget,
+        lockSubShare: hierarchy.hasSubfranchisee,
       }),
     }
   }
@@ -98,7 +100,7 @@ function buildCompletedSale({
   productService,
   customerReference,
 }) {
-  const distributableRevenue = costs.saleMargin
+  const distributableRevenue = costs.customerPayment
   const retailerShare = roundMoney(
     (distributableRevenue * shares.retailerPercentage) / 100,
   )

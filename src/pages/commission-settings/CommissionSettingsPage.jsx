@@ -4,12 +4,13 @@ import { useAuth } from '@/context/AuthContext'
 import {
   COMMISSION_STATUS,
   COMMISSION_STATUS_LABELS,
-  DEFAULT_PLATFORM_FEE_PERCENTAGE,
+  DEFAULT_COMMISSION_SHARES,
   DIRECT_TO_ADMIN,
   enrichCommissionRows,
   filterCommissionRows,
   getCommissionNetworkScope,
   normalizeCommissionShares,
+  pickStoredPlatformPercentage,
   resolveCommissionHierarchy,
 } from '@/lib/commission'
 import { formatDateLong } from '@/lib/date'
@@ -245,13 +246,24 @@ export default function CommissionSettingsPage() {
     const remainderTarget =
       payload.remainderTarget || hierarchy.remainderTarget
 
+    const storedPlatform = pickStoredPlatformPercentage(existing, {
+      retailerOrganizationId: payload.retailerOrganizationId,
+      entryId: payload.id,
+    })
+    const companyPercentage = isAdmin
+      ? payload.companyPercentage
+      : (storedPlatform ?? DEFAULT_COMMISSION_SHARES.companyPercentage)
+
+    const lockSubShare = !isAdmin && hierarchy.hasSubfranchisee
     const normalized = normalizeCommissionShares({
       retailerPercentage: payload.retailerPercentage,
       franchiseePercentage: hierarchy.hasFranchisee
         ? payload.franchiseePercentage
         : 0,
-      companyPercentage: DEFAULT_PLATFORM_FEE_PERCENTAGE,
+      subfranchiseePercentage: payload.subfranchiseePercentage,
+      companyPercentage,
       remainderTarget,
+      lockSubShare,
     })
 
     const savedEntry = {
@@ -307,8 +319,8 @@ export default function CommissionSettingsPage() {
         title="Commission Settings"
         description={
           isAdmin
-            ? 'Set retailer and franchisee transaction commission shares across the network. These % splits are separate from Internet Credits deposit rates (60/70/80).'
-            : 'Set retailer and franchisee transaction commission shares for your downlines. These % splits are separate from Internet Credits deposit rates.'
+            ? 'Set retailer, franchisee, and platform fee % of sales. Sub-franchisee is the remainder. Separate from Internet Credits deposit rates.'
+            : 'Set retailer, franchisee, and your share % of sales. Platform fee is set by Admin. Total must equal 100%.'
         }
         breadcrumbs={[
           { label: 'Home', href: getHomePathForRole(user?.role) },
@@ -531,6 +543,7 @@ export default function CommissionSettingsPage() {
         viewerRole={user?.role}
         retailers={retailers}
         orgById={orgById}
+        existingSettings={settings}
         initial={editing}
         onSave={handleSave}
       />

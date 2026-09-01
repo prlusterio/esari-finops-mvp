@@ -3,12 +3,13 @@ import { CheckCircle2, Info } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
 import {
   buildCommissionPreview,
+  computeSubFranchiseeShare,
   COMMISSION_STATUS,
   DEFAULT_COMMISSION_SHARES,
-  DEFAULT_PLATFORM_FEE_PERCENTAGE,
   isCommissionSplitValid,
   normalizeCommissionShares,
   parsePercentInput,
+  pickStoredPlatformPercentage,
   resolveCommissionHierarchy,
   sumCommissionPercentages,
 } from '@/lib/commission'
@@ -69,6 +70,7 @@ export function CommissionConfigDialog({
   viewerRole = 'subfranchisee',
   retailers = [],
   orgById = {},
+  existingSettings = [],
   initial = null,
   onSave,
 }) {
@@ -81,6 +83,12 @@ export function CommissionConfigDialog({
   )
   const [franchiseePct, setFranchiseePct] = useState(
     String(DEFAULT_COMMISSION_SHARES.franchiseePercentage),
+  )
+  const [platformPct, setPlatformPct] = useState(
+    String(DEFAULT_COMMISSION_SHARES.companyPercentage),
+  )
+  const [subPct, setSubPct] = useState(
+    String(DEFAULT_COMMISSION_SHARES.subfranchiseePercentage),
   )
   const [status, setStatus] = useState(COMMISSION_STATUS.ACTIVE)
   const [error, setError] = useState('')
@@ -106,23 +114,29 @@ export function CommissionConfigDialog({
         franchiseePercentage: initialHierarchy.hasFranchisee
           ? initial.franchiseePercentage
           : 0,
-        companyPercentage: DEFAULT_PLATFORM_FEE_PERCENTAGE,
+        subfranchiseePercentage: initial.subfranchiseePercentage,
+        companyPercentage: initial.companyPercentage,
         remainderTarget: initialHierarchy.remainderTarget,
+        lockSubShare: !isAdmin && initialHierarchy.hasSubfranchisee,
       })
       setRetailerId(initial.retailerOrganizationId || '')
       setEffectiveDate(initial.effectiveDate || '')
       setRetailerPct(String(normalized.retailerPercentage))
       setFranchiseePct(String(normalized.franchiseePercentage))
+      setSubPct(String(normalized.subfranchiseePercentage))
+      setPlatformPct(String(normalized.companyPercentage))
       setStatus(initial.status || COMMISSION_STATUS.ACTIVE)
     } else {
       setRetailerId('')
       setEffectiveDate(new Date().toISOString().slice(0, 10))
       setRetailerPct(String(DEFAULT_COMMISSION_SHARES.retailerPercentage))
       setFranchiseePct(String(DEFAULT_COMMISSION_SHARES.franchiseePercentage))
+      setSubPct(String(DEFAULT_COMMISSION_SHARES.subfranchiseePercentage))
+      setPlatformPct(String(DEFAULT_COMMISSION_SHARES.companyPercentage))
       setStatus(COMMISSION_STATUS.ACTIVE)
     }
     setError('')
-  }, [open, initial, orgById])
+  }, [open, initial, orgById, isAdmin])
 
   useEffect(() => {
     if (!open || !retailerId || isEdit) return
@@ -131,6 +145,32 @@ export function CommissionConfigDialog({
     }
   }, [open, retailerId, isEdit, hasFranchisee, franchiseePct])
 
+  useEffect(() => {
+    if (!open || isEdit || !retailerId) return
+    const stored = pickStoredPlatformPercentage(existingSettings, {
+      retailerOrganizationId: retailerId,
+    })
+    if (stored != null) setPlatformPct(String(stored))
+    if (isAdmin) return
+    const nextHierarchy = resolveCommissionHierarchy(
+      orgById[retailerId],
+      orgById,
+    )
+    const platform = stored ?? DEFAULT_COMMISSION_SHARES.companyPercentage
+    setSubPct(
+      String(
+        computeSubFranchiseeShare({
+          retailerPercentage: DEFAULT_COMMISSION_SHARES.retailerPercentage,
+          franchiseePercentage: nextHierarchy.hasFranchisee
+            ? DEFAULT_COMMISSION_SHARES.franchiseePercentage
+            : 0,
+          companyPercentage: platform,
+        }),
+      ),
+    )
+  }, [open, isEdit, retailerId, existingSettings, isAdmin, orgById])
+
+  const canEditSubShare = !isAdmin && hasSubfranchisee
   const shares = useMemo(
     () =>
       normalizeCommissionShares({
@@ -138,14 +178,19 @@ export function CommissionConfigDialog({
         franchiseePercentage: hasFranchisee
           ? parsePercentInput(franchiseePct)
           : 0,
-        companyPercentage: DEFAULT_PLATFORM_FEE_PERCENTAGE,
+        subfranchiseePercentage: parsePercentInput(subPct),
+        companyPercentage: parsePercentInput(platformPct),
         remainderTarget: hierarchy.remainderTarget,
+        lockSubShare: canEditSubShare,
       }),
     [
       retailerPct,
       franchiseePct,
+      subPct,
+      platformPct,
       hasFranchisee,
       hierarchy.remainderTarget,
+      canEditSubShare,
     ],
   )
 
@@ -153,6 +198,7 @@ export function CommissionConfigDialog({
   const valid = isCommissionSplitValid({
     ...shares,
     remainderTarget: hierarchy.remainderTarget,
+    lockSubShare: canEditSubShare,
   })
   const preview = buildCommissionPreview(shares)
   const downlineTotal =
@@ -161,16 +207,17 @@ export function CommissionConfigDialog({
         100,
     ) / 100
 
+  const canEditPlatformFee = isAdmin && hasSubfranchisee
   const sfLabel = isAdmin ? 'Sub-Franchisee Share' : 'Your Share'
   const platformLabel = hasSubfranchisee ? 'Platform Fee' : 'Platform Share'
   const infoText = !retailerId
     ? isAdmin
-      ? 'Select a retailer to configure commission. Direct-to-admin retailers and franchisees are supported.'
-      : 'Configure commission for your franchisee and retailer downlines. Your share is calculated automatically from what remains after the platform fee and downline shares.'
+      ? 'Select a retailer to configure commission. Percentages apply to sales (customer payment). Admin sets the platform fee; sub-franchisee is the remainder.'
+      : 'Configure commission for your franchisee and retailer downlines. Set your share of sales. Platform fee is set by Admin. Total must equal 100%.'
     : hasSubfranchisee
       ? isAdmin
-        ? 'Sub-franchisee share is calculated automatically from what remains after the platform fee and downline shares.'
-        : 'Your share is calculated automatically from what remains after the platform fee and downline shares.'
+        ? 'Sub-franchisee share is the remainder after retailer, franchisee, and the platform fee you set.'
+        : 'Set your share and downline shares. Platform fee is set by Admin. Combined they must equal 100% of sales.'
       : hasFranchisee
         ? 'This franchisee reports directly to CWPC Admin. There is no sub-franchisee share — platform absorbs the remainder.'
         : 'This retailer reports directly to CWPC Admin. Franchisee and sub-franchisee shares are zero — platform absorbs the remainder.'
@@ -205,9 +252,11 @@ export function CommissionConfigDialog({
     }
     if (!valid) {
       setError(
-        hasSubfranchisee
-          ? 'Retailer + Franchisee shares cannot exceed the remaining allocation after the platform fee.'
-          : 'Retailer + Franchisee shares cannot exceed 100%.',
+        canEditSubShare
+          ? 'Retailer + Franchisee + Your share + Platform fee must equal 100%.'
+          : hasSubfranchisee
+            ? 'Retailer + Franchisee + Platform fee cannot exceed 100%.'
+            : 'Retailer + Franchisee shares cannot exceed 100%.',
       )
       return
     }
@@ -302,13 +351,19 @@ export function CommissionConfigDialog({
               <PercentField
                 id="commission-your-share"
                 label={`${sfLabel} %`}
-                value={String(shares.subfranchiseePercentage)}
-                onChange={() => {}}
-                disabled
+                value={
+                  canEditSubShare
+                    ? subPct
+                    : String(shares.subfranchiseePercentage)
+                }
+                onChange={setSubPct}
+                disabled={!canEditSubShare}
                 hint={
-                  isAdmin
-                    ? 'Auto-calculated remainder for the sub-franchisee.'
-                    : 'Auto-calculated remainder for your sub-franchisee share.'
+                  canEditSubShare
+                    ? 'Your share of sales. Combined with downlines and the Admin platform fee, this must equal 100%.'
+                    : isAdmin
+                      ? 'Auto-calculated remainder for the sub-franchisee.'
+                      : 'Auto-calculated remainder for your sub-franchisee share.'
                 }
               />
             ) : (
@@ -324,18 +379,18 @@ export function CommissionConfigDialog({
             <PercentField
               id="commission-platform"
               label={`${platformLabel} %`}
-              value={String(
+              value={
                 hasSubfranchisee
-                  ? DEFAULT_PLATFORM_FEE_PERCENTAGE
-                  : shares.companyPercentage,
-              )}
-              onChange={() => {}}
-              disabled
+                  ? platformPct
+                  : String(shares.companyPercentage)
+              }
+              onChange={setPlatformPct}
+              disabled={!canEditPlatformFee}
               hint={
                 hasSubfranchisee
                   ? isAdmin
-                    ? 'Platform fee is fixed for this MVP.'
-                    : 'This is configurable on CWPC Admin.'
+                    ? 'Editable by Admin. Sub-franchisee receives the remainder so the split totals 100% of sales.'
+                    : 'Set by Admin. Adjust your share and downline shares so the total equals 100%.'
                   : 'Includes the platform fee plus any unassigned mid-tier shares.'
               }
             />
@@ -370,7 +425,9 @@ export function CommissionConfigDialog({
             >
               {valid
                 ? 'Commission split validated: Total equals 100%'
-                : 'Reduce retailer/franchisee shares so the total can equal 100%'}
+                : canEditSubShare
+                  ? 'Adjust shares so retailer, franchisee, your share, and platform fee equal 100%'
+                  : 'Reduce retailer/franchisee shares so the total can equal 100%'}
             </p>
           </div>
 
@@ -421,7 +478,7 @@ export function CommissionConfigDialog({
                 </span>
               </div>
               <div className="flex justify-between gap-3">
-                <span className="text-slate-500">Distributable Revenue</span>
+                <span className="text-slate-500">Sales (share base)</span>
                 <span className="font-semibold text-blue-700">
                   {formatCurrency(preview.distributable)}
                 </span>

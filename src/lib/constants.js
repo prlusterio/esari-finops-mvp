@@ -60,7 +60,7 @@ export const WALLET_LEDGER_VERSION = 'funding-ledger-v7'
 export const TRANSACTIONS_SEED_VERSION = 'empty-demo-v1'
 
 /** Bump when seeded commission settings change and existing demos should refresh once. */
-export const COMMISSION_SETTINGS_SEED_VERSION = 'login-accounts-v1'
+export const COMMISSION_SETTINGS_SEED_VERSION = 'sheet-sales-split-v1'
 
 /** Bump when internet-credits funding seeds change and existing demos should refresh once. */
 export const INTERNET_CREDITS_SEED_VERSION = 'empty-demo-v3'

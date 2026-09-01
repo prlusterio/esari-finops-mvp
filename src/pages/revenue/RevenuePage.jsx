@@ -600,7 +600,7 @@ export default function RevenuePage() {
                       <TableHead>Date</TableHead>
                       <TableHead>Reference</TableHead>
                       <TableHead>Retailer</TableHead>
-                      <TableHead className="text-right">Commission pool</TableHead>
+                      <TableHead className="text-right">Sales</TableHead>
                       <TableHead className="text-right">Your share %</TableHead>
                       <TableHead className="text-right">Your commission</TableHead>
                       <TableHead>Status</TableHead>
