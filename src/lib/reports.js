@@ -1,5 +1,5 @@
 import { FUNDING_STATUS, ROLES, TRANSACTION_STATUS } from '@/lib/constants'
-import { filterItemsByDateRange, formatDateLong } from '@/lib/date'
+import { filterItemsByDateRange, formatDateLong, formatSheetDate } from '@/lib/date'
 import {
   getFundingDatasets,
   getFundingWorkspaceConfig,
@@ -19,6 +19,7 @@ import {
   sortTransactionsNewest,
   transactionsToCsv,
 } from '@/lib/transactions'
+import { CREDIT_LEDGER_TYPE } from '@/lib/wallets'
 
 export { filterItemsByDateRange }
 
@@ -1020,6 +1021,147 @@ export function subFranchiseeRevenueShareToCsv(report) {
     total.franchiseeShare.toFixed(2),
     total.retailerShare.toFixed(2),
     total.totalRevenue.toFixed(2),
+  ])
+  return [headers, ...lines]
+    .map((row) =>
+      row
+        .map((value) => `"${String(value ?? '').replace(/"/g, '""')}"`)
+        .join(','),
+    )
+    .join('\n')
+}
+
+function csvMoney(value) {
+  if (value == null || value === '') return ''
+  return Number(value).toFixed(2)
+}
+
+/**
+ * Client-sheet Internet Retailer Balance Report.
+ * One retailer. Deposit Amount = credits loaded. Debit Sales = credits consumed.
+ * Franchisee column is the parent franchisee.
+ */
+export function buildInternetRetailerBalanceReport({
+  retailer = null,
+  organizations = [],
+  ledger = null,
+} = {}) {
+  const orgById = Object.fromEntries(organizations.map((org) => [org.id, org]))
+  const parent = retailer?.parentId ? orgById[retailer.parentId] : null
+  const franchiseeName =
+    parent?.type === 'franchisee' ? parent.name : parent?.name || '—'
+
+  const empty = {
+    retailerName: retailer?.name || '',
+    retailerCode: retailer?.code || '',
+    franchiseeName,
+    rows: [],
+    totals: { depositAmount: 0, debitSales: 0, closingBalance: 0 },
+  }
+
+  if (!retailer || !ledger) return empty
+
+  const chronological = [...(ledger.movements || [])].reverse()
+  const rows = chronological
+    .map((entry) => {
+      const amount = roundMoney(Number(entry.amount) || 0)
+      const isOpening =
+        entry.source === 'opening' ||
+        entry.source === 'period_opening' ||
+        entry.type === CREDIT_LEDGER_TYPE.OPENING
+      const isSale =
+        entry.source === 'sale' || entry.type === CREDIT_LEDGER_TYPE.CONSUMED
+      const isCredit = entry.direction === 'credit'
+
+      let credited = ''
+      let debit = ''
+      let depositAmount = null
+      let debitSales = null
+
+      if (isCredit) {
+        credited = isOpening ? 'Initial Wallet' : 'Credit Received'
+        depositAmount = amount
+      } else if (isSale) {
+        debit = 'Sales'
+        debitSales = amount
+      } else {
+        debit = entry.typeLabel || 'Debit'
+        debitSales = amount
+      }
+
+      return {
+        id: entry.id,
+        createdAt: entry.createdAt,
+        dateLabel: formatSheetDate(entry.createdAt),
+        franchiseeName,
+        credited,
+        debit,
+        depositAmount,
+        debitSales,
+        walletBalance: roundMoney(Number(entry.runningBalance) || 0),
+        transaction: entry.transaction || null,
+      }
+    })
+    .filter(
+      (row) =>
+        (Number(row.depositAmount) || 0) > 0 ||
+        (Number(row.debitSales) || 0) > 0,
+    )
+
+  const totals = {
+    depositAmount: roundMoney(
+      rows.reduce((sum, row) => sum + (Number(row.depositAmount) || 0), 0),
+    ),
+    debitSales: roundMoney(
+      rows.reduce((sum, row) => sum + (Number(row.debitSales) || 0), 0),
+    ),
+    closingBalance:
+      rows.length > 0
+        ? rows[rows.length - 1].walletBalance
+        : roundMoney(Number(ledger.closingBalance) || 0),
+  }
+
+  return {
+    retailerName: retailer.name,
+    retailerCode: retailer.code || '',
+    franchiseeName,
+    rows,
+    totals,
+  }
+}
+
+export function internetRetailerBalanceReportToCsv(report) {
+  const headers = [
+    'Date',
+    'Franchisee',
+    'Credited',
+    'Debit',
+    'Deposit Amount',
+    'Less: Debit Sales',
+    'Wallet Balance',
+  ]
+  const lines = (report?.rows || []).map((row) => [
+    row.dateLabel,
+    row.franchiseeName,
+    row.credited,
+    row.debit,
+    csvMoney(row.depositAmount),
+    csvMoney(row.debitSales),
+    csvMoney(row.walletBalance),
+  ])
+  const totals = report?.totals || {
+    depositAmount: 0,
+    debitSales: 0,
+    closingBalance: 0,
+  }
+  lines.push([
+    '',
+    'Total',
+    '',
+    '',
+    csvMoney(totals.depositAmount),
+    csvMoney(totals.debitSales),
+    csvMoney(totals.closingBalance),
   ])
   return [headers, ...lines]
     .map((row) =>

@@ -34,6 +34,8 @@ import {
   creditLoadEntriesToCsv,
   buildSubFranchiseeRevenueShareReport,
   subFranchiseeRevenueShareToCsv,
+  buildInternetRetailerBalanceReport,
+  internetRetailerBalanceReportToCsv,
 } from '@/lib/reports'
 import {
   buildCreditRevenueSnapshot,
@@ -477,6 +479,170 @@ function DownlineCreditStatement({
   )
 }
 
+function blankMoney(value) {
+  if (value == null || value === '') return ''
+  return formatCurrency(value)
+}
+
+function InternetRetailerBalanceReport({
+  options,
+  selectedId,
+  onSelect,
+  report,
+  periodLabel,
+  hidePicker,
+  onExport,
+  onViewTransaction,
+}) {
+  const rows = report?.rows || []
+  const totals = report?.totals || {
+    depositAmount: 0,
+    debitSales: 0,
+    closingBalance: 0,
+  }
+  const selected = options.find((option) => option.id === selectedId)
+  const canExport = Boolean(selectedId && rows.length > 0)
+
+  return (
+    <Card className="mb-4 overflow-hidden shadow-sm">
+      <CardHeader className="border-b border-border px-4 py-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0 flex-1 space-y-2">
+            <CardTitle className="text-base font-semibold">
+              eSariSari Internet Retailer Balance Report
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Credits loaded versus credits consumed on sales, with running
+              wallet balance · {periodLabel}. One retailer at a time.
+            </p>
+            {hidePicker ? (
+              selected ? (
+                <p className="text-sm font-medium text-slate-800">
+                  {selected.name}
+                  {selected.code ? ` (${selected.code})` : ''}
+                </p>
+              ) : null
+            ) : (
+              <div className="max-w-md space-y-1.5">
+                <Label className="text-xs text-slate-500">Retailer</Label>
+                <Select
+                  value={selectedId || undefined}
+                  onValueChange={onSelect}
+                  disabled={options.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a retailer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {options.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.name}
+                        {option.code ? ` (${option.code})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!canExport}
+            onClick={onExport}
+          >
+            <Download className="h-4 w-4" />
+            Download
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="p-0">
+        {!selectedId ? (
+          <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+            Select a retailer to see their credit balance report.
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+            No credit loads or sales for this retailer in the selected period.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead rowSpan={2} className="align-bottom">
+                    Date
+                  </TableHead>
+                  <TableHead rowSpan={2} className="align-bottom">
+                    Franchisee
+                  </TableHead>
+                  <TableHead colSpan={2} className="text-center">
+                    Particulars
+                  </TableHead>
+                  <TableHead colSpan={3} className="text-center">
+                    Details
+                  </TableHead>
+                </TableRow>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead>Credited</TableHead>
+                  <TableHead>Debit</TableHead>
+                  <TableHead className="text-right">Deposit Amount</TableHead>
+                  <TableHead className="text-right">Less: Debit Sales</TableHead>
+                  <TableHead className="text-right">Wallet Balance</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    className={row.transaction ? 'cursor-pointer' : undefined}
+                    onClick={() => {
+                      if (row.transaction) onViewTransaction?.(row.transaction)
+                    }}
+                  >
+                    <TableCell className="whitespace-nowrap">
+                      {row.dateLabel}
+                    </TableCell>
+                    <TableCell>{row.franchiseeName}</TableCell>
+                    <TableCell>{row.credited}</TableCell>
+                    <TableCell>{row.debit}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {blankMoney(row.depositAmount)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-red-600">
+                      {blankMoney(row.debitSales)}
+                    </TableCell>
+                    <TableCell className="text-right font-semibold tabular-nums">
+                      {formatCurrency(row.walletBalance)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+              <TableFooter>
+                <TableRow>
+                  <TableCell />
+                  <TableCell className="font-semibold">Total</TableCell>
+                  <TableCell />
+                  <TableCell />
+                  <TableCell className="text-right font-semibold tabular-nums">
+                    {formatCurrency(totals.depositAmount)}
+                  </TableCell>
+                  <TableCell className="text-right font-semibold tabular-nums">
+                    {formatCurrency(totals.debitSales)}
+                  </TableCell>
+                  <TableCell className="text-right font-semibold tabular-nums">
+                    {formatCurrency(totals.closingBalance)}
+                  </TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 function NetworkPartyRevenueDialog({
   open,
   onOpenChange,
@@ -878,6 +1044,7 @@ export default function ReportsPage() {
   const [selectedTx, setSelectedTx] = useState(null)
   const [selectedParty, setSelectedParty] = useState(null)
   const [selectedDownlineId, setSelectedDownlineId] = useState('')
+  const [selectedBalanceRetailerId, setSelectedBalanceRetailerId] = useState('')
 
   useEffect(() => {
     const nextRange = config.defaultDateRange || 'all'
@@ -896,6 +1063,7 @@ export default function ReportsPage() {
     setPage(0)
     setSelectedParty(null)
     setSelectedDownlineId('')
+    setSelectedBalanceRetailerId('')
   }, [user?.role, config.defaultDateRange])
 
   const retailerOptions = useMemo(() => {
@@ -1100,6 +1268,33 @@ export default function ReportsPage() {
     )
   }, [downlineOptions, selectedDownlineId])
 
+  const retailerBalanceOptions = useMemo(
+    () =>
+      (creditLedgerParties.retailers || []).map((org) => ({
+        id: org.id,
+        name: org.name,
+        code: org.code || '',
+      })),
+    [creditLedgerParties],
+  )
+
+  useEffect(() => {
+    const ids = new Set(retailerBalanceOptions.map((option) => option.id))
+    if (selectedBalanceRetailerId && ids.has(selectedBalanceRetailerId)) return
+    const filteredId = appliedFilters.retailerId
+    if (filteredId && filteredId !== 'all' && ids.has(filteredId)) {
+      setSelectedBalanceRetailerId(filteredId)
+      return
+    }
+    setSelectedBalanceRetailerId(
+      retailerBalanceOptions.length === 1 ? retailerBalanceOptions[0].id : '',
+    )
+  }, [
+    retailerBalanceOptions,
+    selectedBalanceRetailerId,
+    appliedFilters.retailerId,
+  ])
+
   const selectedDownline = useMemo(
     () => downlineOptions.find((option) => option.id === selectedDownlineId) || null,
     [downlineOptions, selectedDownlineId],
@@ -1126,6 +1321,39 @@ export default function ReportsPage() {
     appliedFilters,
     dataVersion,
   ])
+
+  const selectedBalanceRetailer = useMemo(
+    () =>
+      organizations.find((org) => org.id === selectedBalanceRetailerId) || null,
+    [organizations, selectedBalanceRetailerId],
+  )
+
+  const selectedBalanceLedger = useMemo(() => {
+    if (!selectedBalanceRetailerId) return null
+    const wallets = getWallets()
+    return buildCreditLedger({
+      organizationId: selectedBalanceRetailerId,
+      organizations,
+      transfers: getFundingTransfers(),
+      transactions: getTransactions(),
+      wallet: getOperatingWallet(wallets, selectedBalanceRetailerId),
+      dateRange: appliedFilters.dateRange,
+      customDateRange: {
+        from: appliedFilters.customFrom,
+        to: appliedFilters.customTo,
+      },
+    })
+  }, [selectedBalanceRetailerId, organizations, appliedFilters, dataVersion])
+
+  const retailerBalanceReport = useMemo(
+    () =>
+      buildInternetRetailerBalanceReport({
+        retailer: selectedBalanceRetailer,
+        organizations,
+        ledger: selectedBalanceLedger,
+      }),
+    [selectedBalanceRetailer, organizations, selectedBalanceLedger],
+  )
 
   const {
     page: currentPage,
@@ -1198,6 +1426,16 @@ export default function ReportsPage() {
     downloadCsv(
       `esarisari-credit-statement-${slug}.csv`,
       creditLedgerToCsv(selectedDownlineLedger),
+    )
+  }
+
+  const exportRetailerBalanceReport = () => {
+    if (!selectedBalanceRetailer || !retailerBalanceReport?.rows?.length) return
+    const slug =
+      selectedBalanceRetailer.code || selectedBalanceRetailer.id || 'retailer'
+    downloadCsv(
+      `esarisari-internet-retailer-balance-${slug}.csv`,
+      internetRetailerBalanceReportToCsv(retailerBalanceReport),
     )
   }
 
@@ -1480,6 +1718,19 @@ export default function ReportsPage() {
         />
       ) : null}
 
+      {retailerBalanceOptions.length > 0 ? (
+        <InternetRetailerBalanceReport
+          options={retailerBalanceOptions}
+          selectedId={selectedBalanceRetailerId}
+          onSelect={setSelectedBalanceRetailerId}
+          report={retailerBalanceReport}
+          periodLabel={periodLabel}
+          hidePicker={user?.role === ROLES.RETAILER}
+          onExport={exportRetailerBalanceReport}
+          onViewTransaction={(tx) => setSelectedTx(tx)}
+        />
+      ) : null}
+
       {downlineOptions.length > 0 ? (
         <DownlineCreditStatement
           options={downlineOptions}
@@ -1711,6 +1962,13 @@ export default function ReportsPage() {
               }
             />
           ) : null}
+          <ExportCard
+            title="Internet Retailer Balance Report"
+            description="Credits loaded, credits consumed on sales, and running wallet balance for the selected retailer."
+            count={retailerBalanceReport?.rows?.length || 0}
+            disabled={!selectedBalanceRetailerId}
+            onExport={exportRetailerBalanceReport}
+          />
           {config.showRevenueExport ? (
             <ExportCard
               title="Sales Commission"

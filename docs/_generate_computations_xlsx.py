@@ -311,7 +311,7 @@ def build_readme() -> Sheet:
     s.text(
         1,
         3,
-        "This workbook is the same math the demo app uses (18 August 2026). Grey cells are formulas — do not type over them. Excel recalculates on open. Open the Load calculator or Sale calculator tabs to edit yellow inputs.",
+        "This workbook is the same math the demo app uses (1 September 2026). Grey cells are formulas — do not type over them. Excel recalculates on open. Open the Load calculator or Sale calculator tabs to edit yellow inputs.",
         "note",
     )
     s.text(1, 4, "Two separate earning streams", "section")
@@ -321,7 +321,7 @@ def build_readme() -> Sheet:
     s.text(3, 6, "Admin: cash collected. Sub/Fran: cash in − (credits × your buy rate)")
     s.text(1, 7, "Sales Commission")
     s.text(2, 7, "A retailer records an internet sale")
-    s.text(3, 7, "Your % of the commission pool (customer payment − credits consumed)")
+    s.text(3, 7, "Your % of the customer payment (Sales)")
     s.text(1, 9, "Display rule", "section")
     s.text(1, 10, "1 credit face = ₱1 for display. Available Credits are inventory, not bank cash.")
     s.text(1, 12, "Rounding", "section")
@@ -336,9 +336,9 @@ def build_readme() -> Sheet:
     s.text(1, 17, "Load calculator")
     s.text(2, 17, "Convert cash ↔ credits, walk 1,000 credits down the chain, compute Sub/Fran spread")
     s.text(1, 18, "Sale calculator")
-    s.text(2, 18, "Demo sale: 97% credits consumed, then the 4-tier commission split")
+    s.text(2, 18, "Demo sale: 97% credits consumed (inventory); Commission Settings % of sales")
     s.text(1, 19, "Worked examples")
-    s.text(2, 19, "Numbers used in the user guide (₱30,000 load, ₱1,000 sale, Retailer A split)")
+    s.text(2, 19, "Numbers used in the user guide (₱30,000 load, ₱1,000 sale, 10 / 20 / 30 / 40 of sales)")
     s.text(1, 20, "Demo defaults")
     s.text(2, 20, "Hop rates, commission plans, opening balances, low-balance alert")
     s.text(1, 21, "Read me")
@@ -388,28 +388,28 @@ def build_formulas() -> Sheet:
             "Record demo sale, Transactions, Wallet, Revenue (retailer)",
         ),
         (
-            "Commission pool / sale margin",
-            "pool = customer_payment − credits_consumed",
+            "Sale Margin (leftover after credits)",
+            "leftover = customer_payment − credits_consumed",
             "ROUND(payment-credits_consumed,2)",
-            "Transactions, Transaction Details, Wallet Sale Margin",
+            "Transactions, Transaction Details, Wallet Sale Margin — not the commission base",
         ),
         (
             "Party commission",
-            "share = pool × party_% ÷ 100",
-            "ROUND(pool*pct/100,2)",
+            "share = customer_payment × party_% ÷ 100",
+            "ROUND(payment*pct/100,2)",
             "Transaction Details, Revenue Sales Commission, Reports",
         ),
         (
             "Platform remainder",
-            "platform = pool − retailer − franchisee − sub-franchisee",
-            "ROUND(pool-ret-fran-sub,2)",
+            "platform = payment − retailer − franchisee − sub-franchisee",
+            "ROUND(payment-ret-fran-sub,2)",
             "Transaction Details (absorbs 1-cent rounding)",
         ),
         (
-            "Sub-Franchisee remainder %",
+            "Sub-Franchisee remainder % (Admin dialog)",
             "SF% = max(0, 100 − retailer% − franchisee% − platform%)",
             "MAX(0,1-ret-fran-plat)",
-            "Commission Settings when a Sub-Franchisee exists",
+            "Admin Commission Settings — Sub share is remainder; platform fee is Admin-editable",
         ),
         (
             "Total earnings (Sub/Fran)",
@@ -560,50 +560,50 @@ def build_sale() -> Sheet:
     s.text(1, 7, "Credits consumed")
     s.money(2, 7, "=ROUND(B2*0.97,2)", "formula")
     s.text(3, 7, "97% of payment — burned from Available Credits")
-    s.text(1, 8, "Commission pool / sale margin")
+    s.text(1, 8, "Sale Margin (leftover after credits)")
     s.money(2, 8, "=ROUND(B6-B7,2)", "formula")
-    s.text(3, 8, "The remaining 3%. This is the pool, not one party’s profit")
+    s.text(3, 8, "Inventory leftover. Not the commission base.")
 
-    s.text(1, 10, "Commission split (Retailer A demo defaults)", "title")
+    s.text(1, 10, "Commission split — % of sales (demo defaults 10 / 20 / 30 / 40)", "title")
     s.text(1, 11, "Retailer %", "section")
-    s.pct(2, 11, 0.25, "input")
+    s.pct(2, 11, 0.10, "input")
     s.text(1, 12, "Franchisee %", "section")
     s.pct(2, 12, 0.20, "input")
     s.text(1, 13, "Sub-Franchisee %", "section")
-    s.pct(2, 13, 0.15, "input")
+    s.pct(2, 13, 0.30, "input")
     s.text(1, 14, "Platform %", "section")
     s.pct(2, 14, 0.40, "input")
     s.text(1, 15, "Sum of % (must be 100%)")
     s.pct(2, 15, "=B11+B12+B13+B14", "formula")
 
-    headers(s, 17, ["Party", "Share of pool (₱)", "Check"])
+    headers(s, 17, ["Party", "Share of sales (₱)", "Check"])
     s.text(1, 18, "Retailer")
-    s.money(2, 18, "=ROUND($B$8*B11,2)", "formula")
+    s.money(2, 18, "=ROUND($B$2*B11,2)", "formula")
     s.text(1, 19, "Franchisee")
-    s.money(2, 19, "=ROUND($B$8*B12,2)", "formula")
+    s.money(2, 19, "=ROUND($B$2*B12,2)", "formula")
     s.text(1, 20, "Sub-Franchisee")
-    s.money(2, 20, "=ROUND($B$8*B13,2)", "formula")
+    s.money(2, 20, "=ROUND($B$2*B13,2)", "formula")
     s.text(1, 21, "Platform (remainder after rounding)")
-    s.money(2, 21, "=ROUND($B$8-B18-B19-B20,2)", "formula")
-    s.text(3, 21, "Not ROUND(pool×40%) — leftover cents go here")
+    s.money(2, 21, "=ROUND($B$2-B18-B19-B20,2)", "formula")
+    s.text(3, 21, "Not ROUND(sales×40%) — leftover cents go here")
     s.text(1, 22, "Total distributed")
     s.money(2, 22, "=ROUND(B18+B19+B20+B21,2)", "formula")
-    s.text(3, 22, "Must equal the commission pool")
+    s.text(3, 22, "Must equal the customer payment")
 
-    s.text(1, 24, "Sub-Franchisee remainder % (how Commission Settings fills SF)", "title")
+    s.text(1, 24, "Sub-Franchisee remainder % (Admin dialog)", "title")
     s.text(1, 25, "Retailer % entered")
-    s.pct(2, 25, 0.25, "input")
+    s.pct(2, 25, 0.10, "input")
     s.text(1, 26, "Franchisee % entered")
     s.pct(2, 26, 0.20, "input")
-    s.text(1, 27, "Platform share % (fixed when a Sub exists)")
+    s.text(1, 27, "Platform share % (Admin-set)")
     s.pct(2, 27, 0.40, "input")
     s.text(1, 28, "Computed Sub-Franchisee %")
     s.pct(2, 28, "=MAX(0,1-B25-B26-B27)", "formula")
-    s.text(3, 28, "SF% = 100% − retailer − franchisee − platform")
+    s.text(3, 28, "Admin: SF% = 100% − retailer − franchisee − platform")
     s.text(
         1,
         30,
-        "Retailer B demo plan: 30% / 15% / 15% / 40%. New Commission Settings dialog defaults: 30% / 20% / 10% / 40%.",
+        "Sub-Franchisee dialog: retailer, franchisee, and Your Share are editable; platform fee is read-only. Four % must equal 100% of sales. Demo seed for every retailer: 10% / 20% / 30% / 40%.",
         "note",
     )
     return s
@@ -663,27 +663,27 @@ def build_examples() -> Sheet:
     s.money(2, 27, "=ROUND(B23-B26,2)", "formula")
     s.text(4, 27, "800 − 700 = 100")
 
-    s.text(1, 29, "5. ₱1,000 Retailer A demo sale (25 / 20 / 15 / 40)", "section")
+    s.text(1, 29, "5. ₱1,000 Retailer A demo sale (10 / 20 / 30 / 40 of sales)", "section")
     s.text(1, 30, "Customer payment")
     s.money(2, 30, 1000, "input")
     s.text(1, 31, "Credits consumed")
     s.money(2, 31, "=ROUND(B30*0.97,2)", "formula")
-    s.text(4, 31, "97% of ₱1,000 = ₱970")
-    s.text(1, 32, "Commission pool")
+    s.text(4, 31, "97% of ₱1,000 = ₱970 (inventory)")
+    s.text(1, 32, "Sale Margin (leftover after credits)")
     s.money(2, 32, "=ROUND(B30-B31,2)", "formula")
-    s.text(4, 32, "1,000 − 970 = 30")
-    s.text(1, 33, "Retailer A 25%")
-    s.money(2, 33, "=ROUND(B32*0.25,2)", "formula")
-    s.text(4, 33, "7.50")
-    s.text(1, 34, "Franchisee A 20%")
-    s.money(2, 34, "=ROUND(B32*0.20,2)", "formula")
-    s.text(4, 34, "6.00")
-    s.text(1, 35, "Sub-Franchisee 15%")
-    s.money(2, 35, "=ROUND(B32*0.15,2)", "formula")
-    s.text(4, 35, "4.50")
+    s.text(4, 32, "1,000 − 970 = 30 — not the commission base")
+    s.text(1, 33, "Retailer A 10% of sales")
+    s.money(2, 33, "=ROUND(B30*0.10,2)", "formula")
+    s.text(4, 33, "100.00")
+    s.text(1, 34, "Franchisee A 20% of sales")
+    s.money(2, 34, "=ROUND(B30*0.20,2)", "formula")
+    s.text(4, 34, "200.00")
+    s.text(1, 35, "Sub-Franchisee 30% of sales")
+    s.money(2, 35, "=ROUND(B30*0.30,2)", "formula")
+    s.text(4, 35, "300.00")
     s.text(1, 36, "Platform 40% (remainder)")
-    s.money(2, 36, "=ROUND(B32-B33-B34-B35,2)", "formula")
-    s.text(4, 36, "12.00")
+    s.money(2, 36, "=ROUND(B30-B33-B34-B35,2)", "formula")
+    s.text(4, 36, "400.00")
 
     s.text(1, 38, "6. Wallet identity after that sale", "section")
     s.text(1, 39, "Retailer opening / received credits")
@@ -729,29 +729,29 @@ def build_defaults() -> Sheet:
         ["Retailer", "Retailer %", "Franchisee %", "Sub-Franchisee %", "Platform %", "Notes"],
     )
     s.text(1, 11, "Retailer A")
-    s.pct(2, 11, 0.25)
+    s.pct(2, 11, 0.10)
     s.pct(3, 11, 0.20)
-    s.pct(4, 11, 0.15)
+    s.pct(4, 11, 0.30)
     s.pct(5, 11, 0.40)
-    s.text(6, 11, "sharePlans[0]; SF is remainder")
+    s.text(6, 11, "% of sales; demo seed")
     s.text(1, 12, "Retailer B")
-    s.pct(2, 12, 0.30)
-    s.pct(3, 12, 0.15)
-    s.pct(4, 12, 0.15)
+    s.pct(2, 12, 0.10)
+    s.pct(3, 12, 0.20)
+    s.pct(4, 12, 0.30)
     s.pct(5, 12, 0.40)
-    s.text(6, 12, "sharePlans[1]; SF is remainder")
+    s.text(6, 12, "Same default as A")
     s.text(1, 13, "Retailer C")
-    s.pct(2, 13, 0.25)
+    s.pct(2, 13, 0.10)
     s.pct(3, 13, 0.20)
-    s.pct(4, 13, 0.15)
+    s.pct(4, 13, 0.30)
     s.pct(5, 13, 0.40)
-    s.text(6, 13, "Same plan as A (index 2 % 2)")
+    s.text(6, 13, "Same default as A")
     s.text(1, 14, "New-settings dialog default")
-    s.pct(2, 14, 0.30)
+    s.pct(2, 14, 0.10)
     s.pct(3, 14, 0.20)
-    s.pct(4, 14, 0.10)
+    s.pct(4, 14, 0.30)
     s.pct(5, 14, 0.40)
-    s.text(6, 14, "DEFAULT_SHARE_PERCENTAGES if you create a new row")
+    s.text(6, 14, "DEFAULT_SHARE_PERCENTAGES")
 
     s.text(1, 16, "Opening Available Credits (fresh Reset Demo Data)", "section")
     headers(s, 17, ["Role / org", "Opening credits (₱)"])
@@ -776,7 +776,7 @@ def build_defaults() -> Sheet:
     s.text(1, 28, "Internet Credits earnings")
     s.text(2, 28, "Sum of spreads on released downline loads in the selected period")
     s.text(1, 29, "Sales Commission")
-    s.text(2, 29, "Sum of your stamped % × pool on completed sales in the period")
+    s.text(2, 29, "Sum of your stamped % of sales on completed sales in the period")
     s.text(1, 30, "Total earnings")
     s.text(2, 30, "IC earnings + Sales Commission")
     s.text(1, 31, "Retailer Revenue")

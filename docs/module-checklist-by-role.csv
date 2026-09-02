@@ -1,0 +1,253 @@
+Role,Module,Page,Path,Task title,Subtitle,Status
+Shared shell,Authentication & chrome,Login,/login,Initial UI/UX,"Email, password, demo account chips",Completed
+Shared shell,Authentication & chrome,Login,/login,Frontend implementation,Session in localStorage; admin password restricted,Completed
+Shared shell,Authentication & chrome,Login,/login,API-ready client,Need /api/v1 admin + finops resources,In progress
+Shared shell,Authentication & chrome,Login,/login,API wiring,Still on localStorage,In progress
+Shared shell,Authentication & chrome,Login,/login,QA / verification,Pending verification,To do
+Shared shell,Authentication & chrome,Login,/login,Documentation,Documented in app-modules §3,Completed
+Shared shell,Authentication & chrome,Profile,/profile,Initial UI/UX,"Read-only name, email, role, organization",Completed
+Shared shell,Authentication & chrome,Profile,/profile,Frontend implementation,Reads AuthContext only; no edit,Completed
+Shared shell,Authentication & chrome,Profile,/profile,API-ready client,Need /api/v1 admin + finops resources,In progress
+Shared shell,Authentication & chrome,Profile,/profile,API wiring,Still on localStorage,In progress
+Shared shell,Authentication & chrome,Profile,/profile,QA / verification,Pending verification,To do
+Shared shell,Authentication & chrome,Profile,/profile,Documentation,Covered in app-modules / user guide,Completed
+Shared shell,Authentication & chrome,Notifications,Header bell,Initial UI/UX,Pending credit requests + low/zero credits,Completed
+Shared shell,Authentication & chrome,Notifications,Header bell,Frontend implementation,Per-org read state in localStorage,Completed
+Shared shell,Authentication & chrome,Notifications,Header bell,API-ready client,Sub client has notifications.js; other roles do not,In progress
+Shared shell,Authentication & chrome,Notifications,Header bell,API wiring,Bell still uses storage.js,In progress
+Shared shell,Authentication & chrome,Notifications,Header bell,QA / verification,Pending verification,To do
+Shared shell,Authentication & chrome,Notifications,Header bell,Documentation,Covered in app-modules / user guide,Completed
+Shared shell,Authentication & chrome,Reset Demo Data,User menu,Initial UI/UX,Confirm in the user menu,Completed
+Shared shell,Authentication & chrome,Reset Demo Data,User menu,Frontend implementation,Reseeds localStorage; keeps session if user still exists,Completed
+Shared shell,Authentication & chrome,Reset Demo Data,User menu,API-ready client,Demo-only; not a production API,In progress
+Shared shell,Authentication & chrome,Reset Demo Data,User menu,API wiring,Not applicable until a backend seed/reset exists,In progress
+Shared shell,Authentication & chrome,Reset Demo Data,User menu,QA / verification,Pending verification,To do
+Shared shell,Authentication & chrome,Reset Demo Data,User menu,Documentation,Called out in app-modules and user guides,Completed
+Admin module,Financials Dashboard,Dashboard,/dashboard,Initial UI/UX,Upfront + billable monthly collections KPIs and tables,Completed
+Admin module,Financials Dashboard,Dashboard,/dashboard,Frontend implementation,esarisari_franchise_collections ledger,Completed
+Admin module,Financials Dashboard,Dashboard,/dashboard,API-ready client,Need /api/v1 admin + finops resources,In progress
+Admin module,Financials Dashboard,Dashboard,/dashboard,API wiring,Still on localStorage,In progress
+Admin module,Financials Dashboard,Dashboard,/dashboard,QA / verification,Pending verification,To do
+Admin module,Financials Dashboard,Dashboard,/dashboard,Documentation,Covered in app-modules / user guide,Completed
+Admin module,Clients & franchise setup,Clients list,/franchise-setup/clients,Initial UI/UX,Registered + seeded portfolio; Add New Client,Completed
+Admin module,Clients & franchise setup,Clients list,/franchise-setup/clients,Frontend implementation,localStorage registered clients + demo portfolio,Completed
+Admin module,Clients & franchise setup,Clients list,/franchise-setup/clients,API-ready client,Need /api/v1 admin + finops resources,In progress
+Admin module,Clients & franchise setup,Clients list,/franchise-setup/clients,API wiring,Still on localStorage,In progress
+Admin module,Clients & franchise setup,Clients list,/franchise-setup/clients,QA / verification,Pending verification,To do
+Admin module,Clients & franchise setup,Clients list,/franchise-setup/clients,Documentation,Covered in app-modules / user guide,Completed
+Admin module,Clients & franchise setup,Client details,/franchise-setup/clients/:clientId,Initial UI/UX,"Activate, split, collections, territory",Completed
+Admin module,Clients & franchise setup,Client details,/franchise-setup/clients/:clientId,Frontend implementation,Same collection ledger as Dashboard,Completed
+Admin module,Clients & franchise setup,Client details,/franchise-setup/clients/:clientId,API-ready client,Need /api/v1 admin + finops resources,In progress
+Admin module,Clients & franchise setup,Client details,/franchise-setup/clients/:clientId,API wiring,Still on localStorage,In progress
+Admin module,Clients & franchise setup,Client details,/franchise-setup/clients/:clientId,QA / verification,Pending verification,To do
+Admin module,Clients & franchise setup,Client details,/franchise-setup/clients/:clientId,Documentation,Covered in app-modules / user guide,Completed
+Admin module,Clients & franchise setup,Onboarding step 1 — Client Info,/franchise-setup/onboarding/step-1,Initial UI/UX,Admin credentials + company profile,Completed
+Admin module,Clients & franchise setup,Onboarding step 1 — Client Info,/franchise-setup/onboarding/step-1,Frontend implementation,Draft in esarisari_onboarding_client_info,Completed
+Admin module,Clients & franchise setup,Onboarding step 1 — Client Info,/franchise-setup/onboarding/step-1,API-ready client,Need /api/v1 admin + finops resources,In progress
+Admin module,Clients & franchise setup,Onboarding step 1 — Client Info,/franchise-setup/onboarding/step-1,API wiring,Still on localStorage,In progress
+Admin module,Clients & franchise setup,Onboarding step 1 — Client Info,/franchise-setup/onboarding/step-1,QA / verification,Pending verification,To do
+Admin module,Clients & franchise setup,Onboarding step 1 — Client Info,/franchise-setup/onboarding/step-1,Documentation,Covered in app-modules / user guide,Completed
+Admin module,Clients & franchise setup,Onboarding step 2 — Franchise Setup,/franchise-setup/onboarding/step-2,Initial UI/UX,"Client type, packages, territory, fees",Completed
+Admin module,Clients & franchise setup,Onboarding step 2 — Franchise Setup,/franchise-setup/onboarding/step-2,Frontend implementation,Draft in esarisari_onboarding_franchise_setup,Completed
+Admin module,Clients & franchise setup,Onboarding step 2 — Franchise Setup,/franchise-setup/onboarding/step-2,API-ready client,Need /api/v1 admin + finops resources,In progress
+Admin module,Clients & franchise setup,Onboarding step 2 — Franchise Setup,/franchise-setup/onboarding/step-2,API wiring,Still on localStorage,In progress
+Admin module,Clients & franchise setup,Onboarding step 2 — Franchise Setup,/franchise-setup/onboarding/step-2,QA / verification,Pending verification,To do
+Admin module,Clients & franchise setup,Onboarding step 2 — Franchise Setup,/franchise-setup/onboarding/step-2,Documentation,Covered in app-modules / user guide,Completed
+Admin module,Clients & franchise setup,Onboarding step 3 — Revenue Split,/franchise-setup/onboarding/step-3,Initial UI/UX,Company vs this client only; downlines out of scope,Completed
+Admin module,Clients & franchise setup,Onboarding step 3 — Revenue Split,/franchise-setup/onboarding/step-3,Frontend implementation,esarisari_onboarding_revenue_split,Completed
+Admin module,Clients & franchise setup,Onboarding step 3 — Revenue Split,/franchise-setup/onboarding/step-3,API-ready client,Need /api/v1 admin + finops resources,In progress
+Admin module,Clients & franchise setup,Onboarding step 3 — Revenue Split,/franchise-setup/onboarding/step-3,API wiring,Still on localStorage,In progress
+Admin module,Clients & franchise setup,Onboarding step 3 — Revenue Split,/franchise-setup/onboarding/step-3,QA / verification,Pending verification,To do
+Admin module,Clients & franchise setup,Onboarding step 3 — Revenue Split,/franchise-setup/onboarding/step-3,Documentation,Covered in app-modules / user guide,Completed
+Admin module,Clients & franchise setup,Onboarding step 4 — Review,/franchise-setup/onboarding/step-4,Initial UI/UX,Confirm and Create Franchisee,Completed
+Admin module,Clients & franchise setup,Onboarding step 4 — Review,/franchise-setup/onboarding/step-4,Frontend implementation,Writes esarisari_registered_clients,Completed
+Admin module,Clients & franchise setup,Onboarding step 4 — Review,/franchise-setup/onboarding/step-4,API-ready client,Need /api/v1 admin + finops resources,In progress
+Admin module,Clients & franchise setup,Onboarding step 4 — Review,/franchise-setup/onboarding/step-4,API wiring,Still on localStorage,In progress
+Admin module,Clients & franchise setup,Onboarding step 4 — Review,/franchise-setup/onboarding/step-4,QA / verification,Pending verification,To do
+Admin module,Clients & franchise setup,Onboarding step 4 — Review,/franchise-setup/onboarding/step-4,Documentation,Covered in app-modules / user guide,Completed
+Admin module,Wallets,Wallets directory,/wallets,Initial UI/UX,Network Available Credits directory,Completed
+Admin module,Wallets,Wallets directory,/wallets,Frontend implementation,Operating wallets from localStorage,Completed
+Admin module,Wallets,Wallets directory,/wallets,API-ready client,Need /api/v1 admin + finops resources,In progress
+Admin module,Wallets,Wallets directory,/wallets,API wiring,Still on localStorage,In progress
+Admin module,Wallets,Wallets directory,/wallets,QA / verification,Pending verification,To do
+Admin module,Wallets,Wallets directory,/wallets,Documentation,Covered in app-modules / user guide,Completed
+Admin module,Internet Credits,Internet Credits workspace,/funding,Initial UI/UX,"Incoming, mine, direct release, approve/reject",Completed
+Admin module,Internet Credits,Internet Credits workspace,/funding,Frontend implementation,fundingActions.js + localStorage ledgers,Completed
+Admin module,Internet Credits,Internet Credits workspace,/funding,API-ready client,Need /api/v1 admin + finops resources,In progress
+Admin module,Internet Credits,Internet Credits workspace,/funding,API wiring,Still on localStorage,In progress
+Admin module,Internet Credits,Internet Credits workspace,/funding,QA / verification,Pending verification,To do
+Admin module,Internet Credits,Internet Credits workspace,/funding,Documentation,Covered in app-modules / user guide,Completed
+Admin module,Deposit Rates,Deposit Rates,/deposit-rates,Initial UI/UX,Admin → Sub hop overrides,Completed
+Admin module,Deposit Rates,Deposit Rates,/deposit-rates,Frontend implementation,esarisari_deposit_rates,Completed
+Admin module,Deposit Rates,Deposit Rates,/deposit-rates,API-ready client,Need /api/v1 admin + finops resources,In progress
+Admin module,Deposit Rates,Deposit Rates,/deposit-rates,API wiring,Still on localStorage,In progress
+Admin module,Deposit Rates,Deposit Rates,/deposit-rates,QA / verification,Pending verification,To do
+Admin module,Deposit Rates,Deposit Rates,/deposit-rates,Documentation,Covered in app-modules / user guide,Completed
+Admin module,Commission Settings,Commission Settings,/commission-settings,Initial UI/UX,Per-retailer split; Admin-editable platform fee,Completed
+Admin module,Commission Settings,Commission Settings,/commission-settings,Frontend implementation,% of sales; Sub share is remainder for Admin,Completed
+Admin module,Commission Settings,Commission Settings,/commission-settings,API-ready client,Need /api/v1 admin + finops resources,In progress
+Admin module,Commission Settings,Commission Settings,/commission-settings,API wiring,Still on localStorage,In progress
+Admin module,Commission Settings,Commission Settings,/commission-settings,QA / verification,Pending verification,To do
+Admin module,Commission Settings,Commission Settings,/commission-settings,Documentation,Covered in app-modules / user guide,Completed
+Admin module,Transactions,Transactions Ledger,/transactions,Initial UI/UX,Sales table + franchise setup collections panel,Completed
+Admin module,Transactions,Transactions Ledger,/transactions,Frontend implementation,Empty sales seed; collections share Dashboard ledger,Completed
+Admin module,Transactions,Transactions Ledger,/transactions,API-ready client,Need /api/v1 admin + finops resources,In progress
+Admin module,Transactions,Transactions Ledger,/transactions,API wiring,Still on localStorage,In progress
+Admin module,Transactions,Transactions Ledger,/transactions,QA / verification,Pending verification,To do
+Admin module,Transactions,Transactions Ledger,/transactions,Documentation,Covered in app-modules / user guide,Completed
+Admin module,Revenue,Revenue,/revenue,Initial UI/UX,IC earnings + sales commission + collections,Completed
+Admin module,Revenue,Revenue,/revenue,Frontend implementation,Two money streams stay separate from collections cash,Completed
+Admin module,Revenue,Revenue,/revenue,API-ready client,Need /api/v1 admin + finops resources,In progress
+Admin module,Revenue,Revenue,/revenue,API wiring,Still on localStorage,In progress
+Admin module,Revenue,Revenue,/revenue,QA / verification,Pending verification,To do
+Admin module,Revenue,Revenue,/revenue,Documentation,Covered in app-modules / user guide,Completed
+Admin module,Reports,Reports,/reports,Initial UI/UX,"Network tables, Sub revenue-sharing sheet, CSV, collections",Completed
+Admin module,Reports,Reports,/reports,Frontend implementation,Client-sheet Sub report included for Admin too,Completed
+Admin module,Reports,Reports,/reports,API-ready client,Need /api/v1 admin + finops resources,In progress
+Admin module,Reports,Reports,/reports,API wiring,Still on localStorage,In progress
+Admin module,Reports,Reports,/reports,QA / verification,Pending verification,To do
+Admin module,Reports,Reports,/reports,Documentation,Covered in app-modules / user guide,Completed
+Admin module,Leftovers (not in sidebar),Organizations,/organizations,Initial UI/UX,Placeholder copy; removed from nav,To do
+Admin module,Leftovers (not in sidebar),Organizations,/organizations,Frontend implementation,Route exists; not a product surface,To do
+Admin module,Leftovers (not in sidebar),Organizations,/organizations,API-ready client,No contract yet,In progress
+Admin module,Leftovers (not in sidebar),Organizations,/organizations,API wiring,Blocked on frontend + API,In progress
+Admin module,Leftovers (not in sidebar),Organizations,/organizations,QA / verification,Page is not live,To do
+Admin module,Leftovers (not in sidebar),Organizations,/organizations,Documentation,Placeholder only in app-modules,In progress
+Sub-Franchisee module,Dashboard (greyed),Dashboard,/dashboard,Initial UI/UX,Greyed nav item only; Admin Financials is not this role,Completed
+Sub-Franchisee module,Dashboard (greyed),Dashboard,/dashboard,Frontend implementation,Role-specific Sub dashboard,To do
+Sub-Franchisee module,Dashboard (greyed),Dashboard,/dashboard,API-ready client,Not in the current Sub API contract,In progress
+Sub-Franchisee module,Dashboard (greyed),Dashboard,/dashboard,API wiring,Blocked on product decision,In progress
+Sub-Franchisee module,Dashboard (greyed),Dashboard,/dashboard,QA / verification,Route is blocked for this role,To do
+Sub-Franchisee module,Dashboard (greyed),Dashboard,/dashboard,Documentation,Noted as greyed in app-modules,Completed
+Sub-Franchisee module,Franchisees (greyed),Franchisees,/franchisees,Initial UI/UX,Greyed nav; no AppRoutes entry,To do
+Sub-Franchisee module,Franchisees (greyed),Franchisees,/franchisees,Frontend implementation,Placeholder page file only,To do
+Sub-Franchisee module,Franchisees (greyed),Franchisees,/franchisees,API-ready client,No contract yet,In progress
+Sub-Franchisee module,Franchisees (greyed),Franchisees,/franchisees,API wiring,Blocked on frontend + API,In progress
+Sub-Franchisee module,Franchisees (greyed),Franchisees,/franchisees,QA / verification,Page is not live,To do
+Sub-Franchisee module,Franchisees (greyed),Franchisees,/franchisees,Documentation,Placeholder only in app-modules,In progress
+Sub-Franchisee module,Wallets,Wallet Management,/wallet-management,Initial UI/UX,Own org + franchisee + retailer credits directory,Completed
+Sub-Franchisee module,Wallets,Wallet Management,/wallet-management,Frontend implementation,Read-only; activity sheet from transfers,Completed
+Sub-Franchisee module,Wallets,Wallet Management,/wallet-management,API-ready client,Unwired client in src/services/api/subfranchisor,In progress
+Sub-Franchisee module,Wallets,Wallet Management,/wallet-management,API wiring,Do not swap loaders until VITE_API_BASE_URL is set,In progress
+Sub-Franchisee module,Wallets,Wallet Management,/wallet-management,QA / verification,Pending verification,To do
+Sub-Franchisee module,Wallets,Wallet Management,/wallet-management,Documentation,Covered in app-modules / user guide,Completed
+Sub-Franchisee module,Internet Credits,Internet Credits workspace,/funding,Initial UI/UX,Request from Admin; release/reject franchisee requests; direct release,Completed
+Sub-Franchisee module,Internet Credits,Internet Credits workspace,/funding,Frontend implementation,releaseSource=balance; hop admin_to_sub / sub_to_franchisee,Completed
+Sub-Franchisee module,Internet Credits,Internet Credits workspace,/funding,API-ready client,Unwired client in src/services/api/subfranchisor,In progress
+Sub-Franchisee module,Internet Credits,Internet Credits workspace,/funding,API wiring,Do not swap loaders until VITE_API_BASE_URL is set,In progress
+Sub-Franchisee module,Internet Credits,Internet Credits workspace,/funding,QA / verification,Pending verification,To do
+Sub-Franchisee module,Internet Credits,Internet Credits workspace,/funding,Documentation,Covered in app-modules / user guide,Completed
+Sub-Franchisee module,Deposit Rates,Deposit Rates,/deposit-rates,Initial UI/UX,Sub → Franchisee hop (default 70%),Completed
+Sub-Franchisee module,Deposit Rates,Deposit Rates,/deposit-rates,Frontend implementation,Overrides in esarisari_deposit_rates,Completed
+Sub-Franchisee module,Deposit Rates,Deposit Rates,/deposit-rates,API-ready client,Unwired client in src/services/api/subfranchisor,In progress
+Sub-Franchisee module,Deposit Rates,Deposit Rates,/deposit-rates,API wiring,Do not swap loaders until VITE_API_BASE_URL is set,In progress
+Sub-Franchisee module,Deposit Rates,Deposit Rates,/deposit-rates,QA / verification,Pending verification,To do
+Sub-Franchisee module,Deposit Rates,Deposit Rates,/deposit-rates,Documentation,Covered in app-modules / user guide,Completed
+Sub-Franchisee module,Commission Settings,Commission Settings,/commission-settings,Initial UI/UX,"Retailer, franchisee, Your Share editable; platform fee read-only",Completed
+Sub-Franchisee module,Commission Settings,Commission Settings,/commission-settings,Frontend implementation,Split is % of sales; total must equal 100%,Completed
+Sub-Franchisee module,Commission Settings,Commission Settings,/commission-settings,API-ready client,Unwired client in src/services/api/subfranchisor,In progress
+Sub-Franchisee module,Commission Settings,Commission Settings,/commission-settings,API wiring,Do not swap loaders until VITE_API_BASE_URL is set,In progress
+Sub-Franchisee module,Commission Settings,Commission Settings,/commission-settings,QA / verification,Pending verification,To do
+Sub-Franchisee module,Commission Settings,Commission Settings,/commission-settings,Documentation,Covered in app-modules / user guide,Completed
+Sub-Franchisee module,Transactions,Transactions Ledger,/transactions,Initial UI/UX,Network sales; Your Share column; no Record sale,Completed
+Sub-Franchisee module,Transactions,Transactions Ledger,/transactions,Frontend implementation,Scoped by subfranchiseeOrganizationId,Completed
+Sub-Franchisee module,Transactions,Transactions Ledger,/transactions,API-ready client,Unwired client in src/services/api/subfranchisor,In progress
+Sub-Franchisee module,Transactions,Transactions Ledger,/transactions,API wiring,Do not swap loaders until VITE_API_BASE_URL is set,In progress
+Sub-Franchisee module,Transactions,Transactions Ledger,/transactions,QA / verification,Pending verification,To do
+Sub-Franchisee module,Transactions,Transactions Ledger,/transactions,Documentation,Covered in app-modules / user guide,Completed
+Sub-Franchisee module,Revenue,Revenue,/revenue,Initial UI/UX,IC spread earnings + sales commission,Completed
+Sub-Franchisee module,Revenue,Revenue,/revenue,Frontend implementation,credit_spread mode; no franchise collections,Completed
+Sub-Franchisee module,Revenue,Revenue,/revenue,API-ready client,Unwired client in src/services/api/subfranchisor,In progress
+Sub-Franchisee module,Revenue,Revenue,/revenue,API wiring,Do not swap loaders until VITE_API_BASE_URL is set,In progress
+Sub-Franchisee module,Revenue,Revenue,/revenue,QA / verification,Pending verification,To do
+Sub-Franchisee module,Revenue,Revenue,/revenue,Documentation,Covered in app-modules / user guide,Completed
+Sub-Franchisee module,Reports,Reports,/reports,Initial UI/UX,Revenue Sharing Sub-Franchisee table + CSV + network commissions,Completed
+Sub-Franchisee module,Reports,Reports,/reports,Frontend implementation,Client-sheet layout; platform fee excluded from Total Revenue,Completed
+Sub-Franchisee module,Reports,Reports,/reports,API-ready client,Unwired client in src/services/api/subfranchisor,In progress
+Sub-Franchisee module,Reports,Reports,/reports,API wiring,Do not swap loaders until VITE_API_BASE_URL is set,In progress
+Sub-Franchisee module,Reports,Reports,/reports,QA / verification,Pending verification,To do
+Sub-Franchisee module,Reports,Reports,/reports,Documentation,Covered in app-modules / user guide,Completed
+Franchisee module,Dashboard (greyed),Dashboard,/dashboard,Initial UI/UX,Greyed nav item only,Completed
+Franchisee module,Dashboard (greyed),Dashboard,/dashboard,Frontend implementation,Role-specific franchisee dashboard,To do
+Franchisee module,Dashboard (greyed),Dashboard,/dashboard,API-ready client,Not started,In progress
+Franchisee module,Dashboard (greyed),Dashboard,/dashboard,API wiring,Blocked on product + API,In progress
+Franchisee module,Dashboard (greyed),Dashboard,/dashboard,QA / verification,Route is blocked,To do
+Franchisee module,Dashboard (greyed),Dashboard,/dashboard,Documentation,Noted as greyed in app-modules,Completed
+Franchisee module,Retailers (greyed),Retailers,/retailers,Initial UI/UX,Greyed nav; placeholder page; route blocked,To do
+Franchisee module,Retailers (greyed),Retailers,/retailers,Frontend implementation,No retailer directory product yet,To do
+Franchisee module,Retailers (greyed),Retailers,/retailers,API-ready client,No contract yet,In progress
+Franchisee module,Retailers (greyed),Retailers,/retailers,API wiring,Blocked on frontend + API,In progress
+Franchisee module,Retailers (greyed),Retailers,/retailers,QA / verification,Page is not live,To do
+Franchisee module,Retailers (greyed),Retailers,/retailers,Documentation,Placeholder only in app-modules,In progress
+Franchisee module,Wallets,Wallet Management,/wallet-management,Initial UI/UX,Own + retailer credits directory,Completed
+Franchisee module,Wallets,Wallet Management,/wallet-management,Frontend implementation,Read-only localStorage wallets,Completed
+Franchisee module,Wallets,Wallet Management,/wallet-management,API-ready client,Need franchisee API module (same pattern as Sub),In progress
+Franchisee module,Wallets,Wallet Management,/wallet-management,API wiring,Still on localStorage,In progress
+Franchisee module,Wallets,Wallet Management,/wallet-management,QA / verification,Pending verification,To do
+Franchisee module,Wallets,Wallet Management,/wallet-management,Documentation,Covered in app-modules / user guide,Completed
+Franchisee module,Internet Credits,Internet Credits workspace,/funding,Initial UI/UX,Request from Sub; release/reject retailer requests; direct release,Completed
+Franchisee module,Internet Credits,Internet Credits workspace,/funding,Frontend implementation,Hop sub_to_franchisee / franchisee_to_retailer,Completed
+Franchisee module,Internet Credits,Internet Credits workspace,/funding,API-ready client,Need franchisee API module (same pattern as Sub),In progress
+Franchisee module,Internet Credits,Internet Credits workspace,/funding,API wiring,Still on localStorage,In progress
+Franchisee module,Internet Credits,Internet Credits workspace,/funding,QA / verification,Pending verification,To do
+Franchisee module,Internet Credits,Internet Credits workspace,/funding,Documentation,Covered in app-modules / user guide,Completed
+Franchisee module,Deposit Rates,Deposit Rates,/deposit-rates,Initial UI/UX,Franchisee → Retailer hop (default 80%),Completed
+Franchisee module,Deposit Rates,Deposit Rates,/deposit-rates,Frontend implementation,Downline overrides only,Completed
+Franchisee module,Deposit Rates,Deposit Rates,/deposit-rates,API-ready client,Need franchisee API module (same pattern as Sub),In progress
+Franchisee module,Deposit Rates,Deposit Rates,/deposit-rates,API wiring,Still on localStorage,In progress
+Franchisee module,Deposit Rates,Deposit Rates,/deposit-rates,QA / verification,Pending verification,To do
+Franchisee module,Deposit Rates,Deposit Rates,/deposit-rates,Documentation,Covered in app-modules / user guide,Completed
+Franchisee module,Transactions,Transactions Ledger,/transactions,Initial UI/UX,Retailer sales under this franchisee,Completed
+Franchisee module,Transactions,Transactions Ledger,/transactions,Frontend implementation,Scoped by franchiseeOrganizationId,Completed
+Franchisee module,Transactions,Transactions Ledger,/transactions,API-ready client,Need franchisee API module (same pattern as Sub),In progress
+Franchisee module,Transactions,Transactions Ledger,/transactions,API wiring,Still on localStorage,In progress
+Franchisee module,Transactions,Transactions Ledger,/transactions,QA / verification,Pending verification,To do
+Franchisee module,Transactions,Transactions Ledger,/transactions,Documentation,Covered in app-modules / user guide,Completed
+Franchisee module,Revenue,Revenue,/revenue,Initial UI/UX,IC spread + sales commission,Completed
+Franchisee module,Revenue,Revenue,/revenue,Frontend implementation,credit_spread mode,Completed
+Franchisee module,Revenue,Revenue,/revenue,API-ready client,Need franchisee API module (same pattern as Sub),In progress
+Franchisee module,Revenue,Revenue,/revenue,API wiring,Still on localStorage,In progress
+Franchisee module,Revenue,Revenue,/revenue,QA / verification,Pending verification,To do
+Franchisee module,Revenue,Revenue,/revenue,Documentation,Covered in app-modules / user guide,Completed
+Franchisee module,Reports,Reports,/reports,Initial UI/UX,Retailer commissions + IC earnings; no Sub sheet table,Completed
+Franchisee module,Reports,Reports,/reports,Frontend implementation,Role config hides Sub revenue-sharing export,Completed
+Franchisee module,Reports,Reports,/reports,API-ready client,Need franchisee API module (same pattern as Sub),In progress
+Franchisee module,Reports,Reports,/reports,API wiring,Still on localStorage,In progress
+Franchisee module,Reports,Reports,/reports,QA / verification,Pending verification,To do
+Franchisee module,Reports,Reports,/reports,Documentation,Covered in app-modules / user guide,Completed
+Retailer module,Dashboard (greyed),Dashboard,/dashboard,Initial UI/UX,Greyed nav item only,Completed
+Retailer module,Dashboard (greyed),Dashboard,/dashboard,Frontend implementation,Role-specific retailer dashboard,To do
+Retailer module,Dashboard (greyed),Dashboard,/dashboard,API-ready client,Not started,In progress
+Retailer module,Dashboard (greyed),Dashboard,/dashboard,API wiring,Blocked on product + API,In progress
+Retailer module,Dashboard (greyed),Dashboard,/dashboard,QA / verification,Route is blocked,To do
+Retailer module,Dashboard (greyed),Dashboard,/dashboard,Documentation,Noted as greyed in app-modules,Completed
+Retailer module,Wallet,Wallet,/wallet,Initial UI/UX,"Available Credits, sale margin, request CTA",Completed
+Retailer module,Wallet,Wallet,/wallet,Frontend implementation,Retailer operating wallet; cannot record sales here,Completed
+Retailer module,Wallet,Wallet,/wallet,API-ready client,Need retailer API module,In progress
+Retailer module,Wallet,Wallet,/wallet,API wiring,Still on localStorage,In progress
+Retailer module,Wallet,Wallet,/wallet,QA / verification,Pending verification,To do
+Retailer module,Wallet,Wallet,/wallet,Documentation,Covered in app-modules / user guide,Completed
+Retailer module,Internet Credits,Request Funding,/request-funding,Initial UI/UX,Request-only workspace to Franchisee,Completed
+Retailer module,Internet Credits,Request Funding,/request-funding,Frontend implementation,Same FundingWorkspacePage; no incoming / direct release,Completed
+Retailer module,Internet Credits,Request Funding,/request-funding,API-ready client,Need retailer API module,In progress
+Retailer module,Internet Credits,Request Funding,/request-funding,API wiring,Still on localStorage,In progress
+Retailer module,Internet Credits,Request Funding,/request-funding,QA / verification,Pending verification,To do
+Retailer module,Internet Credits,Request Funding,/request-funding,Documentation,Covered in app-modules / user guide,Completed
+Retailer module,Transactions,Transactions Ledger,/transactions,Initial UI/UX,Own sales + Record demo sale,Completed
+Retailer module,Transactions,Transactions Ledger,/transactions,Frontend implementation,Burns ~97% credits; stamps commission % of sales,Completed
+Retailer module,Transactions,Transactions Ledger,/transactions,API-ready client,Need retailer API module,In progress
+Retailer module,Transactions,Transactions Ledger,/transactions,API wiring,Still on localStorage,In progress
+Retailer module,Transactions,Transactions Ledger,/transactions,QA / verification,Pending verification,To do
+Retailer module,Transactions,Transactions Ledger,/transactions,Documentation,Covered in app-modules / user guide,Completed
+Retailer module,Revenue,Revenue,/revenue,Initial UI/UX,"Your commission, sales volume, credits consumed",Completed
+Retailer module,Revenue,Revenue,/revenue,Frontend implementation,No IC earnings / Total earnings cards,Completed
+Retailer module,Revenue,Revenue,/revenue,API-ready client,Need retailer API module,In progress
+Retailer module,Revenue,Revenue,/revenue,API wiring,Still on localStorage,In progress
+Retailer module,Revenue,Revenue,/revenue,QA / verification,Pending verification,To do
+Retailer module,Revenue,Revenue,/revenue,Documentation,Covered in app-modules / user guide,Completed
+Retailer module,Reports,Reports,/reports,Initial UI/UX,Own sales commission + volume; limited CSV,Completed
+Retailer module,Reports,Reports,/reports,Frontend implementation,No network tables or Sub sheet,Completed
+Retailer module,Reports,Reports,/reports,API-ready client,Need retailer API module,In progress
+Retailer module,Reports,Reports,/reports,API wiring,Still on localStorage,In progress
+Retailer module,Reports,Reports,/reports,QA / verification,Pending verification,To do
+Retailer module,Reports,Reports,/reports,Documentation,Covered in app-modules / user guide,Completed

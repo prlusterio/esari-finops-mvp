@@ -396,7 +396,7 @@ def build():
         color=NAVY,
         space_after=10,
     )
-    add_para(doc, "18 August 2026  ·  Demo environment", size=10, italic=True, color=MUTED)
+    add_para(doc, "1 September 2026  ·  Demo environment", size=10, italic=True, color=MUTED)
     HTML.add(
         '<p class="download"><a href="user-guide.docx">Download User Guide Word copy</a> · <a href="esari-computations.xlsx" download="esari-computations.xlsx">Download computations (Excel)</a></p>'
     )
@@ -411,7 +411,7 @@ def build():
     heading(doc, "1. How the money works (read this first)", 1)
     add_para(
         doc,
-        "Every role in this guide is part of one chain. Credits move down. Cash for loads moves up. Customer cash for internet sales is split after each sale.",
+        "Every role in this guide is part of one chain. Credits move down. Cash for loads moves up. Customer cash for internet sales is split as a % of the customer payment (Sales), not as a leftover after credits.",
     )
 
     add_table(
@@ -442,7 +442,7 @@ def build():
             [
                 "Sales Commission",
                 "A retailer sells internet to a customer",
-                "Your % of the commission pool (customer payment − credits consumed)",
+                "Your % of the customer payment (Sales)",
                 "Commission Settings (Sub-Franchisee / Admin)",
             ],
         ],
@@ -475,35 +475,35 @@ def build():
     heading(doc, "Internet sales — customer payment, then a split", 2)
     add_para(
         doc,
-        "In this demo, the retailer records a sale from Transactions → Record demo sale. Credits consumed are 97% of the customer payment. The remaining 3% is the commission pool.",
+        "In this demo, the retailer records a sale from Transactions → Record demo sale. Credits consumed are 97% of the customer payment — that is inventory, not the commission base. Commission Settings split the customer payment (Sales).",
     )
     bullets(
         doc,
         [
-            "Customer payment — what the customer paid (example ₱1,000).",
+            "Customer payment (Sales) — what the customer paid (example ₱1,000). Commission Settings % apply here.",
             "Credits consumed — inventory burned from the retailer’s Available Credits (example ₱970).",
-            "Commission pool (also labeled Sale Margin on Transactions) — customer payment minus credits consumed (example ₱30). This is not one party’s profit.",
+            "Sale Margin — leftover after credits (example ₱30). Shown on Transactions and Wallet. It is not the commission base and not anyone’s take-home.",
         ],
     )
     add_para(
         doc,
-        "That pool is split by the percentages stamped on the sale. After a ₱1,000 demo sale on Retailer A (demo settings 25% / 20% / 15% / 40%):",
+        "After a ₱1,000 demo sale on Retailer A (demo settings 10% / 20% / 30% / 40% of sales):",
     )
     add_table(
         doc,
-        ["Party", "Share of the ₱30 pool", "Amount"],
+        ["Party", "Share of ₱1,000 sales", "Amount"],
         [
-            ["Retailer A", "25%", "₱7.50"],
-            ["Franchisee A", "20%", "₱6.00"],
-            ["Northern Mindanao Sub-Franchisee", "15%", "₱4.50"],
-            ["eSariSari platform", "40%", "₱12.00"],
-            ["Total", "100%", "₱30.00"],
+            ["Retailer A", "10%", "₱100.00"],
+            ["Franchisee A", "20%", "₱200.00"],
+            ["Northern Mindanao Sub-Franchisee", "30%", "₱300.00"],
+            ["eSariSari platform", "40%", "₱400.00"],
+            ["Total", "100%", "₱1,000.00"],
         ],
     )
     callout(
         doc,
-        "Retailer does not keep the full sale margin",
-        "If the customer paid ₱1,000 and credits of ₱970 were used, the ₱30 gap is shared. The retailer’s earning is their % of that ₱30, not the whole ₱30 and not the ₱1,000. Wallet’s Sale Margin card is the pool (all-time), not take-home.",
+        "Sale Margin is not commission",
+        "If the customer paid ₱1,000 and ₱970 of credits were used, the ₱30 leftover is inventory math only. The retailer’s earning is 10% of the ₱1,000 (₱100), not the ₱30 and not the full payment. Wallet’s Sale Margin card is leftover after credits (all-time), not take-home. Read Your Commission on Revenue.",
         fill="ECFDF5",
     )
 
@@ -559,33 +559,37 @@ def build():
         ["Line", "Formula", "On a ₱1,000 sale"],
         [
             ["Credits consumed", "ROUND(payment × 97%, 2)", "₱970.00"],
-            ["Commission pool / sale margin", "ROUND(payment − credits consumed, 2)", "₱30.00"],
+            ["Sale Margin (leftover after credits)", "ROUND(payment − credits consumed, 2)", "₱30.00"],
+            ["Commission base (Sales)", "customer payment", "₱1,000.00"],
         ],
     )
 
     heading(doc, "Commission split", 3)
     add_para(
         doc,
-        "Each party’s commission is ROUND(pool × their % ÷ 100, 2). Platform gets the remainder so the four shares always add up to the pool (leftover cents). When a Sub-Franchisee exists, Commission Settings keeps platform at 40% and fills Sub-Franchisee % = 100% − retailer − franchisee − platform.",
+        "Each party’s commission is ROUND(customer payment × their % ÷ 100, 2). Platform gets the remainder so the four shares always add up to the customer payment (leftover cents). Credits consumed stay inventory and are not subtracted from the split.",
+    )
+    add_para(
+        doc,
+        "On Commission Settings: Admin can edit the platform fee; Sub-Franchisee share is the remainder. A Sub-Franchisee can edit Retailer %, Franchisee %, and Your Share; the platform fee is Admin-set and read-only. The four percentages must total 100% of sales.",
     )
     add_table(
         doc,
         ["Retailer (demo seed)", "Retailer", "Franchisee", "Sub-Franchisee", "Platform"],
         [
-            ["Retailer A / C", "25%", "20%", "15% (remainder)", "40%"],
-            ["Retailer B", "30%", "15%", "15% (remainder)", "40%"],
-            ["New settings dialog default", "30%", "20%", "10% (remainder)", "40%"],
+            ["Retailer A / B / C", "10%", "20%", "30%", "40%"],
+            ["New settings dialog default", "10%", "20%", "30%", "40%"],
         ],
     )
     add_table(
         doc,
-        ["Party on a ₱1,000 Retailer A sale", "% of the ₱30 pool", "Amount"],
+        ["Party on a ₱1,000 Retailer A sale", "% of ₱1,000 sales", "Amount"],
         [
-            ["Retailer A", "25%", "₱7.50"],
-            ["Franchisee A", "20%", "₱6.00"],
-            ["Northern Mindanao Sub-Franchisee", "15%", "₱4.50"],
-            ["eSariSari platform (remainder)", "40%", "₱12.00"],
-            ["Total", "100%", "₱30.00"],
+            ["Retailer A", "10%", "₱100.00"],
+            ["Franchisee A", "20%", "₱200.00"],
+            ["Northern Mindanao Sub-Franchisee", "30%", "₱300.00"],
+            ["eSariSari platform (remainder)", "40%", "₱400.00"],
+            ["Total", "100%", "₱1,000.00"],
         ],
     )
     add_para(
@@ -821,7 +825,7 @@ def build():
     heading(doc, "3.5 Commission Settings — split each internet sale", 2)
     add_para(
         doc,
-        "This is the other pricing surface. For each retailer: Retailer %, Franchisee %, Your Share % (remainder), Platform Fee % (40% in the demo). Total must be 100%. These % are stamped on each sale — changing a row later does not rewrite completed sales.",
+        "This is the other pricing surface. Percentages apply to sales (customer payment), not to credit loads and not to Sale Margin. For each retailer: Retailer %, Franchisee %, Your Share %, Platform Fee % (Admin-set in the demo). Total must be 100% of sales. These % are stamped on each sale — changing a row later does not rewrite completed sales.",
     )
     shot(doc, "sub-commission-settings.png", "Figure 9. Commission Settings — per-retailer sale splits.")
     steps(
@@ -829,10 +833,10 @@ def build():
         [
             "Click Commission Settings.",
             "Optional: filter by Franchisee, Retailer, or Status, then Apply.",
-            "Read a row. Demo seed: Retailer A and Retailer C use 25% / 20% / 15% / 40%. Retailer B uses 30% / 15% / 15% / 40%.",
-            "To change an existing row, click the pencil, edit the percentages, set the effective date, and save.",
+            "Read a row. Demo seed: Retailer A, Retailer B, and Retailer C use 10% / 20% / 30% / 40% of sales.",
+            "To change an existing row, click the pencil. You can edit Retailer %, Franchisee %, and Your Share. Platform fee is set by Admin and is read-only here. The four values must total 100%. Set the effective date and save.",
             "To add a retailer that has no row yet, click + Add Commission Settings, pick the retailer, enter the shares, and save. Saving Active inactivates the previous Active row for that retailer.",
-            "These % apply to the commission pool of each completed internet sale, not to the customer’s full payment and not to credit loads.",
+            "These % apply to the customer payment of each completed internet sale, not to the leftover after credits and not to credit loads.",
         ],
     )
 
@@ -847,8 +851,8 @@ def build():
         [
             "Click Transactions.",
             "Optional: set Date Range, pick a Retailer, or search by name / ID, then Apply Filters.",
-            "Read a row left to right: Customer Payment → Credits Consumed (red) → Sale Margin (the pool) → Your Share (your commission).",
-            "After a ₱1,000 sale on Retailer A: customer ₱1,000, credits −₱970, margin ₱30, your share ₱4.50 (15% of ₱30).",
+            "Read a row left to right: Customer Payment → Credits Consumed (red) → Sale Margin (leftover after credits) → Your Share (your commission).",
+            "After a ₱1,000 sale on Retailer A: customer ₱1,000, credits −₱970, margin ₱30, your share ₱300.00 (30% of sales).",
             "Click the eye icon to open Transaction Details. Confirm product, parties, and Commission Distribution. Close when done.",
             "Optional: Export CSV for a spreadsheet.",
         ],
@@ -864,10 +868,10 @@ def build():
         doc,
         [
             "Click Revenue.",
-            "Read the three cards: Internet Credits earnings (spread on credits you released), Sales Commission (your % of sale pools), Total earnings (the sum).",
+            "Read the three cards: Internet Credits earnings (spread on credits you released), Sales Commission (your % of sales), Total earnings (the sum).",
             "Change Date Range if needed (This Month is the default) and click Apply.",
             "Internet Credits table: each released downline load, with Cash in, Credits, and Earnings. Click the ⓘ next to an amount to see the formula (cash − cost, or credits × rate gap).",
-            "Sales Commission table: each sale, with Commission pool, Your share %, and Your commission. Click the eye to open the same transaction detail.",
+            "Sales Commission table: each sale, with Sales, Your share %, and Your commission. Click the eye to open the same transaction detail.",
         ],
     )
     callout(
@@ -886,7 +890,9 @@ def build():
             "Card order: Internet Credits earnings → Sales Commission → Total earnings → Sales Volume.",
             "Click the Internet Credits earnings card to open Revenue with the same period, scrolled to the line-item table (each release + ⓘ).",
             "Internet Credits by downline is a rollup of those same entries (downline, cash in, credits, earnings) — not a copy of the Revenue table.",
-            "Franchisee Commissions / Retailer Commissions use Commission pool (sale margin), not “% of yours.”",
+            "Franchisee Commissions / Retailer Commissions show Sales Volume and each party’s share of sales.",
+            "Revenue Sharing Sub-Franchisee is the client-sheet table: Sales, Sub / Franchisee / Retailer shares, and Total Revenue (Sub + Franchisee + Retailer; platform fee is separate).",
+            "Internet Retailer Balance Report: pick one retailer. Credits loaded versus credits consumed on sales, with running wallet balance. Franchisee column is the parent franchisee.",
             "Downline Credit Statement: pick a franchisee or retailer and read + / − movements like a bank statement. Download becomes available after you select a downline (CSV of + / − and running balance).",
             "Scroll to Export Reports at the bottom of the page for the CSV cards.",
         ],
@@ -902,11 +908,15 @@ def build():
         [
             [
                 "Transactions",
-                "Each sale in your scope: customer payment, credits consumed, commission pool, split %, and your share.",
+                "Each sale in your scope: customer payment, credits consumed, leftover after credits, split %, and your share.",
             ],
             [
                 "Sales Commission",
-                "Each sale: commission pool, your share %, your commission, status.",
+                "Each sale: sales, your share %, your commission, status.",
+            ],
+            [
+                "Revenue Sharing Sub-Franchisee",
+                "Sales and Sub / Franchisee / Retailer shares. Total Revenue excludes platform fee.",
             ],
             [
                 "Internet Credits earnings",
@@ -1058,14 +1068,14 @@ def build():
         [
             "Click Transactions. The list is empty until a retailer records a demo sale.",
             "Filter by Date Range or Retailer, search, then Apply Filters.",
-            "Your Share is your commission from that sale’s pool, not the full customer payment.",
+            "Your Share is your commission from that sale’s customer payment (20% of sales on the demo seed), not the leftover after credits and not the full ₱1,000.",
             "Click the eye on a row for the full split.",
         ],
     )
-    shot(doc, "fran-transaction-details.png", "Figure 23. Transaction Details — commission pool split across the chain.")
+    shot(doc, "fran-transaction-details.png", "Figure 23. Transaction Details — commission split of sales across the chain.")
     add_para(
         doc,
-        "On a ₱1,000 Retailer A sale you should see: customer ₱1,000, credits −₱970, sale margin / pool ₱30. Your commission is ₱6.00 (20%). Retailer ₱7.50, Sub-Franchisee ₱4.50, platform ₱12.00. Optional: Download Receipt, then Close.",
+        "On a ₱1,000 Retailer A sale you should see: customer ₱1,000, credits −₱970, sale margin ₱30 (leftover after credits, not the split base). Your commission is ₱200.00 (20% of sales). Retailer ₱100.00, Sub-Franchisee ₱300.00, platform ₱400.00. Optional: Download Receipt, then Close.",
     )
 
     heading(doc, "4.6 Revenue and Reports", 2)
@@ -1073,10 +1083,11 @@ def build():
     steps(
         doc,
         [
-            "Click Revenue. Internet Credits earnings = spread on credits you released to retailers. Sales Commission = your % of sale pools. Total earnings = both.",
-            "Internet Credits table lists each retailer load (Cash in, Credits, Earnings) with ⓘ on the amount. Sales Commission lists each sale.",
+            "Click Revenue. Internet Credits earnings = spread on credits you released to retailers. Sales Commission = your % of sales. Total earnings = both.",
+            "Internet Credits table lists each retailer load (Cash in, Credits, Earnings) with ⓘ on the amount. Sales Commission lists each sale (Sales, Your share %, Your commission).",
             "Click Reports. Same period cards plus Sales Volume. Click the Internet Credits earnings card to open Revenue for that period.",
-            "Internet Credits by downline rolls up cash in, credits, and earnings per retailer. Retailer Commissions uses Commission pool.",
+            "Internet Credits by downline rolls up cash in, credits, and earnings per retailer. Retailer Commissions uses Sales Volume and each party’s share of sales.",
+            "Internet Retailer Balance Report: pick one of your retailers for credits loaded versus sales, with running wallet balance.",
             "Scroll to Export Reports for CSV downloads (same filters as the cards above).",
         ],
     )
@@ -1084,7 +1095,7 @@ def build():
     shot(doc, "fran-reports-export.png", "Figure 26. Franchisee Export Reports — same CSV cards, scoped to your retailers.")
     add_para(
         doc,
-        "Same files as the Sub-Franchisee: Transactions, Sales Commission, Internet Credits earnings, Requests, and Releases. Counts and rows are only your network (your restock from the Sub plus loads to Retailer A / B, and sales under you). Click Export CSV; the filename includes franchisee.",
+        "Same files as the Sub-Franchisee except Revenue Sharing Sub-Franchisee (that table is Admin / Sub only): Transactions, Sales Commission, Internet Credits earnings, Requests, and Releases. Counts and rows are only your network (your restock from the Sub plus loads to Retailer A / B, and sales under you). Click Export CSV; the filename includes franchisee.",
     )
     callout(
         doc,
@@ -1096,7 +1107,7 @@ def build():
     heading(doc, "5. Retailer", 1)
     add_para(
         doc,
-        "You are the end of the credit chain and the start of customer sales. You only buy credits (you have no downline to approve). You deposit cash to your Franchisee, receive Available Credits, then burn those credits when you record a demo sale. You keep your % of each sale’s pool — not the full customer payment. Use Retailer A under Franchisee A.",
+        "You are the end of the credit chain and the start of customer sales. You only buy credits (you have no downline to approve). You deposit cash to your Franchisee, receive Available Credits, then burn those credits when you record a demo sale. You keep your % of each sale’s customer payment — 10% on the demo seed (₱100 on ₱1,000) — not the leftover after credits and not the full payment. Use Retailer A under Franchisee A.",
     )
     bullets(
         doc,
@@ -1114,7 +1125,7 @@ def build():
         [
             "Sign in as Retailer A. You land on Wallet. The page tells you to request more via Internet Credits from your franchisee.",
             "Available Credits is what you can still sell. Status Low / Zero (≤ ₱5,000, or ₱0) means restock soon. After a fresh demo you are at ₱0.",
-            "Sale Margin is customer payment minus credits consumed (all-time). That is the commission pool, not your take-home. Filter by period on Revenue.",
+            "Sale Margin is customer payment minus credits consumed (all-time). That leftover is not your take-home. Your commission is on Revenue.",
             "Franchisee shows who you buy from (Franchisee A).",
             "Recent Credits Activity lists credits received after the franchisee released your request or Direct Release.",
         ],
@@ -1186,19 +1197,19 @@ def build():
             "Click Transactions.",
             "Click Record demo sale. Pick a product/service (or type one) and enter the customer payment. The preview shows credits that will be consumed (97% of payment) and remaining Available Credits.",
             "If credits required are more than your Available Credits, restock first. Submit to post a completed sale.",
-            "Read Customer Payment, Credits Consumed, Sale Margin (the pool), then Your Share (your commission).",
+            "Read Customer Payment, Credits Consumed, Sale Margin (leftover after credits), then Your Share (your commission).",
             "Click the eye. Transaction Details shows product, the chain, and Commission Distribution with You highlighted.",
             "Optional: Download Receipt, then Close. Export CSV if you need a file.",
         ],
     )
-    shot(doc, "ret-transaction-details.png", "Figure 33. Retailer view of a sale — you earn your % of the pool.")
+    shot(doc, "ret-transaction-details.png", "Figure 33. Retailer view of a sale — you earn your % of sales.")
     add_para(doc, "Same ₱1,000 sale, retailer reading:")
     bullets(
         doc,
         [
             "Customer paid ₱1,000. That cash is collected at the store. It is not all yours.",
-            "₱970 of credits left your Wallet. That is the cost of the product.",
-            "₱30 is the pool. Your 25% on Retailer A = ₱7.50. The rest goes to franchisee, sub-franchisee, and platform.",
+            "₱970 of credits left your Wallet. That is the cost of the product (inventory).",
+            "Sale Margin ₱30 is leftover after credits — not your earning. Your 10% of sales on Retailer A = ₱100.00. The rest of the ₱1,000 is franchisee, sub-franchisee, and platform shares.",
         ],
     )
 
@@ -1213,9 +1224,9 @@ def build():
         [
             "Click Revenue.",
             "Your Commission is the sum of your sale shares for the period.",
-            "Sales volume is customer payments. Credits consumed is inventory burned. The gap is the pool; you only keep your %.",
+            "Sales volume is customer payments. Credits consumed is inventory burned. Your commission is your % of sales, not the leftover after credits.",
             "Change Date Range / search and Apply as needed.",
-            "Sales Commission table lists each sale: Commission pool, Your share %, Your commission, Status. Click the eye for details.",
+            "Sales Commission table lists each sale: Sales, Your share %, Your commission, Status. Click the eye for details.",
         ],
     )
 
@@ -1226,6 +1237,7 @@ def build():
         [
             "Click Reports.",
             "You see Sales Commission and Sales Volume only — no Internet Credits earnings card and no by-downline rollup (you have no load-spread stream).",
+            "Internet Retailer Balance Report is your own wallet: Initial Wallet / Credit Received versus Sales, with running Wallet Balance.",
             "Downline Credit Statement on this role is your own statement — opening balance, + releases, − sales, ending balance. Download exports that statement as CSV.",
             "Scroll to Export Reports. You do not get an Internet Credits earnings CSV (you have no load-spread stream).",
         ],
@@ -1233,7 +1245,7 @@ def build():
     shot(doc, "ret-reports-export.png", "Figure 36. Retailer Export Reports — Transactions, Sales Commission, Requests, and Releases.")
     add_para(
         doc,
-        "Four CSVs: Transactions (your sales), Sales Commission (your % of each pool), Internet Credits Requests (your buys from the franchisee), and Internet Credits Releases (credits that landed in your Wallet). Same rule as other roles: filters first, then Export CSV. Filename includes retailer.",
+        "Four CSVs: Transactions (your sales), Sales Commission (your % of each sale), Internet Credits Requests (your buys from the franchisee), and Internet Credits Releases (credits that landed in your Wallet). Same rule as other roles: filters first, then Export CSV. Filename includes retailer.",
     )
 
     heading(doc, "6. End-to-end flow (all three roles)", 1)
@@ -1256,7 +1268,7 @@ def build():
         doc,
         [
             "Retailer A opens Transactions → Record demo sale (example Smart load ₱1,000). Wallet burns ₱970 credits if stock is enough.",
-            "Commission pool ₱30 is stamped with Commission Settings: retailer / franchisee / sub-franchisee / platform.",
+            "Commission Settings % of the ₱1,000 sales are stamped: retailer 10 / franchisee 20 / sub-franchisee 30 / platform 40.",
             "Each role opens Transactions → eye icon to see their line. Revenue / Reports add those lines for the month. Sub and Fran also see Internet Credits earnings from the restock in step A.",
         ],
     )
@@ -1270,8 +1282,8 @@ def build():
             ["Pending Deposits", "Cash claimed, not yet released", "Already earned revenue"],
             ["Direct Release", "Same load as a request, no pending queue", "A free transfer without cash / proof / payment ref"],
             ["Internet Credits earnings", "Spread (or Admin cash) on credits you sold to a downline", "Customer-sale commission"],
-            ["Sales Commission / Your Share", "Your % of the commission pool", "The full customer payment"],
-            ["Sale Margin / Commission pool", "Customer payment − credits consumed", "Anyone’s take-home by itself"],
+            ["Sales Commission / Your Share", "Your % of the customer payment (Sales)", "The full ₱1,000 or the leftover after credits"],
+            ["Sale Margin", "Customer payment − credits consumed (inventory leftover)", "Your commission or the commission base"],
             ["Low Balance", "Available Credits ≤ ₱5,000", "A second wallet or a cash account"],
             ["Credits Consumed", "Inventory burned on a sale", "Your commission"],
         ],
@@ -1283,7 +1295,7 @@ def build():
         [
             "Releasing credits without matching proof of payment — cash and inventory will not reconcile.",
             "Releasing when Available Credits After Release is negative — restock from your upline first (Franchisee A starts at ₱0).",
-            "Treating sale margin as retailer profit — only the retailer % of the pool is theirs.",
+            "Treating sale margin as retailer profit — leftover after credits is not commission. On a ₱1,000 Retailer A sale the retailer earns ₱100 (10% of sales).",
             "Changing Deposit Rates and expecting sale commissions to move — they are separate.",
             "Calling Internet Credits earnings “Load earnings” or mixing it with Sales Commission on Reports.",
             "Expecting Reverse after a mistaken release — that action is not in the UI.",
@@ -1303,7 +1315,7 @@ def build():
 
     add_para(
         doc,
-        "This guide matches the eSariSari demo build as of 18 August 2026. Admin screens are omitted on purpose. Screenshots are layout references; live numbers depend on the walkthrough you just ran.",
+        "This guide matches the eSariSari demo build as of 1 September 2026. Admin screens are omitted on purpose. Screenshots are layout references; live numbers depend on the walkthrough you just ran.",
         italic=True,
         color=MUTED,
         space_before=12,

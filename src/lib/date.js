@@ -58,6 +58,16 @@ export function formatDateLong(isoDate) {
   }).format(date)
 }
 
+/** Client sheet date: 1-Aug-26 */
+export function formatSheetDate(isoDate) {
+  const date = new Date(isoDate)
+  if (Number.isNaN(date.getTime())) return '—'
+  const day = date.getDate()
+  const month = date.toLocaleString('en-US', { month: 'short' })
+  const year = String(date.getFullYear()).slice(-2)
+  return `${day}-${month}-${year}`
+}
+
 export const REPORT_PERIOD_KEYS = [
   'all',
   'this_month',

@@ -2,7 +2,7 @@
 
 **Status:** Living product map for the **whole app**, not Internet Credits only  
 **Last verified:** 2026-08-18 against current code (`src/lib`, `src/pages`, `src/layouts`, `src/services`, `src/data/seed.js`)  
-**Related:** [Internet Credits business model review](./internet-credits-business-model-review.md) (deposit-rate lock + §11 IC details) · [Sale commission 3% pool baseline (revert notes)](./sale-commission-3pct-pool-baseline.md)
+**Related:** [Internet Credits business model review](./internet-credits-business-model-review.md) (deposit-rate lock + §11 IC details) · [Sale commission 3% pool baseline (revert notes)](./sale-commission-3pct-pool-baseline.md) · [Sub-Franchisee API (unwired)](./api-subfranchisee.md)
 
 This is a React / Vite demo that persists to `localStorage`. There is no backend. Reset Demo Data restores seed.
 
@@ -17,6 +17,7 @@ This is a React / Vite demo that persists to `localStorage`. There is no backend
 5. [Role matrix](#5-role-matrix)
 6. [Money math (both streams)](#6-money-math-both-streams)
 7. [Not in v1 / leftovers](#7-not-in-v1--leftovers)
+8. [Sub-Franchisee API (unwired)](#8-sub-franchisee-api-unwired)
 
 Sale-commission revert snapshot (3% pool vs client sheet): [sale-commission-3pct-pool-baseline.md](./sale-commission-3pct-pool-baseline.md).
 
@@ -264,12 +265,15 @@ The **Internet Credits earnings** card links to Revenue with the **same period**
 
 Network tables (Admin/Sub/Fran as scoped): Franchisee Commissions and Retailer Commissions show **Sales Volume** and each party’s share of sales. Admin and Sub also get a **Revenue Sharing Sub-Franchisee** grouped table (client sheet layout).
 
+**Internet Retailer Balance Report** (all roles): client *Retailer Credits* sheet. One retailer at a time. Columns: Date, Franchisee (parent), Credited (`Initial Wallet` / `Credit Received`), Debit (`Sales`), Deposit Amount (**credits loaded**), Less: Debit Sales (**credits consumed**), Wallet Balance (running Available Credits). Retailer sees self. Admin / Sub / Franchisee pick a retailer. CSV export matches the sheet (`D-Mon-YY`). Downline Credit Statement stays as the operational + / − view.
+
 **CSV exports** (counts follow the selected period):
 
 | Export | Who | Contents |
 |--------|-----|----------|
 | Transactions | All | Payment, credits consumed, leftover after credits, split %, your share |
 | Revenue Sharing Sub-Franchisee | Admin / Sub | Sales, Sub / Franchisee / Retailer shares, Total Revenue (excludes platform) |
+| Internet Retailer Balance Report | All | Date, parent franchisee, credits loaded, credits consumed, running wallet balance |
 | Sales Commission | All | Sales, your share %, your commission |
 | Franchise collections | Admin | Upfront and billable monthly collected vs remaining for Activated clients |
 | Internet Credits earnings | Admin / Sub / Fran | Cash in, credits, earnings, rates, cost basis |
@@ -390,3 +394,11 @@ Verified leftovers — documented so they are not treated as product:
 | `RevenueSharingPage` | Dead code; live config is Commission Settings |
 
 Storage keys (all `esarisari_*`) cover users, orgs, wallets, funding requests/transfers, commission settings, deposit rates, transactions, settlements, session, notification reads, and one-time seed version stamps.
+
+---
+
+## 8. Sub-Franchisee API (unwired)
+
+Contract and client for the Sub-Franchisee module live in [api-subfranchisee.md](./api-subfranchisee.md) and `src/services/api/subfranchisor/`. They follow admin-v3 `/api/v1/subfranchisor` conventions.
+
+**Not wired.** Pages, auth, and `storage.js` still use `localStorage`. Calls throw `API_NOT_WIRED` until `VITE_API_BASE_URL` is set and a later task swaps loaders.
