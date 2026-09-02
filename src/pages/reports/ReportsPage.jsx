@@ -509,7 +509,7 @@ function InternetRetailerBalanceReport({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0 flex-1 space-y-2">
             <CardTitle className="text-base font-semibold">
-              eSariSari Internet Retailer Balance Report
+              Internet Retailer Balance Report
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               Credits loaded versus credits consumed on sales, with running
