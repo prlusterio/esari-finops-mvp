@@ -90,6 +90,32 @@ async function openFirstTableView(page) {
   await page.waitForTimeout(400)
 }
 
+async function pickBalanceRetailer(page, optionName) {
+  const heading = page.getByRole('heading', {
+    name: 'Internet Retailer Balance Report',
+  }).first()
+  await heading.scrollIntoViewIfNeeded()
+  const card = heading.locator(
+    'xpath=ancestor::div[contains(@class,"overflow-hidden")][1]',
+  )
+  await card.getByRole('combobox').click()
+  await page.getByRole('option', { name: optionName }).click()
+  await page.waitForTimeout(400)
+}
+
+async function shotReports(page, pageFile, exportFile, { pickRetailer } = {}) {
+  await gotoPath(page, '/reports')
+  if (pickRetailer) {
+    await pickBalanceRetailer(page, pickRetailer)
+  }
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await page.waitForTimeout(200)
+  await shot(page, pageFile)
+  await page.getByRole('heading', { name: 'Export Reports' }).scrollIntoViewIfNeeded()
+  await page.waitForTimeout(200)
+  await shot(page, exportFile)
+}
+
 async function main() {
   await mkdir(ASSETS, { recursive: true })
   const browser = await chromium.launch({
@@ -122,6 +148,24 @@ async function main() {
     amount: 8000,
     paymentRef: 'UG-FRAN-RET-A-001',
     notes: 'User-guide walkthrough load to Retailer A',
+  })
+  await logout(page)
+
+  await login(page, 'Sub-Franchisee')
+  await directRelease(page, {
+    optionName: /Franchisee A/,
+    amount: 1750,
+    paymentRef: 'UG-SUB-FRAN-A-002',
+    notes: 'Stock for Retailer B low-balance shot',
+  })
+  await logout(page)
+
+  await login(page, 'Franchisee A')
+  await directRelease(page, {
+    optionName: /Retailer B/,
+    amount: 2000,
+    paymentRef: 'UG-FRAN-RET-B-001',
+    notes: 'User-guide walkthrough load to Retailer B',
   })
   await logout(page)
 
@@ -164,8 +208,9 @@ async function main() {
   await shot(page, 'sub-transactions.png')
   await gotoPath(page, '/revenue')
   await shot(page, 'sub-revenue.png')
-  await gotoPath(page, '/reports')
-  await shot(page, 'sub-reports.png')
+  await shotReports(page, 'sub-reports.png', 'sub-reports-export.png', {
+    pickRetailer: /Retailer A/,
+  })
   await logout(page)
 
   // Franchisee A
@@ -210,11 +255,17 @@ async function main() {
 
   await gotoPath(page, '/revenue')
   await shot(page, 'fran-revenue.png')
-  await gotoPath(page, '/reports')
-  await shot(page, 'fran-reports.png')
+  await shotReports(page, 'fran-reports.png', 'fran-reports-export.png', {
+    pickRetailer: /Retailer A/,
+  })
   await logout(page)
 
   // Retailer A
+  await login(page, 'Retailer B')
+  await gotoPath(page, '/wallet')
+  await shot(page, 'ret-wallet-low-balance.png')
+  await logout(page)
+
   await login(page, 'Retailer A')
   await gotoPath(page, '/wallet')
   await shot(page, 'ret-wallet.png')
@@ -240,8 +291,7 @@ async function main() {
 
   await gotoPath(page, '/revenue')
   await shot(page, 'ret-revenue.png')
-  await gotoPath(page, '/reports')
-  await shot(page, 'ret-reports.png')
+  await shotReports(page, 'ret-reports.png', 'ret-reports-export.png')
 
   await browser.close()
   console.log('All user-guide screenshots captured.')

@@ -117,6 +117,21 @@ async function main() {
     await page.waitForTimeout(200)
   }
 
+  await gotoPath(page, '/transactions')
+  await page.getByRole('heading', { name: 'Franchise Setup Collections' }).first().scrollIntoViewIfNeeded()
+  await page.waitForTimeout(200)
+  await shot(page, 'admin-14-transactions-collections.png', { fullPage: true })
+
+  await gotoPath(page, '/revenue')
+  await page.getByText('Franchise collections', { exact: true }).first().scrollIntoViewIfNeeded()
+  await page.waitForTimeout(200)
+  await shot(page, 'admin-15-revenue-collections.png', { fullPage: true })
+
+  await gotoPath(page, '/reports')
+  await page.getByText('Franchise collections', { exact: true }).first().scrollIntoViewIfNeeded()
+  await page.waitForTimeout(200)
+  await shot(page, 'admin-16-reports-collections.png', { fullPage: true })
+
   await gotoPath(page, '/franchise-setup/clients')
   await shot(page, 'admin-04-clients.png', { fullPage: true })
 

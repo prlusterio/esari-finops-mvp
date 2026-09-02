@@ -1923,7 +1923,7 @@ export default function ReportsPage() {
         <div className="grid gap-4 md:grid-cols-2">
           <ExportCard
             title="Transactions"
-            description="Sales volume, credits consumed, after-credits leftover, and your commission share for your scope."
+            description="Sales volume, credits consumed, and your commission share for your scope."
             count={datasets.transactions.length}
             onExport={() =>
               downloadCsv(

@@ -20,6 +20,11 @@ ASSETS = ROOT / "admin-user-guide-assets"
 OUTPUT = ROOT / "admin-user-guide.docx"
 OUTPUT_HTML = ROOT / "admin-user-guide.html"
 
+GUIDE_TITLE = "eSariSari Admin User Guide"
+GUIDE_VERSION = "1.1"
+GUIDE_DATE = "2 September 2026"
+GUIDE_EDITION = f"Version {GUIDE_VERSION}  ·  {GUIDE_DATE}  ·  Demo environment"
+
 NAVY = RGBColor(0x0F, 0x17, 0x2A)
 BLUE = RGBColor(0x1D, 0x4E, 0xD8)
 MUTED = RGBColor(0x47, 0x55, 0x69)
@@ -59,6 +64,7 @@ class HtmlSink:
                 f'<a class="{cls}" href="#{slug}">{escape(text)}</a>'
             )
         return HTML_PAGE.format(
+            title=escape(f"{GUIDE_TITLE} · Version {GUIDE_VERSION}"),
             toc="\n".join(toc_items),
             body="\n".join(self.body),
         )
@@ -71,7 +77,7 @@ HTML_PAGE = """<!DOCTYPE html>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>eSariSari Admin User Guide</title>
+  <title>{title}</title>
   <style>
     :root {{
       --navy: #0f172a;
@@ -378,9 +384,12 @@ def build():
     section.right_margin = Inches(0.85)
 
     core = doc.core_properties
-    core.title = "eSariSari Admin User Guide"
-    core.subject = "Platform Admin — Financials Dashboard and Client Onboarding"
+    core.title = GUIDE_TITLE
+    core.subject = f"Platform Admin — Financials Dashboard and Client Onboarding · Version {GUIDE_VERSION}"
     core.author = "eSariSari"
+    core.revision = 2
+    core.version = GUIDE_VERSION
+    core.comments = f"Version {GUIDE_VERSION} — {GUIDE_DATE}"
 
     add_para(doc, "eSariSari", size=14, bold=True, color=BLUE, space_after=0)
     add_para(doc, "Franchise financial operations platform", size=11, color=MUTED, space_after=18)
@@ -399,7 +408,7 @@ def build():
         color=NAVY,
         space_after=10,
     )
-    add_para(doc, "1 September 2026  ·  Demo environment", size=10, italic=True, color=MUTED)
+    add_para(doc, GUIDE_EDITION, size=10, italic=True, color=MUTED)
     HTML.add(
         '<p class="download"><a href="admin-user-guide.docx">Download Admin User Guide Word copy</a> · '
         '<a href="user-guide.html">Open the Internet Credits User Guide</a></p>'
@@ -407,9 +416,31 @@ def build():
 
     callout(
         doc,
-        "About this demo",
+        f"About this demo (version {GUIDE_VERSION})",
         "This is a browser-only demo. Data lives in localStorage. There is no backend. Reset Demo Data restores the seeded client portfolio, removes clients you registered, clears activation overlays, and clears onboarding drafts and collection marks. Screenshots show layout; peso amounts change as you confirm collections.",
         fill="EEF2FF",
+    )
+
+    heading(doc, "What's new in this version", 1)
+    add_para(
+        doc,
+        f"Version {GUIDE_VERSION} matches the Admin module as of {GUIDE_DATE}.",
+    )
+    add_table(
+        doc,
+        ["Version", "Date", "What changed"],
+        [
+            [
+                "1.1 (current)",
+                "2 September 2026",
+                "Confirm Collection on Transactions, Revenue, and Reports (same ledger as Dashboard and Client Details). Collection cash stays out of Total earnings.",
+            ],
+            [
+                "1.0",
+                "1 September 2026",
+                "First Admin walkthrough: Financials Dashboard, Clients, onboarding wizard, Activate Client.",
+            ],
+        ],
     )
 
     heading(doc, "1. What this guide covers", 1)
@@ -545,6 +576,21 @@ def build():
             "Confirm the remainder from Revenue (or Transactions / Reports). Enter an amount and a reference number.",
             "Return to Dashboard and Client Details. The same paid / remaining values appear without a second write path.",
         ],
+    )
+    shot(
+        doc,
+        "admin-14-transactions-collections.png",
+        "Admin Transactions — Franchise Setup Collections sit above the sales table and share the page date range.",
+    )
+    shot(
+        doc,
+        "admin-15-revenue-collections.png",
+        "Admin Revenue — Franchise collections card plus the same collections table. Total earnings stays Internet Credits + sales.",
+    )
+    shot(
+        doc,
+        "admin-16-reports-collections.png",
+        "Admin Reports — Franchise collections hero card, Collections by client, and the Franchise collections CSV export.",
     )
     callout(
         doc,
@@ -820,7 +866,7 @@ def build():
 
     add_para(
         doc,
-        "This guide matches the eSariSari Admin module as of 1 September 2026. It does not replace the Internet Credits User Guide. Screenshots are layout references; live numbers depend on collections you confirm in this session.",
+        f"Admin User Guide version {GUIDE_VERSION}  ·  {GUIDE_DATE}. Matches the eSariSari Admin module on that date. It does not replace the Internet Credits User Guide (version 2.0). Screenshots are layout references; live numbers depend on collections you confirm in this session.",
         italic=True,
         color=MUTED,
         space_before=12,

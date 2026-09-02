@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>eSariSari Admin User Guide</title>
+  <title>eSariSari Admin User Guide · Version 1.1</title>
   <style>
     :root {
       --navy: #0f172a;
@@ -119,7 +119,8 @@
   <div class="wrap">
     <nav>
       <div class="label">Contents</div>
-      <a class="toc-h1" href="#1-what-this-guide-covers">1. What this guide covers</a>
+      <a class="toc-h1" href="#what-s-new-in-this-version">What&#x27;s new in this version</a>
+<a class="toc-h1" href="#1-what-this-guide-covers">1. What this guide covers</a>
 <a class="toc-h1" href="#2-sign-in-as-admin">2. Sign in as Admin</a>
 <a class="toc-h1" href="#3-financials-dashboard">3. Financials Dashboard</a>
 <a class="toc-h2" href="#3-1-general-kpis">3.1 General KPIs</a>
@@ -146,9 +147,12 @@
 <h1 class="cover">Admin User Guide</h1>
 <p class="kicker" style="font-weight:600">Platform Admin  ·  Financials Dashboard  ·  Clients</p>
 <p>A click-by-click walkthrough of the Admin franchise module: sign in, read the Financials Dashboard, confirm collections, open clients, and add a new client through the four-step onboarding wizard. Create Franchisee saves that client to this browser and shows it on the Clients list. Internet Credits, wallets, sales, and downline roles are covered in the separate User Guide — not in this document.</p>
-<p class="muted">1 September 2026  ·  Demo environment</p>
+<p class="muted">Version 1.1  ·  2 September 2026  ·  Demo environment</p>
 <p class="download"><a href="admin-user-guide.docx">Download Admin User Guide Word copy</a> · <a href="user-guide.html">Open the Internet Credits User Guide</a></p>
-<div class="callout" style="background:#eef2ff"><strong>About this demo</strong>This is a browser-only demo. Data lives in localStorage. There is no backend. Reset Demo Data restores the seeded client portfolio, removes clients you registered, clears activation overlays, and clears onboarding drafts and collection marks. Screenshots show layout; peso amounts change as you confirm collections.</div>
+<div class="callout" style="background:#eef2ff"><strong>About this demo (version 1.1)</strong>This is a browser-only demo. Data lives in localStorage. There is no backend. Reset Demo Data restores the seeded client portfolio, removes clients you registered, clears activation overlays, and clears onboarding drafts and collection marks. Screenshots show layout; peso amounts change as you confirm collections.</div>
+<h1 id="what-s-new-in-this-version">What&#x27;s new in this version</h1>
+<p>Version 1.1 matches the Admin module as of 2 September 2026.</p>
+<table><thead><tr><th>Version</th><th>Date</th><th>What changed</th></tr></thead><tbody><tr><td>1.1 (current)</td><td>2 September 2026</td><td>Confirm Collection on Transactions, Revenue, and Reports (same ledger as Dashboard and Client Details). Collection cash stays out of Total earnings.</td></tr><tr><td>1.0</td><td>1 September 2026</td><td>First Admin walkthrough: Financials Dashboard, Clients, onboarding wizard, Activate Client.</td></tr></tbody></table>
 <h1 id="1-what-this-guide-covers">1. What this guide covers</h1>
 <p>Use this guide when you are signed in as Platform Admin. The Admin home page is the Financials Dashboard. Clients is the franchise portfolio and the entry point for onboarding.</p>
 <table><thead><tr><th>In this guide</th><th>Not in this guide</th></tr></thead><tbody><tr><td>Financials Dashboard KPIs and Confirm Collection</td><td>Internet Credits loads, Direct Release, and deposit rates</td></tr><tr><td>Clients list, client details, and shared collection history</td><td>Recording a retailer demo sale or reading Sales Commission</td></tr><tr><td>Add New Client — Client Info, Franchise Setup, Revenue Split, Review</td><td>Sub-Franchisee, Franchisee, and Retailer day-to-day screens</td></tr><tr><td>Franchise collections on Transactions, Revenue, and Reports (Admin)</td><td>Mixing collection cash into Internet Credits + sales Total earnings</td></tr></tbody></table>
@@ -174,6 +178,9 @@
 <p>Admin can confirm the same franchise setup collections on Transactions, Revenue, and Reports. Those pages keep Internet Credits and sales as a separate stream. Collection cash is not added into Total earnings, and collection rows are not mixed into the sales table.</p>
 <table><thead><tr><th>Page</th><th>What Admin sees</th></tr></thead><tbody><tr><td>Transactions</td><td>Franchise Setup Collections card above the sales table. Shares the page date range. Confirm Collection on unpaid or partial rows.</td></tr><tr><td>Revenue</td><td>A fourth Franchise collections card (cash collected in the period) plus the same collections table. Internet Credits, Sales Commission, and Total earnings stay IC + sales only.</td></tr><tr><td>Reports</td><td>A Franchise collections hero card, Collections by client rollup, the same line-item table, and a Franchise collections CSV export.</td></tr></tbody></table>
 <ol><li>Confirm a partial upfront or monthly amount on Financials Dashboard.</li><li>Open Client Details — paid and remaining match.</li><li>Open Transactions, Revenue, or Reports (Admin). Choose All Time or a range that includes the payment date / month.</li><li>Confirm the remainder from Revenue (or Transactions / Reports). Enter an amount and a reference number.</li><li>Return to Dashboard and Client Details. The same paid / remaining values appear without a second write path.</li></ol>
+<figure><img src="admin-user-guide-assets/admin-14-transactions-collections.png" alt="Admin Transactions — Franchise Setup Collections sit above the sales table and share the page date range." /><figcaption>Admin Transactions — Franchise Setup Collections sit above the sales table and share the page date range.</figcaption></figure>
+<figure><img src="admin-user-guide-assets/admin-15-revenue-collections.png" alt="Admin Revenue — Franchise collections card plus the same collections table. Total earnings stays Internet Credits + sales." /><figcaption>Admin Revenue — Franchise collections card plus the same collections table. Total earnings stays Internet Credits + sales.</figcaption></figure>
+<figure><img src="admin-user-guide-assets/admin-16-reports-collections.png" alt="Admin Reports — Franchise collections hero card, Collections by client, and the Franchise collections CSV export." /><figcaption>Admin Reports — Franchise collections hero card, Collections by client, and the Franchise collections CSV export.</figcaption></figure>
 <div class="callout" style="background:#ecfdf5"><strong>What is included</strong>Activated clients only. Upfront = package fees + enabled one-time fees. Billable monthly = fixed monthly fees that are not cost deductions. Company vs client % is informational on the table. % of gross sales, cost-deduction-only fees, and Client Details demo Gross Sale / Cost Deduction / Revenue Share Payout rows stay off these pages.</div>
 <h1 id="4-clients">4. Clients</h1>
 <p>Open Clients in the sidebar. This is the franchise / sub-franchise portfolio: seeded demo rows plus any clients you create with Add New Client. Newly registered clients appear at the top as Pending Review. Seeded examples include Surigao City Service Hub (Activated Sub-Franchisor) and Siargao General Luna Operator (Franchisee, still in progress).</p>
@@ -229,7 +236,7 @@
 <table><thead><tr><th>Term</th><th>Meaning</th></tr></thead><tbody><tr><td>Activated</td><td>Client is live. Dashboard, Client Details, and the Admin collections section on Transactions, Revenue, and Reports can Confirm Collection. Use Activate Client on Client Details to get here.</td></tr><tr><td>Upfront / one-time</td><td>Package unit fees plus enabled one-time franchise fees.</td></tr><tr><td>Billable fixed monthly</td><td>Monthly fees billed as a peso amount. Excludes cost-deduction-only and % of gross sales.</td></tr><tr><td>Cost deduction</td><td>A monthly fee subtracted from gross sales before the revenue split.</td></tr><tr><td>% of gross sales</td><td>A fee expressed as a percent of sales. Tracked on the client record; not in the billable monthly KPI.</td></tr><tr><td>Revenue split</td><td>Company + this client. Must equal 100%. Downline retailer / franchisee shares are set by the client.</td></tr><tr><td>Net revenue for sharing</td><td>Demo gross sale minus standard cost deductions.</td></tr></tbody></table>
 <h1 id="8-common-mistakes">8. Common mistakes</h1>
 <ul><li>Using password123 on the Admin account — Admin is Restricted and uses abc12345678.</li><li>Looking for Franchises or Organizations in the sidebar — those items were removed. Use Clients.</li><li>Expecting franchise collections inside Total earnings or the sales table — those stay Internet Credits and sales. Admin collections are a separate section on Transactions, Revenue, and Reports.</li><li>Expecting Confirm Collection on a non-Activated client — open Client Details and click Activate Client first.</li><li>Treating Create Franchisee as a login for the new client — the company appears on Clients, but this demo does not create a sign-in account.</li><li>Expecting the new client to stay off the Clients list — Create Franchisee now saves it and shows it at the top as Pending Review.</li><li>Trying to set retailer or franchisee downline shares on step 3 — those belong to the client, not platform admin.</li><li>Mixing this guide with Internet Credits work — loads, sales, and commissions are in the other User Guide.</li><li>Using Reset Demo Data during a live collection walkthrough — it wipes payment marks, the onboarding draft, registered clients, and activation overlays.</li></ul>
-<p class="muted">This guide matches the eSariSari Admin module as of 1 September 2026. It does not replace the Internet Credits User Guide. Screenshots are layout references; live numbers depend on collections you confirm in this session.</p>
+<p class="muted">Admin User Guide version 1.1  ·  2 September 2026. Matches the eSariSari Admin module on that date. It does not replace the Internet Credits User Guide (version 2.0). Screenshots are layout references; live numbers depend on collections you confirm in this session.</p>
     </article>
   </div>
 </body>

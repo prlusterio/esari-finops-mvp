@@ -311,7 +311,7 @@ def build_readme() -> Sheet:
     s.text(
         1,
         3,
-        "This workbook is the same math the demo app uses (1 September 2026). Grey cells are formulas — do not type over them. Excel recalculates on open. Open the Load calculator or Sale calculator tabs to edit yellow inputs.",
+        "This workbook is the same math the demo app uses (User Guide version 2.0, 2 September 2026). Grey cells are formulas — do not type over them. Excel recalculates on open. Open the Load calculator or Sale calculator tabs to edit yellow inputs.",
         "note",
     )
     s.text(1, 4, "Two separate earning streams", "section")

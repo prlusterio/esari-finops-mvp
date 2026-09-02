@@ -17,6 +17,11 @@ ASSETS = ROOT / "user-guide-assets"
 OUTPUT = ROOT / "user-guide.docx"
 OUTPUT_HTML = ROOT / "user-guide.html"
 
+GUIDE_TITLE = "eSariSari User Guide"
+GUIDE_VERSION = "2.0"
+GUIDE_DATE = "2 September 2026"
+GUIDE_EDITION = f"Version {GUIDE_VERSION}  ·  {GUIDE_DATE}  ·  Demo environment"
+
 NAVY = RGBColor(0x0F, 0x17, 0x2A)
 BLUE = RGBColor(0x1D, 0x4E, 0xD8)
 MUTED = RGBColor(0x47, 0x55, 0x69)
@@ -56,6 +61,7 @@ class HtmlSink:
                 f'<a class="{cls}" href="#{slug}">{escape(text)}</a>'
             )
         return HTML_PAGE.format(
+            title=escape(f"{GUIDE_TITLE} · Version {GUIDE_VERSION}"),
             toc="\n".join(toc_items),
             body="\n".join(self.body),
         )
@@ -68,7 +74,7 @@ HTML_PAGE = """<!DOCTYPE html>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>eSariSari User Guide</title>
+  <title>{title}</title>
   <style>
     :root {{
       --navy: #0f172a;
@@ -375,9 +381,12 @@ def build():
     section.right_margin = Inches(0.85)
 
     core = doc.core_properties
-    core.title = "eSariSari User Guide"
-    core.subject = "Sub-Franchisee, Franchisee, and Retailer"
+    core.title = GUIDE_TITLE
+    core.subject = f"Sub-Franchisee, Franchisee, and Retailer · Version {GUIDE_VERSION}"
     core.author = "eSariSari"
+    core.revision = 2
+    core.version = GUIDE_VERSION
+    core.comments = f"Version {GUIDE_VERSION} — {GUIDE_DATE}"
 
     add_para(doc, "eSariSari", size=14, bold=True, color=BLUE, space_after=0)
     add_para(doc, "Franchise financial operations platform", size=11, color=MUTED, space_after=18)
@@ -396,16 +405,49 @@ def build():
         color=NAVY,
         space_after=10,
     )
-    add_para(doc, "1 September 2026  ·  Demo environment", size=10, italic=True, color=MUTED)
+    add_para(doc, GUIDE_EDITION, size=10, italic=True, color=MUTED)
     HTML.add(
         '<p class="download"><a href="user-guide.docx">Download User Guide Word copy</a> · <a href="esari-computations.xlsx" download="esari-computations.xlsx">Download computations (Excel)</a></p>'
     )
 
     callout(
         doc,
-        "About this demo (version 1)",
-        "This is the first walkthrough of the franchise operations demo. Sales and Internet Credits history start empty. Franchisees and retailers start at ₱0 Available Credits — restock with a request or Direct Release. There are two earnings streams: Internet Credits earnings and Sales Commission (from customer sales). The bell alerts the upline to pending downline credit requests and to low or zero balances. Screenshots show layout; numbers change as you walk the demo.",
+        f"About this demo (version {GUIDE_VERSION})",
+        "This is a browser-only franchise operations demo. Sales and Internet Credits history start empty. Franchisees and retailers start at ₱0 Available Credits — restock with a request or Direct Release. There are two earnings streams: Internet Credits earnings and Sales Commission (from customer sales). The bell alerts the upline to pending downline credit requests and to low or zero balances. Screenshots show layout; numbers change as you walk the demo.",
         fill="EEF2FF",
+    )
+
+    heading(doc, "What's new in this version", 1)
+    add_para(
+        doc,
+        f"Version {GUIDE_VERSION} matches the demo as of {GUIDE_DATE}. Use this page to see what changed since the first walkthrough (version 1.0).",
+    )
+    add_table(
+        doc,
+        ["Version", "Date", "What changed"],
+        [
+            [
+                "2.0 (current)",
+                "2 September 2026",
+                "Commission % of sales; 100% credit burn; Sale Margin hidden; Internet Retailer Balance Report; computations workbook.",
+            ],
+            [
+                "1.0",
+                "1 September 2026",
+                "First illustrated walkthrough: loads, Direct Release, two earnings streams, credit alerts.",
+            ],
+        ],
+    )
+    add_para(doc, "In version 2.0, walk these as live product — not leftover from version 1.0:")
+    bullets(
+        doc,
+        [
+            "Commission Settings % apply to the customer payment (Sales). Demo defaults are Retailer 10 / Franchisee 20 / Sub-Franchisee 30 / Platform 40. They are not a leftover-after-credits pool.",
+            "Record demo sale burns 100% of the customer payment from Available Credits. A ₱1,000 sale debits ₱1,000. There is no 2% platform processing-fee haircut.",
+            "Sale Margin is hidden on Wallet, Transactions, Reports, Transaction Details, the receipt, and CSV. Commission is Your Share / Your Commission, not leftover inventory.",
+            "Internet Retailer Balance Report on Reports: credits loaded versus credits consumed, running wallet, parent franchisee column. Title is Internet Retailer Balance Report (no brand prefix).",
+            "Download esari-computations.xlsx from Sign In or your name menu. The workbook uses the same 100%-of-payment sale math as the app.",
+        ],
     )
 
     heading(doc, "1. How the money works (read this first)", 1)
@@ -1311,7 +1353,7 @@ def build():
 
     add_para(
         doc,
-        "This guide matches the eSariSari demo build as of 2 September 2026. Admin screens are omitted on purpose. Screenshots are layout references; live numbers depend on the walkthrough you just ran.",
+        f"User Guide version {GUIDE_VERSION}  ·  {GUIDE_DATE}. Matches the eSariSari demo build on that date. Admin screens are omitted on purpose (see the Admin User Guide). Screenshots are layout references; live numbers depend on the walkthrough you just ran.",
         italic=True,
         color=MUTED,
         space_before=12,
