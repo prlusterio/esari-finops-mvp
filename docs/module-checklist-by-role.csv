@@ -221,7 +221,7 @@ Retailer module,Dashboard (greyed),Dashboard,/dashboard,API-ready client,Not sta
 Retailer module,Dashboard (greyed),Dashboard,/dashboard,API wiring,Blocked on product + API,In progress
 Retailer module,Dashboard (greyed),Dashboard,/dashboard,QA / verification,Route is blocked,To do
 Retailer module,Dashboard (greyed),Dashboard,/dashboard,Documentation,Noted as greyed in app-modules,Completed
-Retailer module,Wallet,Wallet,/wallet,Initial UI/UX,"Available Credits, sale margin, request CTA",Completed
+Retailer module,Wallet,Wallet,/wallet,Initial UI/UX,"Available Credits, request CTA",Completed
 Retailer module,Wallet,Wallet,/wallet,Frontend implementation,Retailer operating wallet; cannot record sales here,Completed
 Retailer module,Wallet,Wallet,/wallet,API-ready client,Need retailer API module,In progress
 Retailer module,Wallet,Wallet,/wallet,API wiring,Still on localStorage,In progress
@@ -234,7 +234,7 @@ Retailer module,Internet Credits,Request Funding,/request-funding,API wiring,Sti
 Retailer module,Internet Credits,Request Funding,/request-funding,QA / verification,Pending verification,To do
 Retailer module,Internet Credits,Request Funding,/request-funding,Documentation,Covered in app-modules / user guide,Completed
 Retailer module,Transactions,Transactions Ledger,/transactions,Initial UI/UX,Own sales + Record demo sale,Completed
-Retailer module,Transactions,Transactions Ledger,/transactions,Frontend implementation,Burns ~97% credits; stamps commission % of sales,Completed
+Retailer module,Transactions,Transactions Ledger,/transactions,Frontend implementation,Burns 100% credits; stamps commission % of sales,Completed
 Retailer module,Transactions,Transactions Ledger,/transactions,API-ready client,Need retailer API module,In progress
 Retailer module,Transactions,Transactions Ledger,/transactions,API wiring,Still on localStorage,In progress
 Retailer module,Transactions,Transactions Ledger,/transactions,QA / verification,Pending verification,To do

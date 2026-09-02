@@ -145,7 +145,6 @@ Hidden **revenue wallets** exist per org and are reconciled to credited sale-com
 **Retailer `/wallet`**
 
 - Available Credits + status
-- Sale Margin (all-time customer payment − credits consumed) — this is the **commission pool**, not the retailer’s take-home
 - Upline name
 - Recent Credits Activity (releases in)
 
@@ -192,7 +191,7 @@ Copy on the page states that sale splits live in Commission Settings.
 
 **Who:** Admin and Sub-Franchisee. Franchisee and Retailer do not configure splits.
 
-**What it prices:** Each internet sale’s **customer payment (Sales)**. Credits consumed stay inventory (97% of payment) and are not the commission base.
+**What it prices:** Each internet sale’s **customer payment (Sales)**. Credits consumed equal the payment (inventory) and are not the commission base.
 
 Per-retailer rows: retailer / franchisee / (sub) / platform %. Active vs Inactive. Adding an Active row for a retailer inactivates the previous Active row for that retailer.
 
@@ -218,13 +217,13 @@ To restore the previous 3% pool model, see [sale-commission-3pct-pool-baseline.m
 
 **Admin Franchise Setup Collections** card sits above the sales table and shares the page date range. Confirm Collection on unpaid/partial rows writes the same `upfrontPaid` / `monthlyPaidByPeriod` ledger. Collection rows are **not** mixed into the sales table.
 
-**Retailer only:** **Record demo sale** — product/service + customer payment. Credits consumed = 95% product cost + 2% processing = **97%** of payment (inventory). Commission Settings split **sales** (customer payment), default 10 / 20 / 30 / 40. Sale is blocked if Available Credits &lt; credits consumed.
+**Retailer only:** **Record demo sale** — product/service + customer payment. Credits consumed = **100%** of payment (inventory). There is no 2% processing-fee haircut and no leftover sale margin. Commission Settings split **sales** (customer payment), default 10 / 20 / 30 / 40. Sale is blocked if Available Credits &lt; the full payment.
 
-Columns: Reference, Date, Retailer (Admin/Sub/Fran), Customer Payment, Credits Consumed, **Sale Margin** (leftover after credits; not the commission base), Your Share / Platform Share, Status, View.
+Columns: Reference, Date, Retailer (Admin/Sub/Fran), Customer Payment, Credits Consumed, Your Share / Platform Share, Status, View.
 
 Filters: date range, retailer (uplines), search. Export CSV from this page.
 
-Transaction details: payment, credits consumed, sale margin, 4-tier distribution (entity, %, amount).
+Transaction details: payment, credits consumed (= payment), 4-tier distribution (entity, %, amount).
 
 ---
 
@@ -271,7 +270,7 @@ Network tables (Admin/Sub/Fran as scoped): Franchisee Commissions and Retailer C
 
 | Export | Who | Contents |
 |--------|-----|----------|
-| Transactions | All | Payment, credits consumed, leftover after credits, split %, your share |
+| Transactions | All | Payment, credits consumed, split %, your share |
 | Revenue Sharing Sub-Franchisee | Admin / Sub | Sales, Sub / Franchisee / Retailer shares, Total Revenue (excludes platform) |
 | Internet Retailer Balance Report | All | Date, parent franchisee, credits loaded, credits consumed, running wallet balance |
 | Sales Commission | All | Sales, your share %, your commission |
@@ -367,11 +366,11 @@ Admin’s Internet Credits earnings on a load are the **cash collected**, not a 
 
 Demo sale on ₱1,000 customer payment:
 
-- Credits consumed = ₱950 + ₱20 = ₱970 (inventory)
-- Commission Settings apply to **₱1,000 sales**, not the ₱30 leftover
+- Credits consumed = **₱1,000** (100% of payment)
+- Commission Settings apply to **₱1,000 sales**
 - Default stamps: retailer ₱100, franchisee ₱200, sub ₱300, platform ₱400
 
-The leftover after credits is **not** the commission base. Wallet’s “Sale Margin” card is still payment minus credits (inventory leftover), not “Your Commission”.
+Wallet does not show a Sale Margin card. Commission is “Your Commission” on Revenue, not leftover after credits.
 
 Revert snapshot for the previous 3% pool: [sale-commission-3pct-pool-baseline.md](./sale-commission-3pct-pool-baseline.md). The client Sub-Franchisee report Total Revenue is Sub + Franchisee + Retailer (60% of sales at default); platform fee is the other 40%.
 
@@ -389,7 +388,7 @@ Verified leftovers — documented so they are not treated as product:
 | Buyer-submitted payment reference | Upline enters payment ref on release |
 | Hold / clarification status | Reject only |
 | User guide `.docx` | Regenerated 2026-08-18; screenshots may still show older sample rows |
-| Transactions column **Sale Margin** | Leftover after credits (inventory); commission is % of sales, not this leftover |
+| Transactions column **Sale Margin** | Hidden. Live sales burn 100% of payment; leftover is not a product field |
 | Retailer Wallet “Min. ₱5,000” | Details modal no longer has a Minimum Balance card; this caption remains |
 | `RevenueSharingPage` | Dead code; live config is Commission Settings |
 

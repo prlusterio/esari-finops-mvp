@@ -134,7 +134,7 @@
  * @property {string} [retailerCode]
  * @property {number} customerPayment
  * @property {number} [baseCost]
- * @property {number} [platformProcessingFee]
+ * @property {number} [platformProcessingFee] live sales stamp 0; not a credit burn
  * @property {number} [walletDeduction]
  * @property {number} [distributableRevenue]
  * @property {number} [retailerPercentage]

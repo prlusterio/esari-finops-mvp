@@ -191,11 +191,11 @@ export function isCommissionSplitValid(shares) {
   return Math.abs(sumCommissionPercentages(normalized) - 100) < 0.01
 }
 
-/** Preview applies Commission Settings % to Sales (customer payment). Credits consumed stay inventory-only. */
+/** Preview applies Commission Settings % to Sales (customer payment). Credits consumed equal the payment. */
 export function buildCommissionPreview(shares, samplePayment = 1000) {
   const payment = Number(samplePayment) || 0
   const costs = {
-    deduction: roundPercent(payment * 0.97),
+    deduction: roundPercent(payment),
   }
 
   const retailerAmount = roundPercent(

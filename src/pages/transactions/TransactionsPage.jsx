@@ -376,7 +376,6 @@ export default function TransactionsPage() {
                       ) : null}
                       <TableHead>Customer Payment</TableHead>
                       <TableHead>Credits Consumed</TableHead>
-                      <TableHead>Sale Margin</TableHead>
                       {config.showShareColumns ? (
                         <TableHead>{config.yourShareLabel || 'Your Share'}</TableHead>
                       ) : null}
@@ -388,9 +387,6 @@ export default function TransactionsPage() {
                     {paged.map((tx) => {
                       const retailer =
                         orgById[tx.retailerOrganizationId] || null
-                      const saleMargin =
-                        (Number(tx.customerPayment) || 0) -
-                        (Number(tx.walletDeduction) || 0)
                       const yourShare = getViewerShareAmountForRole(
                         tx,
                         user?.role,
@@ -425,13 +421,6 @@ export default function TransactionsPage() {
                             <SignedAmount
                               amount={tx.walletDeduction}
                               direction="debit"
-                            />
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            <SignedAmount
-                              amount={saleMargin}
-                              direction="credit"
-                              showSign={false}
                             />
                           </TableCell>
                           {config.showShareColumns ? (

@@ -336,7 +336,7 @@ def build_readme() -> Sheet:
     s.text(1, 17, "Load calculator")
     s.text(2, 17, "Convert cash ↔ credits, walk 1,000 credits down the chain, compute Sub/Fran spread")
     s.text(1, 18, "Sale calculator")
-    s.text(2, 18, "Demo sale: 97% credits consumed (inventory); Commission Settings % of sales")
+    s.text(2, 18, "Demo sale: 100% credits consumed (inventory); Commission Settings % of sales")
     s.text(1, 19, "Worked examples")
     s.text(2, 19, "Numbers used in the user guide (₱30,000 load, ₱1,000 sale, 10 / 20 / 30 / 40 of sales)")
     s.text(1, 20, "Demo defaults")
@@ -383,15 +383,9 @@ def build_formulas() -> Sheet:
         ),
         (
             "Credits consumed",
-            "credits_consumed = customer_payment × 97%",
-            "ROUND(payment*0.97,2)",
+            "credits_consumed = customer_payment",
+            "ROUND(payment,2)",
             "Record demo sale, Transactions, Wallet, Revenue (retailer)",
-        ),
-        (
-            "Sale Margin (leftover after credits)",
-            "leftover = customer_payment − credits_consumed",
-            "ROUND(payment-credits_consumed,2)",
-            "Transactions, Transaction Details, Wallet Sale Margin — not the commission base",
         ),
         (
             "Party commission",
@@ -558,11 +552,8 @@ def build_sale() -> Sheet:
     s.money(2, 6, "=B2", "formula")
     s.text(3, 6, "Same as the amount you entered")
     s.text(1, 7, "Credits consumed")
-    s.money(2, 7, "=ROUND(B2*0.97,2)", "formula")
-    s.text(3, 7, "97% of payment — burned from Available Credits")
-    s.text(1, 8, "Sale Margin (leftover after credits)")
-    s.money(2, 8, "=ROUND(B6-B7,2)", "formula")
-    s.text(3, 8, "Inventory leftover. Not the commission base.")
+    s.money(2, 7, "=B2", "formula")
+    s.text(3, 7, "100% of payment — burned from Available Credits")
 
     s.text(1, 10, "Commission split — % of sales (demo defaults 10 / 20 / 30 / 40)", "title")
     s.text(1, 11, "Retailer %", "section")
@@ -667,11 +658,8 @@ def build_examples() -> Sheet:
     s.text(1, 30, "Customer payment")
     s.money(2, 30, 1000, "input")
     s.text(1, 31, "Credits consumed")
-    s.money(2, 31, "=ROUND(B30*0.97,2)", "formula")
-    s.text(4, 31, "97% of ₱1,000 = ₱970 (inventory)")
-    s.text(1, 32, "Sale Margin (leftover after credits)")
-    s.money(2, 32, "=ROUND(B30-B31,2)", "formula")
-    s.text(4, 32, "1,000 − 970 = 30 — not the commission base")
+    s.money(2, 31, "=B30", "formula")
+    s.text(4, 31, "100% of ₱1,000 = ₱1,000 (inventory)")
     s.text(1, 33, "Retailer A 10% of sales")
     s.money(2, 33, "=ROUND(B30*0.10,2)", "formula")
     s.text(4, 33, "100.00")
@@ -692,7 +680,7 @@ def build_examples() -> Sheet:
     s.money(2, 40, "=B31", "formula")
     s.text(1, 41, "Available Credits after the sale")
     s.money(2, 41, "=ROUND(B39-B40,2)", "formula")
-    s.text(4, 41, "6,250 − 970 = 5,280  (Sufficient, above ₱5,000)")
+    s.text(4, 41, "6,250 − 1,000 = 5,250  (Sufficient, above ₱5,000)")
     s.text(1, 42, "Retailer B sample (low)")
     s.money(2, 42, 2500, "input")
     s.text(1, 43, "Alert?")

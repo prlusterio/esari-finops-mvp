@@ -1,6 +1,6 @@
 # Sale commission baseline (3% pool) — revert notes
 
-**Status:** Snapshot of the **previous** internet-sale commission model (3% pool). Live app as of 1 September 2026 uses **% of sales** instead — see [app-modules.md](./app-modules.md) §4.4 and §6.  
+**Status:** Snapshot of the **previous** internet-sale commission model (3% pool). Live app as of 2 September 2026 uses **% of sales** and burns **100% of the customer payment** as credits — see [app-modules.md](./app-modules.md) §4.4, §4.5, and §6.  
 **Use this file to revert** if the sheet-aligned payout should be undone.  
 **Date:** 1 September 2026  
 **Repo:** `esari-finops-mvp`  

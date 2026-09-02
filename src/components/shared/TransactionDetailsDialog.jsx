@@ -41,7 +41,6 @@ function downloadReceipt(tx, distribution, summary) {
     '',
     `Total Customer Payment: ${formatCurrency(costs.customerPayment)}`,
     `Credits Consumed: ${formatSignedCurrency(costs.netWalletDeduction, 'debit')}`,
-    `Sale Margin: ${formatCurrency(costs.saleMargin ?? costs.customerPayment - costs.netWalletDeduction)}`,
     `Sales (share base): ${formatCurrency(distributable)}`,
     '',
     'Commission Distribution',
@@ -102,14 +101,6 @@ export function TransactionDetailsDialog({
     revenueSharing: getRevenueSharing(),
   })
   const { costs, tiers, distributable } = distribution
-  const saleMargin =
-    costs.saleMargin ??
-    Math.round(
-      ((Number(costs.customerPayment) || 0) -
-        (Number(costs.netWalletDeduction) || 0) +
-        Number.EPSILON) *
-        100,
-    ) / 100
   const summary = resolveTransactionSummary(transaction, organizations)
 
   return (
@@ -187,18 +178,6 @@ export function TransactionDetailsDialog({
                 direction="debit"
               />
             </div>
-
-            <div className="my-3 border-t border-dashed border-slate-200" />
-
-            <div className="flex items-center justify-between gap-3 text-sm">
-              <span className="font-medium text-slate-700">Sale Margin</span>
-              <SignedAmount
-                amount={saleMargin}
-                direction="credit"
-                showSign={false}
-                className="font-bold"
-              />
-            </div>
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-white px-4 py-4">
@@ -253,7 +232,7 @@ export function TransactionDetailsDialog({
           <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
             <p className="text-sm leading-relaxed text-slate-500">
               Commission settings split customer payment (sales). Credits consumed
-              are inventory for the load, not the commission base.
+              equal that payment (inventory).
             </p>
           </div>
         </div>

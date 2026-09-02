@@ -818,7 +818,7 @@ ROLES = [
                         "name": "Wallet",
                         "path": "/wallet",
                         "tasks": live_page_tasks(
-                            ux_note="Available Credits, sale margin, request CTA",
+                            ux_note="Available Credits, request CTA",
                             fe_note="Retailer operating wallet; cannot record sales here",
                             **RETAIL_API,
                         ),
@@ -847,7 +847,7 @@ ROLES = [
                         "path": "/transactions",
                         "tasks": live_page_tasks(
                             ux_note="Own sales + Record demo sale",
-                            fe_note="Burns ~97% credits; stamps commission % of sales",
+                            fe_note="Burns 100% credits; stamps commission % of sales",
                             **RETAIL_API,
                         ),
                     }

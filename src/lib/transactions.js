@@ -9,10 +9,6 @@ export const DEFAULT_SHARE_PERCENTAGES = {
   company: 40,
 }
 
-/** Demo sale cost mix: 95% product cost + 2% processing = 97% credits consumed. */
-export const DEMO_SALE_BASE_COST_RATE = 0.95
-export const DEMO_SALE_PROCESSING_FEE_RATE = 0.02
-
 export const DEMO_PRODUCT_CATALOG = [
   'Mobile Load - Globe',
   'Mobile Load - Smart',
@@ -35,21 +31,18 @@ export function pickRandomDemoProduct() {
 
 /**
  * Credits consumed for a retailer demo sale (inventory burn).
- * Sale commission is a separate split of customer payment — see getSaleCommissionBase.
+ * Live wallet debit is 100% of customer payment. There is no processing-fee
+ * haircut and no leftover “sale margin.” Commission is a separate split of
+ * the same payment — see getSaleCommissionBase.
  */
 export function estimateDemoSaleCosts(customerPayment) {
   const payment = roundMoney(Number(customerPayment) || 0)
-  const baseCost = roundMoney(payment * DEMO_SALE_BASE_COST_RATE)
-  const platformProcessingFee = roundMoney(
-    payment * DEMO_SALE_PROCESSING_FEE_RATE,
-  )
-  const walletDeduction = roundMoney(baseCost + platformProcessingFee)
   return {
     customerPayment: payment,
-    baseCost,
-    platformProcessingFee,
-    walletDeduction,
-    saleMargin: roundMoney(payment - walletDeduction),
+    baseCost: payment,
+    platformProcessingFee: 0,
+    walletDeduction: payment,
+    saleMargin: 0,
   }
 }
 
@@ -442,7 +435,6 @@ export function transactionsToCsv(
     'Retailer Code',
     'Customer Payment',
     'Credits Consumed',
-    'After Credits',
     'Retailer %',
     'Franchisee %',
     'Sub-Franchisee %',
@@ -464,7 +456,6 @@ export function transactionsToCsv(
       tx.retailerCode || retailer?.code || '',
       costs.customerPayment,
       costs.netWalletDeduction,
-      costs.saleMargin,
       split.shares.retailer,
       split.shares.franchisee,
       split.shares.subfranchisee,

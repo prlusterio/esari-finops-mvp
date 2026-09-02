@@ -127,7 +127,9 @@ export function buildMidTierSpreadEntries({
 }
 
 /**
- * Retailer sale margin: customer payment − credits consumed.
+ * Retailer leftover after credits: customer payment − credits consumed.
+ * Live sales burn 100% of payment, so this is ₱0 for new sales. Kept so
+ * older demo stamps still resolve; Wallet no longer shows a Sale Margin card.
  */
 export function buildRetailerMarginEntries({
   transactions = [],

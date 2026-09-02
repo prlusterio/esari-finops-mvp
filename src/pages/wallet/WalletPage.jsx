@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Banknote, Building2, Wallet } from 'lucide-react'
+import { Building2, Wallet } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { formatCurrency, formatSignedCurrency } from '@/lib/currency'
 import { getHomePathForRole } from '@/lib/permissions'
@@ -17,7 +17,6 @@ import {
 import { DateTimeCell } from '@/components/shared/DateTimeCell'
 import { LowBalanceAlert } from '@/components/shared/LowBalanceAlert'
 import { PageHeader } from '@/components/shared/PageHeader'
-import { StatCard } from '@/components/shared/StatCard'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -92,7 +91,7 @@ export default function WalletPage() {
     <div>
       <PageHeader
         title="Wallet"
-        description={`Available Credits for internet sales, plus sale margin from customer payments. ${requestHint}`}
+        description={`Available Credits for internet sales. ${requestHint}`}
         breadcrumbs={[
           { label: 'Home', href: getHomePathForRole(user?.role) },
           { label: 'Wallet' },
@@ -105,7 +104,7 @@ export default function WalletPage() {
         role={user?.role}
       />
 
-      <div className="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mb-4 grid gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
             <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -126,13 +125,6 @@ export default function WalletPage() {
             </p>
           </CardContent>
         </Card>
-        <StatCard
-          title="Sale Margin"
-          value={formatCurrency(view.kpis.saleMargin ?? view.kpis.revenueBalance)}
-          description="Customer payment minus credits consumed (all-time) · filter by period on Revenue"
-          icon={Banknote}
-          accent="success"
-        />
         <Card>
           <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
             <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">

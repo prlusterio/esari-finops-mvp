@@ -128,16 +128,14 @@ export function DummyTransactionDialog({
               {preview ? (
                 <div className="mt-2 grid gap-1 text-slate-700">
                   <p>Credits consumed {formatCurrency(preview.walletDeduction)}</p>
-                  <p>Sale margin {formatCurrency(preview.saleMargin)}</p>
                   <p className={insufficient ? 'text-red-600' : ''}>
                     Remaining after sale {formatCurrency(remainingAfterSale)}
                   </p>
                 </div>
               ) : (
                 <p className="mt-1 text-muted-foreground">
-                  Credits consumed are 97% of the payment (inventory). Commission
-                  settings split the customer payment (sales), not the leftover
-                  after credits.
+                  Credits consumed equal the customer payment (100%). Commission
+                  settings split that same payment (sales).
                 </p>
               )}
             </div>
