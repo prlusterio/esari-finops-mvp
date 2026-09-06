@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
+import { isApiWired } from '@/lib/api/config'
+import { useResourceData, toRows, apiErrorMessage } from '@/hooks/useResourceData'
+import {
+  createAdminCollectionForRole,
+  listAdminCollectionsForRole,
+} from '@/services/api/adminResources'
 import {
   applyClientCollection,
   fixedMonthlyTotal,
@@ -57,6 +63,41 @@ function StatusBadge({ status }) {
   )
 }
 
+/**
+ * []-safe mapping for GET /admin/collections payloads (or a bare array of
+ * entries) onto the local ledger shape. Missing fields degrade to empty
+ * strings/zeros, never null crashes.
+ */
+function normalizeServerLedger(payload) {
+  const source =
+    payload && typeof payload === 'object' && !Array.isArray(payload)
+      ? (payload.entries ?? payload.items ?? payload.data ?? [])
+      : payload
+  const entries = (Array.isArray(source) ? source : []).map((entry, index) => ({
+    id: entry?.id ?? entry?.collectionId ?? `server-${index}`,
+    clientId: entry?.clientId ?? entry?.companyId ?? '',
+    clientName: entry?.clientName ?? entry?.companyName ?? '',
+    clientType: entry?.clientType ?? '',
+    type: entry?.type ?? '',
+    period: entry?.period ?? '',
+    periodKey: entry?.periodKey ?? null,
+    periodLabel: entry?.periodLabel ?? entry?.period ?? '',
+    date: entry?.date ?? '',
+    due: Number(entry?.due) || 0,
+    paid: Number(entry?.paid) || 0,
+    remaining: Number(entry?.remaining ?? Math.max(0, Number(entry?.due || 0) - Number(entry?.paid || 0))) || 0,
+    status: entry?.status ?? 'Unpaid',
+    companyPct: entry?.companyPct ?? 0,
+    clientPct: entry?.clientPct ?? 0,
+    reference: entry?.reference ?? '',
+    paymentKey: entry?.paymentKey ?? null,
+    collectionKind: entry?.collectionKind ?? 'upfront',
+  }))
+  const collected = entries.reduce((sum, entry) => sum + (Number(entry.paid) || 0), 0)
+  const remaining = entries.reduce((sum, entry) => sum + (Number(entry.remaining) || 0), 0)
+  return { entries, rollup: [], kpis: { collected, remaining } }
+}
+
 export function FranchiseCollectionsPanel({
   dateRange = 'all',
   customDateRange = null,
@@ -67,9 +108,28 @@ export function FranchiseCollectionsPanel({
   showRollup = false,
   className,
 }) {
-  const { dataVersion, bumpDataVersion } = useAuth()
+  const { user, dataVersion, bumpDataVersion } = useAuth()
   const [page, setPage] = useState(0)
   const [paymentDraft, setPaymentDraft] = useState(null)
+  const [collectionError, setCollectionError] = useState('')
+  // T9b/T10: GET /admin/collections feeds the ledger when wired (local
+  // ledger stays as fallback until verify; no mixed-source rows).
+  const useApi = isApiWired()
+  const apiCollections = useResourceData({
+    loadFromApi: () =>
+      listAdminCollectionsForRole(user?.role, {
+        dateRange,
+        search,
+      }),
+    loadFromStorage: () => [],
+    fallbackEnabled: false,
+    deps: [user?.role],
+  })
+  const serverLedger = useMemo(() => {
+    if (!useApi) return null
+    if (apiCollections.error) return { entries: [], rollup: [], kpis: null }
+    return normalizeServerLedger(toRows(apiCollections.data))
+  }, [useApi, apiCollections.data, apiCollections.error])
 
   useEffect(() => {
     setPage(0)
@@ -77,12 +137,22 @@ export function FranchiseCollectionsPanel({
 
   const view = useMemo(() => {
     void dataVersion
-    return loadFranchiseCollectionView({
+    const local = loadFranchiseCollectionView({
       dateRange,
       customDateRange,
       search,
     })
-  }, [customDateRange, dataVersion, dateRange, search])
+    // No mixed-source page: wired + verified server ledger replaces local;
+    // on API error the panel shows []-safe rows + the error, not a blend.
+    if (!useApi || !serverLedger) return local
+    return {
+      ...local,
+      entries: serverLedger.entries,
+      rollup: showRollup ? serverLedger.rollup : local.rollup,
+      kpis: serverLedger.kpis ?? local.kpis,
+      collections: local.collections,
+    }
+  }, [customDateRange, dataVersion, dateRange, search, useApi, serverLedger, showRollup])
 
   const { page: currentPage, items: paged } = paginateItems(
     view.entries,
@@ -104,11 +174,33 @@ export function FranchiseCollectionsPanel({
     })
   }
 
-  function confirmPayment() {
+  async function confirmPayment() {
     if (!paymentDraft) return
     const amount = Math.max(0, Number(paymentDraft.amountCollected) || 0)
     const reference = paymentDraft.referenceNumber.trim()
     if (amount <= 0 || !reference) return
+    setCollectionError('')
+
+    // G4 open: POST /admin/collections is 503-as-expected while wired.
+    // Surface the 503; never persist locally when wired.
+    if (useApi) {
+      try {
+        await createAdminCollectionForRole(user?.role, {
+          clientId: paymentDraft.clientId,
+          kind: paymentDraft.kind,
+          periodKey: paymentDraft.periodKey,
+          amountCollected: amount,
+          referenceNumber: reference,
+          paymentKey: paymentDraft.key,
+        })
+        apiCollections.reload()
+        bumpDataVersion()
+        setPaymentDraft(null)
+      } catch (error) {
+        setCollectionError(apiErrorMessage(error, 'Unable to record this collection.'))
+      }
+      return
+    }
 
     const client = getClientById(paymentDraft.clientId)
     if (!client) return
@@ -138,6 +230,16 @@ export function FranchiseCollectionsPanel({
 
   return (
     <div className={cn('space-y-4', className)}>
+      {useApi && apiCollections.error ? (
+        <div className="rounded-md border border-danger/20 bg-danger/5 px-3 py-2 text-sm text-danger">
+          {apiErrorMessage(apiCollections.error)}
+        </div>
+      ) : null}
+      {collectionError ? (
+        <div className="rounded-md border border-danger/20 bg-danger/5 px-3 py-2 text-sm text-danger">
+          {collectionError}
+        </div>
+      ) : null}
       {showRollup ? (
         <Card className="overflow-hidden shadow-sm">
           <CardHeader className="border-b border-border px-4 py-3">

@@ -8,6 +8,9 @@ import {
   Briefcase,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { isApiWired } from '@/lib/api/config'
+import { useResourceData, toRows, apiErrorMessage } from '@/hooks/useResourceData'
+import { listAdminCompaniesForRole } from '@/services/api/adminResources'
 import { formatCompactCurrency, formatCurrency } from '@/lib/currency'
 import {
   allocateMonthlyPayment,
@@ -23,6 +26,7 @@ import {
   monthlyCoverageLabel,
 } from '@/lib/financialsDashboard'
 import { getHomePathForRole } from '@/lib/permissions'
+import { normalizeServerPortfolio } from '@/lib/serverPortfolio'
 import {
   getFranchiseCollections,
   saveFranchiseCollections,
@@ -183,10 +187,25 @@ function CollectionAction({
 
 export default function DashboardPage() {
   const { user, dataVersion, bumpDataVersion } = useAuth()
+  // T10 admin rebuild: GET /admin/companies replaces mockFranchises when
+  // wired. Local portfolio stays as fallback until verify; no mixing.
+  const useApi = isApiWired()
+  const apiCompanies = useResourceData({
+    loadFromApi: () => listAdminCompaniesForRole(user?.role),
+    loadFromStorage: () => [],
+    fallbackEnabled: false,
+    deps: [user?.role],
+  })
+  const serverPortfolio = useMemo(() => {
+    if (!useApi) return null
+    if (apiCompanies.error) return []
+    return normalizeServerPortfolio(toRows(apiCompanies.data))
+  }, [useApi, apiCompanies.data, apiCompanies.error])
   const franchises = useMemo(() => {
+    if (serverPortfolio) return serverPortfolio
     void dataVersion
     return getFranchisePortfolio()
-  }, [dataVersion])
+  }, [serverPortfolio, dataVersion])
   const money = useMemo(() => computeMoney(franchises), [franchises])
   const [monthlyPeriod, setMonthlyPeriod] = useState(() => monthKey(new Date()))
   const monthlyPeriodOptions = useMemo(
@@ -215,6 +234,10 @@ export default function DashboardPage() {
   )
 
   const persistCollections = (next) => {
+    // Wired: collections persist via POST /admin/collections (G4-guarded)
+    // which the FranchiseCollectionsPanel path handles; the dashboard keeps
+    // local draft state only while unwired. Never persist locally when wired.
+    if (useApi) return
     saveFranchiseCollections(next)
     bumpDataVersion()
   }
@@ -365,6 +388,12 @@ export default function DashboardPage() {
           </Button>
         }
       />
+
+      {useApi && apiCompanies.error ? (
+        <div className="mb-4 rounded-md border border-danger/20 bg-danger/5 px-3 py-2 text-sm text-danger">
+          {apiErrorMessage(apiCompanies.error)}
+        </div>
+      ) : null}
 
       <div className="space-y-4">
         <Card>

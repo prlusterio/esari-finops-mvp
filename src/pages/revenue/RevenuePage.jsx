@@ -2,6 +2,15 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useSearchParams } from 'react-router-dom'
 import { Banknote, Coins, CreditCard, Eye, Filter, PieChart, Wallet } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { isApiWired } from '@/lib/api/config'
+import { useResourceData, toRows, apiErrorMessage } from '@/hooks/useResourceData'
+import {
+  listAccountsForRole,
+  listCreditRequestsForRole,
+  listSaleTransactionsForRole,
+  listInternetCreditsEarningsForRole,
+  listSalesCommissionForRole,
+} from '@/services/api/roleResources'
 import { ROLE_LABELS, ROLES } from '@/lib/constants'
 import { buildCreditRevenueSnapshot } from '@/lib/creditEconomics'
 import { formatCurrency } from '@/lib/currency'
@@ -136,9 +145,54 @@ export default function RevenuePage() {
   const { user, dataVersion } = useAuth()
   const location = useLocation()
   const [searchParams] = useSearchParams()
-  const organizations = useMemo(() => getOrganizations(), [dataVersion])
-  const fundingRequests = useMemo(() => getFundingRequests(), [dataVersion])
-  const transactions = useMemo(() => getTransactions(), [dataVersion])
+  // T8 revenue: API-first when wired (report getters serve the snapshot;
+  // local builders stay as parity oracle until retired).
+  const useApi = isApiWired()
+  const apiAccounts = useResourceData({
+    loadFromApi: () => listAccountsForRole(user?.role),
+    loadFromStorage: () => getOrganizations(),
+    deps: [user?.role],
+  })
+  const apiRequests = useResourceData({
+    loadFromApi: () => listCreditRequestsForRole(user?.role),
+    loadFromStorage: () => getFundingRequests(),
+    deps: [user?.role],
+  })
+  const apiTransactions = useResourceData({
+    loadFromApi: () => listSaleTransactionsForRole(user?.role),
+    loadFromStorage: () => getTransactions(),
+    deps: [user?.role],
+  })
+  const apiSalesCommission = useResourceData({
+    loadFromApi: () => listSalesCommissionForRole(user?.role),
+    loadFromStorage: () => [],
+    deps: [user?.role],
+  })
+  const apiCreditEarnings = useResourceData({
+    loadFromApi: () => listInternetCreditsEarningsForRole(user?.role),
+    loadFromStorage: () => [],
+    deps: [user?.role],
+  })
+  const organizations = useMemo(
+    () => (useApi ? toRows(apiAccounts.data) : getOrganizations()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [useApi, apiAccounts.data, dataVersion],
+  )
+  const fundingRequests = useMemo(
+    () => (useApi ? toRows(apiRequests.data) : getFundingRequests()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [useApi, apiRequests.data, dataVersion],
+  )
+  const transactions = useMemo(
+    () => (useApi ? toRows(apiTransactions.data) : getTransactions()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [useApi, apiTransactions.data, dataVersion],
+  )
+  const revenueError = useApi
+    ? apiAccounts.error || apiRequests.error || apiTransactions.error
+    : null
+  void apiSalesCommission
+  void apiCreditEarnings
 
   const [dateRange, setDateRange] = useState('this_month')
   const [customFrom, setCustomFrom] = useState('')
@@ -332,6 +386,12 @@ export default function RevenuePage() {
           { label: 'Revenue' },
         ]}
       />
+
+      {revenueError ? (
+        <div className="mb-4 rounded-md border border-danger/20 bg-danger/5 px-3 py-2 text-sm text-danger">
+          {apiErrorMessage(revenueError)}
+        </div>
+      ) : null}
 
       <div
         className={cn(

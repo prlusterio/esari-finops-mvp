@@ -5,6 +5,10 @@ import {
   estimateDemoSaleCosts,
 } from '@/lib/transactions'
 import { createRetailerDemoSale } from '@/services/transactionActions'
+import { isApiWired } from '@/lib/api/config'
+import { apiPost } from '@/lib/api/client'
+import { resolveApiPrefix } from '@/lib/api/roles'
+import { subfranchisorEndpoints } from '@/lib/api/endpoints'
 import { getOperatingWallet } from '@/services/fundingActions'
 import { getWallets } from '@/services/storage'
 import { Button } from '@/components/ui/button'
@@ -61,6 +65,19 @@ export function DummyTransactionDialog({
     setError('')
     setBusy(true)
     try {
+      // T7: retailer demo sale via API when wired (isolation server-side);
+      // local path retired only after verify.
+      if (isApiWired()) {
+        const prefix = resolveApiPrefix('retailer')
+        const sub = subfranchisorEndpoints.transactions()
+        const transaction = await apiPost(
+          `${prefix}${sub.replace(/^\/api\/v1\/subfranchisor/, '')}`,
+          { customerPayment: Number(amount), productService },
+        )
+        onCreated?.(transaction)
+        onOpenChange?.(false)
+        return
+      }
       const result = createRetailerDemoSale({
         organizationId,
         customerPayment: amount,

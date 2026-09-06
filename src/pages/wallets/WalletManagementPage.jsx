@@ -8,6 +8,9 @@ import {
   Wallet,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { isApiWired } from '@/lib/api/config'
+import { useResourceData, toRows, apiErrorMessage } from '@/hooks/useResourceData'
+import { listWalletsForRole, listAccountsForRole } from '@/services/api/roleResources'
 import { ROLES } from '@/lib/constants'
 import { formatCurrency } from '@/lib/currency'
 import { DEFAULT_PAGE_SIZE, paginateItems } from '@/lib/pagination'
@@ -87,9 +90,30 @@ function StatusBadge({ status }) {
 export default function WalletManagementPage() {
   const { user, dataVersion } = useAuth()
   const isFranchisee = user?.role === ROLES.FRANCHISEE
-  const organizations = useMemo(() => getOrganizations(), [dataVersion])
-  const wallets = useMemo(() => getWallets(), [dataVersion])
+  // T4: API-first wallets + activity when wired; storage until verify.
+  const apiWallets = useResourceData({
+    loadFromApi: () => listWalletsForRole(user?.role),
+    loadFromStorage: () => getWallets(),
+    deps: [user?.role],
+  })
+  const apiAccounts = useResourceData({
+    loadFromApi: () => listAccountsForRole(user?.role),
+    loadFromStorage: () => getOrganizations(),
+    deps: [user?.role],
+  })
+  const useApi = isApiWired()
+  const organizations = useMemo(
+    () => (useApi ? toRows(apiAccounts.data) : getOrganizations()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [useApi, apiAccounts.data, dataVersion],
+  )
+  const wallets = useMemo(
+    () => (useApi ? toRows(apiWallets.data) : getWallets()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [useApi, apiWallets.data, dataVersion],
+  )
   const transfers = useMemo(() => getFundingTransfers(), [dataVersion])
+  const walletsError = useApi ? apiWallets.error || apiAccounts.error : null
 
   const directory = useMemo(() => {
     const args = {
@@ -148,6 +172,12 @@ export default function WalletManagementPage() {
           { label: 'Wallets' },
         ]}
       />
+
+      {walletsError ? (
+        <div className="mb-4 rounded-md border border-danger/20 bg-danger/5 px-3 py-2 text-sm text-danger">
+          {apiErrorMessage(walletsError)}
+        </div>
+      ) : null}
 
       <LowBalanceAlert
         status={ownStatus}

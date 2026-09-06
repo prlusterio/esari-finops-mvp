@@ -132,4 +132,19 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // Spec 00 T1 (origin-only): VITE_API_BASE_URL points at the Vite origin
+  // (http://localhost:5173) and `/api/v1` is proxied to the local API.
+  // Same-origin through the proxy means no CORS preflight in dev.
+  server: {
+    proxy: {
+      '/api/v1': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+      '/up': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+    },
+  },
 })

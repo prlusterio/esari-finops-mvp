@@ -25,20 +25,22 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
     setError('')
     setSubmitting(true)
 
-    const result = login(email, password)
-    setSubmitting(false)
+    try {
+      const result = await login(email, password)
+      if (!result.success) {
+        setError(result.error || 'Invalid email or password.')
+        return
+      }
 
-    if (!result.success) {
-      setError(result.error || 'Invalid email or password.')
-      return
+      navigate(getHomePathForRole(result.user?.role), { replace: true })
+    } finally {
+      setSubmitting(false)
     }
-
-    navigate(getHomePathForRole(result.user?.role), { replace: true })
   }
 
   const fillDemoAccount = (account) => {

@@ -6,7 +6,6 @@ import {
   FileSpreadsheet,
   LogOut,
   Menu,
-  RefreshCcw,
   UserRound,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
@@ -29,34 +28,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 
 export default function AppLayout() {
-  const { user, organization, logout, resetDemoData } = useAuth()
+  const { user, organization, logout } = useAuth()
   const navigate = useNavigate()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [resetOpen, setResetOpen] = useState(false)
 
   const handleLogout = () => {
     logout()
     navigate('/login', { replace: true })
-  }
-
-  const handleReset = () => {
-    resetDemoData()
-    setResetOpen(false)
   }
 
   return (
@@ -172,10 +155,6 @@ export default function AppLayout() {
                     Download computations (Excel)
                   </a>
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setResetOpen(true)}>
-                  <RefreshCcw className="h-4 w-4" />
-                  Reset Demo Data
-                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={handleLogout}>
                   <LogOut className="h-4 w-4" />
@@ -190,24 +169,6 @@ export default function AppLayout() {
           <Outlet key={user?.id || 'guest'} />
         </main>
       </div>
-
-      <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Reset all demo data?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will restore wallets, requests, transactions, and other mock data
-              to their original demo values.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleReset}>
-              Reset Demo Data
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
 }
