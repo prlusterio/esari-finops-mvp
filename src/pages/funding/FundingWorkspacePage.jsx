@@ -9,6 +9,22 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { isApiWired } from '@/lib/api/config'
+import { useResourceData, toRows, apiErrorMessage } from '@/hooks/useResourceData'
+import {
+  listAccountsForRole,
+  listCreditRequestsForRole,
+  listCreditTransfersForRole,
+  listWalletsForRole,
+} from '@/services/api/roleResources'
+import {
+  apiCreateFundingRequest,
+  apiDeleteFundingRequest,
+  apiDirectReleaseFunding,
+  apiRejectFundingRequest,
+  apiReleaseFundingRequest,
+  apiUpdateFundingRequest,
+} from '@/services/api/fundingBridge'
 import { FUNDING_STATUS } from '@/lib/constants'
 import { formatCurrency } from '@/lib/currency'
 import { DateTimeCell } from '@/components/shared/DateTimeCell'
@@ -158,7 +174,53 @@ function OrganizationCell({ organization }) {
 
 export default function FundingWorkspacePage() {
   const { user, dataVersion, bumpDataVersion } = useAuth()
-  const organizations = useMemo(() => getOrganizations(), [dataVersion])
+  // T5 IC lifecycle: API-first when wired (mint vs balance-debit server-side,
+  // 422 insufficient surfaced, REQ- never sent, approved→released).
+  // reverseInternetCredits stays unused. Storage until verify, no mixing.
+  const useApi = isApiWired()
+  const apiAccounts = useResourceData({
+    loadFromApi: () => listAccountsForRole(user?.role),
+    loadFromStorage: () => getOrganizations(),
+    deps: [user?.role],
+  })
+  const apiRequests = useResourceData({
+    loadFromApi: () => listCreditRequestsForRole(user?.role),
+    loadFromStorage: () => getFundingRequests(),
+    deps: [user?.role],
+  })
+  const apiTransfers = useResourceData({
+    loadFromApi: () => listCreditTransfersForRole(user?.role),
+    loadFromStorage: () => getFundingTransfers(),
+    deps: [user?.role],
+  })
+  const apiWallets = useResourceData({
+    loadFromApi: () => listWalletsForRole(user?.role),
+    loadFromStorage: () => getWallets(),
+    deps: [user?.role],
+  })
+  const organizations = useMemo(
+    () => (useApi ? toRows(apiAccounts.data) : getOrganizations()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [useApi, apiAccounts.data, dataVersion],
+  )
+  const apiFundingRequests = useMemo(
+    () => (useApi ? toRows(apiRequests.data) : getFundingRequests()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [useApi, apiRequests.data, dataVersion],
+  )
+  const apiFundingTransfers = useMemo(
+    () => (useApi ? toRows(apiTransfers.data) : getFundingTransfers()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [useApi, apiTransfers.data, dataVersion],
+  )
+  const apiWalletsList = useMemo(
+    () => (useApi ? toRows(apiWallets.data) : getWallets()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [useApi, apiWallets.data, dataVersion],
+  )
+  const fundingError = useApi
+    ? apiAccounts.error || apiRequests.error || apiTransfers.error || apiWallets.error
+    : null
 
   const config = useMemo(
     () =>
@@ -229,25 +291,25 @@ export default function FundingWorkspacePage() {
   }, [organizations])
 
   const walletBalance = useMemo(() => {
-    const wallet = getOperatingWallet(getWallets(), user?.organizationId)
+    const wallet = getOperatingWallet(apiWalletsList, user?.organizationId)
     return Math.round((Number(wallet?.availableBalance) || 0) * 100) / 100
-  }, [user?.organizationId, dataVersion])
+  }, [user?.organizationId, apiWalletsList])
 
   const datasets = useMemo(
     () =>
       getFundingDatasets({
         role: user?.role,
         organizationId: user?.organizationId,
-        requests: getFundingRequests(),
-        transfers: getFundingTransfers(),
+        requests: apiFundingRequests,
+        transfers: apiFundingTransfers,
         config,
       }),
-    [user?.role, user?.organizationId, dataVersion, config],
+    [user?.role, user?.organizationId, apiFundingRequests, apiFundingTransfers, config],
   )
 
   const summaryMetrics = useMemo(() => {
     const orgId = String(user?.organizationId || '')
-    const requests = getFundingRequests()
+    const requests = apiFundingRequests
     const pendingIncoming = requests.filter(
       (request) =>
         String(request.parentOrganizationId || '') === orgId &&
@@ -371,7 +433,7 @@ export default function FundingWorkspacePage() {
       : ''
   }, [confirmAction, internetCredits, paymentReferenceId])
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     if (!confirmAction) return
     setActionBusy(true)
     setActionError('')
@@ -379,7 +441,14 @@ export default function FundingWorkspacePage() {
     try {
       if (confirmAction.type === 'approve') {
         if (internetCredits) {
-          const result = releaseInternetCredits(confirmAction.request, {
+          // T5: API-first release (server decides mint vs balance-debit,
+          // 422 on insufficient). REQ- ids never sent — server ints only.
+          const result = useApi
+            ? await apiReleaseFundingRequest(user?.role, confirmAction.request, {
+                creditsToRelease: Number(creditsToRelease),
+                paymentReferenceId,
+              }).then((released) => ({ request: released, transfer: null, duplicatePaymentReference: null }))
+            : releaseInternetCredits(confirmAction.request, {
             actorOrganizationId: user.organizationId,
             actorUserId: user.id,
             paymentReferenceId,
@@ -429,7 +498,11 @@ export default function FundingWorkspacePage() {
           })
         }
       } else if (confirmAction.type === 'reject') {
-        const result = rejectFundingRequest(confirmAction.request, {
+        const result = useApi
+          ? await apiRejectFundingRequest(user?.role, confirmAction.request, {
+              reason: rejectReason,
+            }).then((rejected) => ({ request: rejected }))
+          : rejectFundingRequest(confirmAction.request, {
           reason: rejectReason,
           requireReason: internetCredits,
         })
@@ -449,7 +522,11 @@ export default function FundingWorkspacePage() {
           ],
         })
       } else if (confirmAction.type === 'new-request') {
-        const result = createFundingRequest(confirmAction.payload)
+        const result = useApi
+          ? await apiCreateFundingRequest(user?.role, confirmAction.payload).then((request) => ({
+              request,
+            }))
+          : createFundingRequest(confirmAction.payload)
         setConfirmAction(null)
         bumpDataVersion()
         setTab('mine')
@@ -476,7 +553,11 @@ export default function FundingWorkspacePage() {
           ],
         })
       } else if (confirmAction.type === 'update-request') {
-        const result = updatePendingFundingRequest(confirmAction.request, {
+        const result = useApi
+          ? await apiUpdateFundingRequest(user?.role, confirmAction.request, {
+              ...confirmAction.payload,
+            }).then((request) => ({ request }))
+          : updatePendingFundingRequest(confirmAction.request, {
           ...confirmAction.payload,
           depositHop: config.myRequestHop,
         })
@@ -508,7 +589,11 @@ export default function FundingWorkspacePage() {
           ],
         })
       } else if (confirmAction.type === 'delete-request') {
-        const result = deletePendingFundingRequest(confirmAction.request, {
+        const result = useApi
+          ? await apiDeleteFundingRequest(user?.role, confirmAction.request).then(() => ({
+              request: confirmAction.request,
+            }))
+          : deletePendingFundingRequest(confirmAction.request, {
           organizationId: user.organizationId,
         })
         setConfirmAction(null)
@@ -529,7 +614,13 @@ export default function FundingWorkspacePage() {
         })
       } else if (confirmAction.type === 'direct-transfer') {
         if (internetCredits) {
-          const result = directReleaseInternetCredits({
+          const result = useApi
+            ? await apiDirectReleaseFunding(user?.role, {
+                ...confirmAction.payload,
+                paymentReferenceId,
+                creditsToRelease: Number(creditsToRelease),
+              }).then((released) => ({ request: released }))
+            : directReleaseInternetCredits({
             fromOrganizationId: confirmAction.payload.fromOrganizationId,
             toOrganizationId: confirmAction.payload.toOrganizationId,
             requesterRole: confirmAction.payload.requesterRole,

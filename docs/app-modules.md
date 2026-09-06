@@ -2,7 +2,7 @@
 
 **Status:** Living product map for the **whole app**, not Internet Credits only  
 **Last verified:** 2026-08-18 against current code (`src/lib`, `src/pages`, `src/layouts`, `src/services`, `src/data/seed.js`)  
-**Related:** [Internet Credits business model review](./internet-credits-business-model-review.md) (deposit-rate lock + §11 IC details) · [Sale commission 3% pool baseline (revert notes)](./sale-commission-3pct-pool-baseline.md) · [Sub-Franchisee API (unwired)](./api-subfranchisee.md)
+**Related:** [Internet Credits business model review](./internet-credits-business-model-review.md) (deposit-rate lock + §11 IC details) · [Sale commission 3% pool baseline (revert notes)](./sale-commission-3pct-pool-baseline.md) · [Sub-Franchisee API (unwired)](./api-subfranchisee.md) · [Unified franchise backend plan](./unified-backend-plan.md)
 
 This is a React / Vite demo that persists to `localStorage`. There is no backend. Reset Demo Data restores seed.
 
@@ -18,6 +18,7 @@ This is a React / Vite demo that persists to `localStorage`. There is no backend
 6. [Money math (both streams)](#6-money-math-both-streams)
 7. [Not in v1 / leftovers](#7-not-in-v1--leftovers)
 8. [Sub-Franchisee API (unwired)](#8-sub-franchisee-api-unwired)
+9. [Unified backend](#9-unified-backend)
 
 Sale-commission revert snapshot (3% pool vs client sheet): [sale-commission-3pct-pool-baseline.md](./sale-commission-3pct-pool-baseline.md).
 
@@ -398,6 +399,16 @@ Storage keys (all `esarisari_*`) cover users, orgs, wallets, funding requests/tr
 
 ## 8. Sub-Franchisee API (unwired)
 
-Contract and client for the Sub-Franchisee module live in [api-subfranchisee.md](./api-subfranchisee.md) and `src/services/api/subfranchisor/`. They follow admin-v3 `/api/v1/subfranchisor` conventions.
+Contract and client for the Sub-Franchisee module live in [api-subfranchisee.md](./api-subfranchisee.md) and `src/services/api/subfranchisor/`. Paths stay `/api/v1/subfranchisor` with Sanctum Bearer and `{ success, message, data }`.
+
+**Target origin is the new platform API**, not `esarisari-admin-v3`. See [unified-backend-plan.md](./unified-backend-plan.md). Admin-v3 remains the *live* Subfranchise backend until that API exists and FinOps is cut over.
 
 **Not wired.** Pages, auth, and `storage.js` still use `localStorage`. Calls throw `API_NOT_WIRED` until `VITE_API_BASE_URL` is set and a later task swaps loaders.
+
+## 9. Unified backend
+
+Planning doc: [unified-backend-plan.md](./unified-backend-plan.md).
+
+`esari-finops-mvp` stays frontend-only until Phase 1 of that plan ships. Set `VITE_API_BASE_URL` to `esarisari-platform-api` (same MySQL as the legacy franchise apps). Do not point this SPA at `c360-finance-api` (separate SIARELCO database).
+
+The implementing developer should follow that plan’s FinOps API scan (§13), legacy exists-or-create cross-check (§14), and live-safe rules (§15): reuse or wrap existing routes/tables; create only what is missing; do not change live admin-v3 / franchise / portal processes.

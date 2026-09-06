@@ -1,6 +1,12 @@
 import { useMemo, useState } from 'react'
 import { Pencil } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { isApiWired } from '@/lib/api/config'
+import { useResourceData, toRows, apiErrorMessage } from '@/hooks/useResourceData'
+import { listAccountsForRole, listDepositRatesForRole } from '@/services/api/roleResources'
+import { apiDelete, apiPut } from '@/lib/api/client'
+import { subfranchisorEndpoints } from '@/lib/api/endpoints'
+import { resolveApiPrefix } from '@/lib/api/roles'
 import {
   buildDepositRateRows,
   getDepositRatesPageConfig,
@@ -51,8 +57,31 @@ export default function DepositRatesPage() {
   const { user, dataVersion, bumpDataVersion } = useAuth()
   const pageConfig = getDepositRatesPageConfig(user?.role)
 
-  const organizations = useMemo(() => getOrganizations(), [dataVersion])
-  const rates = useMemo(() => getDepositRates(), [dataVersion])
+  // T6a deposit rates: API-first when wired (reason-required 422 surfaced
+  // in the dialog error state). Storage until verify, no mixed rows.
+  const useApi = isApiWired()
+  const apiAccounts = useResourceData({
+    loadFromApi: () => listAccountsForRole(user?.role),
+    loadFromStorage: () => getOrganizations(),
+    deps: [user?.role],
+  })
+  const apiRates = useResourceData({
+    loadFromApi: () => listDepositRatesForRole(user?.role),
+    loadFromStorage: () => getDepositRates(),
+    deps: [user?.role],
+  })
+  const organizations = useMemo(
+    () => (useApi ? toRows(apiAccounts.data) : getOrganizations()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [useApi, apiAccounts.data, dataVersion],
+  )
+  const rates = useMemo(
+    () => (useApi ? toRows(apiRates.data) : getDepositRates()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [useApi, apiRates.data, dataVersion],
+  )
+  const ratesError = useApi ? apiAccounts.error || apiRates.error : null
+  const [saveError, setSaveError] = useState('')
 
   const rows = useMemo(
     () =>
@@ -78,7 +107,22 @@ export default function DepositRatesPage() {
     items: paged,
   } = paginateItems(rows, page, DEFAULT_PAGE_SIZE)
 
-  const handleSave = ({ organizationId, hop, depositRate, reason }) => {
+  const handleSave = async ({ organizationId, hop, depositRate, reason }) => {
+    setSaveError('')
+    if (useApi) {
+      // Server ints only; 422 (reason required / out of range) surfaces.
+      try {
+        const prefix = resolveApiPrefix(user?.role)
+        const sub = subfranchisorEndpoints.depositRate(organizationId)
+        const path = `${prefix}${sub.replace(/^\/api\/v1\/subfranchisor/, '')}`
+        await apiPut(path, { depositRate, reason })
+        apiRates.reload()
+        return
+      } catch (error) {
+        setSaveError(apiErrorMessage(error, 'Unable to save this deposit rate.'))
+        return
+      }
+    }
     const row = rows.find((entry) => entry.organizationId === organizationId)
     const defaultRate = Number(row?.defaultRate)
     if (
@@ -108,7 +152,21 @@ export default function DepositRatesPage() {
     bumpDataVersion()
   }
 
-  const handleReset = ({ organizationId }) => {
+  const handleReset = async ({ organizationId }) => {
+    setSaveError('')
+    if (useApi) {
+      try {
+        const prefix = resolveApiPrefix(user?.role)
+        const sub = subfranchisorEndpoints.depositRate(organizationId)
+        const path = `${prefix}${sub.replace(/^\/api\/v1\/subfranchisor/, '')}`
+        await apiDelete(path)
+        apiRates.reload()
+        return
+      } catch (error) {
+        setSaveError(apiErrorMessage(error, 'Unable to reset this deposit rate.'))
+        return
+      }
+    }
     const next = removeDepositRateOverride(
       getDepositRates(),
       organizationId,
@@ -143,6 +201,17 @@ export default function DepositRatesPage() {
           { label: 'Deposit Rates' },
         ]}
       />
+
+      {ratesError ? (
+        <div className="mb-4 rounded-md border border-danger/20 bg-danger/5 px-3 py-2 text-sm text-danger">
+          {apiErrorMessage(ratesError)}
+        </div>
+      ) : null}
+      {saveError ? (
+        <div className="mb-4 rounded-md border border-danger/20 bg-danger/5 px-3 py-2 text-sm text-danger">
+          {saveError}
+        </div>
+      ) : null}
 
       {hopDefaults.length > 0 ? (
         <div

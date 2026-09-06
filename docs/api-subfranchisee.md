@@ -2,20 +2,22 @@
 
 **Status:** Client + DTOs exist. **Not wired.** Pages still read and write `localStorage`.  
 **Repo:** `esari-finops-mvp`  
-**Backend convention:** `esarisari-admin-v3` (`/api/v1`, `{ success, message, data }`, Sanctum Bearer).  
+**Target backend:** `esarisari-platform-api` (new standalone Laravel API on the **shared franchise MySQL**). Plan: [unified-backend-plan.md](./unified-backend-plan.md).  
+**Wire format:** `/api/v1`, `{ success, message, data }`, Sanctum Bearer — same as live `esarisari-admin-v3`, different origin.  
 **Path prefix:** `/api/v1/subfranchisor`  
 **MVP role string:** `subfranchisee` (UI). Backend namespace: `subfranchisor`.
 
-Do not import `src/services/api/subfranchisor` from pages, `AuthContext`, or `src/services/storage.js` until wiring is an explicit task.
+Do not import `src/services/api/subfranchisor` from pages, `AuthContext`, or `src/services/storage.js` until wiring is an explicit task. Do not set `VITE_API_BASE_URL` to `c360-finance-api`.
 
 ---
 
 ## How this is meant to be wired later
 
-1. Set `VITE_API_BASE_URL` (origin only, no trailing slash). Until then every call throws `ApiError` with code `API_NOT_WIRED`.
-2. Store the Sanctum token in `localStorage.api_token` (same key as admin-v3). `loginSubfranchisor` already writes it.
-3. Swap page loaders one resource at a time. DTOs use the same camelCase fields as current localStorage records.
-4. Keep `src/services/fundingActions.js`, `storage.js`, and seed as the live path until each swap is done.
+1. Stand up `esarisari-platform-api` (Phase 0–1 in [unified-backend-plan.md](./unified-backend-plan.md)). Auth + accounts exist today on admin-v3; FinOps resources are implemented on the **new** API, wrapping `user_wallets` / `internet_token_*` rather than a second ledger.
+2. Set `VITE_API_BASE_URL` to that origin (origin only, no trailing slash). Until then every call throws `ApiError` with code `API_NOT_WIRED`.
+3. Store the Sanctum token in `localStorage.api_token` (same key as admin-v3). `loginSubfranchisor` already writes it.
+4. Swap page loaders one resource at a time. DTOs use the same camelCase fields as current localStorage records.
+5. Keep `src/services/fundingActions.js`, `storage.js`, and seed as the live path until each swap is done.
 
 ---
 
@@ -34,7 +36,7 @@ Auth header: `Authorization: Bearer <token>`.
 
 | Live page | Resource module | Notes |
 |-----------|-----------------|--------|
-| `/login` (Sub account) | `auth.js` | Reuses admin-v3 `login` / `logout` / `me` |
+| `/login` (Sub account) | `auth.js` | Same paths as admin-v3; call **platform-api** once it exists |
 | `/wallet-management` | `wallets.js` + `accounts.js` | Directory of own + downline operating wallets |
 | `/funding` | `internetCredits.js` | Incoming, mine, release, reject, direct release |
 | `/deposit-rates` | `depositRates.js` | Sub → Franchisee hop only |
@@ -50,7 +52,7 @@ Auth header: `Authorization: Bearer <token>`.
 
 All paths are under `/api/v1/subfranchisor`.
 
-### Auth (already in admin-v3)
+### Auth (live on admin-v3; reimplement on platform-api)
 
 | Method | Path | Client |
 |--------|------|--------|
@@ -58,7 +60,7 @@ All paths are under `/api/v1/subfranchisor`.
 | POST | `/logout` | `logoutSubfranchisor` |
 | GET | `/me` | `getSubfranchisorMe` |
 
-### Accounts (already in admin-v3)
+### Accounts (live on admin-v3; port queries to platform-api)
 
 | Method | Path | Client |
 |--------|------|--------|
@@ -66,7 +68,7 @@ All paths are under `/api/v1/subfranchisor`.
 | GET | `/accounts/retailers` | `listRetailerAccounts` |
 | GET | `/accounts/all` | `listNetworkAccounts` |
 
-### FinOps (proposed; not in admin-v3 today)
+### FinOps (proposed on platform-api; not a new admin-v3 surface)
 
 | Method | Path | Client |
 |--------|------|--------|
@@ -116,3 +118,5 @@ Query filters for list/report GETs: `dateRange`, `from`, `to`, `franchiseeId`, `
 | `src/services/api/subfranchisor/` | Resource functions + JSDoc DTOs |
 
 These modules are unused by the running app. `grep` of `src/pages` and `src/context` should find no imports from `services/api`.
+
+Backend ownership, table mapping, and cutover phases: [unified-backend-plan.md](./unified-backend-plan.md).

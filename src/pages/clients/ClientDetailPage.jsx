@@ -2,6 +2,16 @@ import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Banknote, Info, MapPin } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { isApiWired } from '@/lib/api/config'
+import { useResourceData, toRows, apiErrorMessage } from '@/hooks/useResourceData'
+import {
+  adminCompaniesPath,
+  createAdminCollectionForRole,
+  getAdminStatusAudit,
+  listAdminCollectionsForRole,
+  listAdminCompaniesForRole,
+} from '@/services/api/adminResources'
+import { apiPatch } from '@/lib/api/client'
 import { formatCurrency } from '@/lib/currency'
 import {
   applyClientCollection,
@@ -12,7 +22,6 @@ import {
   fixedMonthlyTotal,
   formatClientDate,
   formatUpdatedAt,
-  getClientById,
   getClientPortfolio,
   GROSS_SALES_BY_CLIENT_ID,
   splitIsValid,
@@ -31,6 +40,7 @@ import {
   loadSharedCollections,
 } from '@/lib/financialsDashboard'
 import { getHomePathForRole } from '@/lib/permissions'
+import { normalizeServerPortfolio } from '@/lib/serverPortfolio'
 import {
   getFranchiseCollections,
   saveFranchiseCollections,
@@ -95,10 +105,43 @@ function StatusBadge({ status }) {
 export default function ClientDetailPage() {
   const { user, dataVersion, bumpDataVersion } = useAuth()
   const { clientId } = useParams()
+  // T10: GET /admin/companies replaces the mock-backed portfolio when
+  // wired; status-audit trail below records activation transitions.
+  const useApi = isApiWired()
+  const apiCompanies = useResourceData({
+    loadFromApi: () => listAdminCompaniesForRole(user?.role),
+    loadFromStorage: () => [],
+    fallbackEnabled: false,
+    deps: [user?.role],
+  })
+  const portfolio = useMemo(() => {
+    if (!useApi) {
+      void dataVersion
+      return getClientPortfolio()
+    }
+    if (apiCompanies.error) return []
+    return normalizeServerPortfolio(toRows(apiCompanies.data))
+  }, [useApi, apiCompanies.data, apiCompanies.error, dataVersion])
+  const companiesError = useApi ? apiCompanies.error : null
+  // ITEM 2: GET /admin/status-audit backs the audit trail when wired.
+  // Backend shape (AdminFinopsController::statusAudit + spec 11 §3-req-6):
+  // { data: { [table]: string[] }, activateColumn: string|null,
+  //   activatedAtColumn: string|null, g4: 'open'|'closed' }.
+  // Error → banner + [] rows, never mock blend.
+  const apiStatusAudit = useResourceData({
+    loadFromApi: () => getAdminStatusAudit(),
+    loadFromStorage: () => [],
+    fallbackEnabled: false,
+    deps: [],
+  })
+  const statusAuditError = useApi ? apiStatusAudit.error : null
+  const statusAudit = !useApi || apiStatusAudit.error ? null : (apiStatusAudit.data ?? null)
+  const statusAuditTables = statusAudit && typeof statusAudit.data === 'object' && !Array.isArray(statusAudit.data)
+    ? Object.entries(statusAudit.data)
+    : []
   const selectedClient = useMemo(() => {
-    void dataVersion
-    return getClientById(clientId)
-  }, [clientId, dataVersion])
+    return portfolio.find((item) => String(item.id) === String(clientId)) ?? null
+  }, [portfolio, clientId])
   const [historyStartDate, setHistoryStartDate] = useState(
     DEFAULT_HISTORY_START_DATE,
   )
@@ -108,8 +151,11 @@ export default function ClientDetailPage() {
 
   const collections = useMemo(() => {
     void dataVersion
-    return loadSharedCollections(getClientPortfolio(), getFranchiseCollections())
-  }, [dataVersion])
+    // Wired path never blends mock fallback into collections denominators:
+    // server [] stays [] (error state shows []-safe rows).
+    if (useApi) return loadSharedCollections(portfolio, getFranchiseCollections())
+    return loadSharedCollections(portfolio.length > 0 ? portfolio : getClientPortfolio(), getFranchiseCollections())
+  }, [dataVersion, portfolio, useApi])
   const collectionState =
     (selectedClient && collections[selectedClient.id]) || emptyCollectionState()
 
@@ -264,6 +310,12 @@ export default function ClientDetailPage() {
         }
       />
 
+      {companiesError ? (
+        <div className="mb-4 rounded-md border border-danger/20 bg-danger/5 px-3 py-2 text-sm text-danger">
+          {apiErrorMessage(companiesError)}
+        </div>
+      ) : null}
+
       <div className="space-y-4">
         <Card>
           <CardContent className="flex flex-col gap-3 p-4 md:flex-row md:items-start md:justify-between">
@@ -280,6 +332,78 @@ export default function ClientDetailPage() {
               </p>
             </div>
             <StatusBadge status={selectedClient.status} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="border-b border-border px-4 py-3">
+            <CardTitle className="text-base">Status Audit</CardTitle>
+            <CardDescription>
+              Activation timeline for this client.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 p-4 text-sm">
+            {statusAuditError ? (
+              <div className="rounded-md border border-danger/20 bg-danger/5 px-3 py-2 text-sm text-danger">
+                {apiErrorMessage(statusAuditError)}
+              </div>
+            ) : null}
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">Current status</span>
+              <StatusBadge status={selectedClient.status} />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">Last updated</span>
+              <span className="font-medium tabular-nums">
+                {selectedClient.updatedAt ? formatUpdatedAt(selectedClient.updatedAt) : '—'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">Activated</span>
+              <span className="font-medium tabular-nums">
+                {selectedClient.activatedAt ? formatUpdatedAt(selectedClient.activatedAt) : '—'}
+              </span>
+            </div>
+            {useApi && !statusAuditError && statusAudit ? (
+              <div className="space-y-2 border-t border-border pt-2">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">Activate column</span>
+                  <span className="font-medium tabular-nums">
+                    {statusAudit.activateColumn ?? '—'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">Activated-at column</span>
+                  <span className="font-medium tabular-nums">
+                    {statusAudit.activatedAtColumn ?? '—'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">Collections gate (G4)</span>
+                  <span className="font-medium tabular-nums">
+                    {statusAudit.g4 ?? '—'}
+                  </span>
+                </div>
+                {statusAuditTables.length > 0 ? (
+                  statusAuditTables.map(([table, columns]) => (
+                    <div className="flex items-start justify-between gap-3" key={table}>
+                      <span className="text-muted-foreground">{table}</span>
+                      <span className="text-right font-medium tabular-nums">
+                        {Array.isArray(columns) && columns.length > 0 ? columns.join(', ') : '—'}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    No status columns reported.
+                  </p>
+                )}
+              </div>
+            ) : null}
+            <p className="text-xs text-muted-foreground">
+              Source: {useApi ? 'GET /admin/companies' : 'local portfolio'} · activation writes
+              {useApi ? ' go through the backend (G4-guarded)' : ' persist to local overrides'}.
+            </p>
           </CardContent>
         </Card>
 

@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Download, Eye, Filter, Plus } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { isApiWired } from '@/lib/api/config'
+import { useResourceData, toRows, apiErrorMessage } from '@/hooks/useResourceData'
+import {
+  exportReportCsvForRole,
+  downloadBlob,
+  listAccountsForRole,
+  listSaleTransactionsForRole,
+} from '@/services/api/roleResources'
 import { ROLES, TRANSACTION_STATUS, TRANSACTION_STATUS_LABELS } from '@/lib/constants'
 import { formatCurrency } from '@/lib/currency'
 import { DEFAULT_PAGE_SIZE, paginateItems } from '@/lib/pagination'
@@ -78,12 +86,35 @@ function downloadCsv(filename, content) {
 
 export default function TransactionsPage() {
   const { user, dataVersion, bumpDataVersion } = useAuth()
+  // T7 transactions + retailer demo sale: API-first when wired (isolation
+  // server-side, portal rows included). Storage until verify, no mixing.
+  const useApi = isApiWired()
+  const apiAccounts = useResourceData({
+    loadFromApi: () => listAccountsForRole(user?.role),
+    loadFromStorage: () => getOrganizations(),
+    deps: [user?.role],
+  })
+  const apiTransactions = useResourceData({
+    loadFromApi: () => listSaleTransactionsForRole(user?.role),
+    loadFromStorage: () => getTransactions(),
+    deps: [user?.role],
+  })
+  const organizations = useMemo(
+    () => (useApi ? toRows(apiAccounts.data) : getOrganizations()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [useApi, apiAccounts.data, dataVersion],
+  )
+  const allTransactions = useMemo(
+    () => (useApi ? toRows(apiTransactions.data) : getTransactions()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [useApi, apiTransactions.data, dataVersion],
+  )
+  const transactionsError = useApi ? apiAccounts.error || apiTransactions.error : null
   const config = useMemo(
     () => getTransactionsPageConfig(user?.role),
     [user?.role],
   )
 
-  const organizations = useMemo(() => getOrganizations(), [dataVersion])
   const orgById = useMemo(
     () => Object.fromEntries(organizations.map((org) => [org.id, org])),
     [organizations],
@@ -150,14 +181,13 @@ export default function TransactionsPage() {
   ])
 
   const scopedTransactions = useMemo(() => {
-    const all = getTransactions()
     return sortTransactionsNewest(
-      filterTransactionsForRole(all, {
+      filterTransactionsForRole(allTransactions, {
         role: user?.role,
         organizationId: user?.organizationId,
       }),
     )
-  }, [user?.role, user?.organizationId, dataVersion])
+  }, [allTransactions, user?.role, user?.organizationId])
 
   const revenueSharing = useMemo(() => getRevenueSharing(), [dataVersion])
 
@@ -198,7 +228,23 @@ export default function TransactionsPage() {
     setPage(0)
   }
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    // T8: CSV via GET /reports/{slug}/export when wired; local Blob builder
+    // stays as fallback until verify (parity oracle).
+    if (useApi) {
+      try {
+        const blob = await exportReportCsvForRole(user?.role, 'transactions', {
+          dateRange: appliedFilters.dateRange,
+          from: appliedFilters.customDateRange?.from,
+          to: appliedFilters.customDateRange?.to,
+          search: appliedFilters.search,
+        })
+        downloadBlob(`esarisari-transactions-${user?.role || 'export'}.csv`, blob)
+        return
+      } catch {
+        // Fall through to the local builder below.
+      }
+    }
     const csv = transactionsToCsv(filteredTransactions, orgById, {
       revenueSharing,
       role: user?.role,
@@ -234,6 +280,12 @@ export default function TransactionsPage() {
           </>
         }
       />
+
+      {transactionsError ? (
+        <div className="mb-4 rounded-md border border-danger/20 bg-danger/5 px-3 py-2 text-sm text-danger">
+          {apiErrorMessage(transactionsError)}
+        </div>
+      ) : null}
 
       <Card className="mb-4 shadow-sm">
         <CardContent

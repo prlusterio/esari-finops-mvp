@@ -1,6 +1,9 @@
 import { useMemo } from 'react'
 import { Building2, Wallet } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { isApiWired } from '@/lib/api/config'
+import { useResourceData, toRows, apiErrorMessage } from '@/hooks/useResourceData'
+import { listWalletsForRole, listAccountsForRole, listSaleTransactionsForRole } from '@/services/api/roleResources'
 import { formatCurrency, formatSignedCurrency } from '@/lib/currency'
 import { getHomePathForRole } from '@/lib/permissions'
 import {
@@ -56,10 +59,42 @@ function StatusBadge({ status }) {
 
 export default function WalletPage() {
   const { user, dataVersion } = useAuth()
-  const organizations = useMemo(() => getOrganizations(), [dataVersion])
-  const wallets = useMemo(() => getWallets(), [dataVersion])
+  // T4: API-first retailer wallet when wired; storage until verify.
+  const apiWallets = useResourceData({
+    loadFromApi: () => listWalletsForRole(user?.role),
+    loadFromStorage: () => getWallets(),
+    deps: [user?.role],
+  })
+  const apiAccounts = useResourceData({
+    loadFromApi: () => listAccountsForRole(user?.role),
+    loadFromStorage: () => getOrganizations(),
+    deps: [user?.role],
+  })
+  const apiTransactions = useResourceData({
+    loadFromApi: () => listSaleTransactionsForRole(user?.role),
+    loadFromStorage: () => getTransactions(),
+    deps: [user?.role],
+  })
+  const useApi = isApiWired()
+  const organizations = useMemo(
+    () => (useApi ? toRows(apiAccounts.data) : getOrganizations()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [useApi, apiAccounts.data, dataVersion],
+  )
+  const wallets = useMemo(
+    () => (useApi ? toRows(apiWallets.data) : getWallets()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [useApi, apiWallets.data, dataVersion],
+  )
   const transfers = useMemo(() => getFundingTransfers(), [dataVersion])
-  const transactions = useMemo(() => getTransactions(), [dataVersion])
+  const transactions = useMemo(
+    () => (useApi ? toRows(apiTransactions.data) : getTransactions()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [useApi, apiTransactions.data, dataVersion],
+  )
+  const walletError = useApi
+    ? apiWallets.error || apiAccounts.error || apiTransactions.error
+    : null
 
   const view = useMemo(
     () =>
@@ -97,6 +132,12 @@ export default function WalletPage() {
           { label: 'Wallet' },
         ]}
       />
+
+      {walletError ? (
+        <div className="mb-4 rounded-md border border-danger/20 bg-danger/5 px-3 py-2 text-sm text-danger">
+          {apiErrorMessage(walletError)}
+        </div>
+      ) : null}
 
       <LowBalanceAlert
         status={view.kpis.operatingStatus}

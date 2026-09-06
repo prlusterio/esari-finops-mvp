@@ -8,6 +8,17 @@ import {
   Receipt,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { isApiWired } from '@/lib/api/config'
+import { useResourceData, toRows, apiErrorMessage } from '@/hooks/useResourceData'
+import {
+  downloadBlob,
+  exportReportCsvForRole,
+  listAccountsForRole,
+  listCreditRequestsForRole,
+  listCreditTransfersForRole,
+  listSaleTransactionsForRole,
+  listWalletsForRole,
+} from '@/services/api/roleResources'
 import { ROLES, TRANSACTION_STATUS, TRANSACTION_STATUS_LABELS } from '@/lib/constants'
 import { formatCurrency, formatSignedCurrency } from '@/lib/currency'
 import { buildRevenuePageHref, formatDateLong, formatReportPeriodLabel } from '@/lib/date'
@@ -1014,6 +1025,86 @@ function RevenueSharingSubTable({ report, periodLabel }) {
 
 export default function ReportsPage() {
   const { user, dataVersion } = useAuth()
+  // T8 reports: API-first when wired; local builders stay as parity oracle
+  // until retired. CSV goes through GET /reports/{slug}/export.
+  const useApi = isApiWired()
+  const apiAccounts = useResourceData({
+    loadFromApi: () => listAccountsForRole(user?.role),
+    loadFromStorage: () => getOrganizations(),
+    deps: [user?.role],
+  })
+  const apiTransactions = useResourceData({
+    loadFromApi: () => listSaleTransactionsForRole(user?.role),
+    loadFromStorage: () => getTransactions(),
+    deps: [user?.role],
+  })
+  const apiRequests = useResourceData({
+    loadFromApi: () => listCreditRequestsForRole(user?.role),
+    loadFromStorage: () => getFundingRequests(),
+    deps: [user?.role],
+  })
+  const apiTransfers = useResourceData({
+    loadFromApi: () => listCreditTransfersForRole(user?.role),
+    loadFromStorage: () => getFundingTransfers(),
+    deps: [user?.role],
+  })
+  const apiWallets = useResourceData({
+    loadFromApi: () => listWalletsForRole(user?.role),
+    loadFromStorage: () => getWallets(),
+    deps: [user?.role],
+  })
+  const organizations = useMemo(
+    () => (useApi ? toRows(apiAccounts.data) : getOrganizations()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [useApi, apiAccounts.data, dataVersion],
+  )
+  const apiTransactionsList = useMemo(
+    () => (useApi ? toRows(apiTransactions.data) : getTransactions()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [useApi, apiTransactions.data, dataVersion],
+  )
+  const apiRequestsList = useMemo(
+    () => (useApi ? toRows(apiRequests.data) : getFundingRequests()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [useApi, apiRequests.data, dataVersion],
+  )
+  const apiTransfersList = useMemo(
+    () => (useApi ? toRows(apiTransfers.data) : getFundingTransfers()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [useApi, apiTransfers.data, dataVersion],
+  )
+  const apiWalletsList = useMemo(
+    () => (useApi ? toRows(apiWallets.data) : getWallets()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [useApi, apiWallets.data, dataVersion],
+  )
+  const reportsError = useApi
+    ? apiAccounts.error ||
+      apiTransactions.error ||
+      apiRequests.error ||
+      apiTransfers.error ||
+      apiWallets.error
+    : null
+  // Server CSV export helper: when wired, GET /reports/{slug}/export first;
+  // local builders run only unwired or as parity fallback on server failure
+  // (TransactionsPage pattern). See REPORT_CSV_SLUGS for the 8 §12 slugs.
+  const serverExport = async (slug, filename, buildLocal, extraQuery = {}) => {
+    if (useApi) {
+      try {
+        const blob = await exportReportCsvForRole(user?.role, slug, {
+          dateRange: appliedFilters.dateRange,
+          from: appliedFilters.customFrom,
+          to: appliedFilters.customTo,
+          ...extraQuery,
+        })
+        downloadBlob(filename, blob)
+        return
+      } catch {
+        // Parity oracle fallback below.
+      }
+    }
+    downloadCsv(filename, buildLocal())
+  }
   const config = useMemo(
     () => getReportsPageConfig(user?.role),
     [user?.role],
@@ -1022,7 +1113,6 @@ export default function ReportsPage() {
     () => getTransactionsPageConfig(user?.role),
     [user?.role],
   )
-  const organizations = useMemo(() => getOrganizations(), [dataVersion])
   const networkOptions = useMemo(
     () => getNetworkFilterOptions(organizations, user?.organizationId),
     [organizations, user?.organizationId],

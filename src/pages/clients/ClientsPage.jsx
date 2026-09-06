@@ -2,6 +2,9 @@ import { Link } from 'react-router-dom'
 import { useMemo } from 'react'
 import { Plus } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { isApiWired } from '@/lib/api/config'
+import { useResourceData, toRows, apiErrorMessage } from '@/hooks/useResourceData'
+import { listAdminCompaniesForRole } from '@/services/api/adminResources'
 import { ONBOARDING_STEP_PATHS } from '@/lib/onboardingSetup'
 import { formatCurrency } from '@/lib/currency'
 import {
@@ -12,6 +15,7 @@ import {
   upfrontSetupTotal,
 } from '@/lib/clientFinancials'
 import { getHomePathForRole } from '@/lib/permissions'
+import { normalizeServerPortfolio } from '@/lib/serverPortfolio'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -50,10 +54,24 @@ function StatusBadge({ status }) {
 
 export default function ClientsPage() {
   const { user, dataVersion } = useAuth()
+  // T10: GET /admin/companies replaces the mock-backed portfolio when
+  // wired; local portfolio stays as fallback until verify (no mixing).
+  const useApi = isApiWired()
+  const apiCompanies = useResourceData({
+    loadFromApi: () => listAdminCompaniesForRole(user?.role),
+    loadFromStorage: () => [],
+    fallbackEnabled: false,
+    deps: [user?.role],
+  })
   const clients = useMemo(() => {
-    void dataVersion
-    return getClientPortfolio()
-  }, [dataVersion])
+    if (!useApi) {
+      void dataVersion
+      return getClientPortfolio()
+    }
+    if (apiCompanies.error) return []
+    return normalizeServerPortfolio(toRows(apiCompanies.data))
+  }, [useApi, apiCompanies.data, apiCompanies.error, dataVersion])
+  const companiesError = useApi ? apiCompanies.error : null
 
   return (
     <div>
@@ -73,6 +91,12 @@ export default function ClientsPage() {
           </Button>
         }
       />
+
+      {companiesError ? (
+        <div className="mb-4 rounded-md border border-danger/20 bg-danger/5 px-3 py-2 text-sm text-danger">
+          {apiErrorMessage(companiesError)}
+        </div>
+      ) : null}
 
       <Card>
         <CardHeader className="border-b border-border px-4 py-3">

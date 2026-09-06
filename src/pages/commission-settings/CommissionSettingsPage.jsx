@@ -1,6 +1,12 @@
 import { useMemo, useState } from 'react'
 import { Pencil, Plus } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { isApiWired } from '@/lib/api/config'
+import { useResourceData, toRows, apiErrorMessage } from '@/hooks/useResourceData'
+import { listAccountsForRole, listCommissionSettingsForRole } from '@/services/api/roleResources'
+import { apiPost, apiPut } from '@/lib/api/client'
+import { subfranchisorEndpoints } from '@/lib/api/endpoints'
+import { resolveApiPrefix } from '@/lib/api/roles'
 import {
   COMMISSION_STATUS,
   COMMISSION_STATUS_LABELS,
@@ -70,8 +76,31 @@ const EMPTY_APPLIED = {
 export default function CommissionSettingsPage() {
   const { user, dataVersion, bumpDataVersion } = useAuth()
   const isAdmin = user?.role === ROLES.ADMIN
-  const organizations = useMemo(() => getOrganizations(), [dataVersion])
-  const settings = useMemo(() => getCommissionSettings(), [dataVersion])
+  // T6b commission: API-first when wired (total-100 + Active-supersedes
+  // server-side, 422 surfaced). Storage until verify, no mixed rows.
+  const useApi = isApiWired()
+  const apiAccounts = useResourceData({
+    loadFromApi: () => listAccountsForRole(user?.role),
+    loadFromStorage: () => getOrganizations(),
+    deps: [user?.role],
+  })
+  const apiSettings = useResourceData({
+    loadFromApi: () => listCommissionSettingsForRole(user?.role),
+    loadFromStorage: () => getCommissionSettings(),
+    deps: [user?.role],
+  })
+  const organizations = useMemo(
+    () => (useApi ? toRows(apiAccounts.data) : getOrganizations()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [useApi, apiAccounts.data, dataVersion],
+  )
+  const settings = useMemo(
+    () => (useApi ? toRows(apiSettings.data) : getCommissionSettings()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [useApi, apiSettings.data, dataVersion],
+  )
+  const settingsError = useApi ? apiAccounts.error || apiSettings.error : null
+  const [saveError, setSaveError] = useState('')
 
   const { subfranchisees, franchisees, retailers } = useMemo(
     () =>
@@ -235,7 +264,34 @@ export default function CommissionSettingsPage() {
     resetRetailerIfInvalid(value, subfranchiseeId)
   }
 
-  const handleSave = (payload) => {
+  const handleSave = async (payload) => {
+    setSaveError('')
+    if (useApi) {
+      // T6b: server validates total-100 + Active-supersedes; 422 surfaces.
+      try {
+        const prefix = resolveApiPrefix(user?.role)
+        const body = {
+          retailerOrganizationId: payload.retailerOrganizationId,
+          retailerPercentage: payload.retailerPercentage,
+          franchiseePercentage: payload.franchiseePercentage,
+          subfranchiseePercentage: payload.subfranchiseePercentage,
+          effectiveDate: payload.effectiveDate,
+          status: payload.status,
+        }
+        if (payload.id) {
+          const sub = subfranchisorEndpoints.commissionSetting(payload.id)
+          await apiPut(`${prefix}${sub.replace(/^\/api\/v1\/subfranchisor/, '')}`, body)
+        } else {
+          const sub = subfranchisorEndpoints.commissionSettings()
+          await apiPost(`${prefix}${sub.replace(/^\/api\/v1\/subfranchisor/, '')}`, body)
+        }
+        apiSettings.reload()
+        return
+      } catch (error) {
+        setSaveError(apiErrorMessage(error, 'Unable to save this commission setting.'))
+        return
+      }
+    }
     const existing = getCommissionSettings()
     const now = new Date().toISOString()
     const entryId =
@@ -340,6 +396,17 @@ export default function CommissionSettingsPage() {
           </Button>
         }
       />
+
+      {settingsError ? (
+        <div className="mb-4 rounded-md border border-danger/20 bg-danger/5 px-3 py-2 text-sm text-danger">
+          {apiErrorMessage(settingsError)}
+        </div>
+      ) : null}
+      {saveError ? (
+        <div className="mb-4 rounded-md border border-danger/20 bg-danger/5 px-3 py-2 text-sm text-danger">
+          {saveError}
+        </div>
+      ) : null}
 
       <Card className="mb-4 shadow-sm">
         <CardContent

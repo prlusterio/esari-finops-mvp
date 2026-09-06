@@ -2,6 +2,12 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Bell } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { isApiWired } from '@/lib/api/config'
+import { useResourceData, toRows, apiErrorMessage } from '@/hooks/useResourceData'
+import {
+  listNotificationsForRole,
+  markNotificationsReadForRole,
+} from '@/services/api/roleResources'
 import { WALLET_BALANCE_STATUS } from '@/lib/wallets'
 import {
   buildNotifications,
@@ -35,11 +41,43 @@ function notificationDotClass(item) {
   return 'bg-amber-500'
 }
 
+/**
+ * []-safe mapping for server notification payloads onto the bell shape.
+ * Unknown/missing fields degrade to empty title/body, never crash.
+ */
+function normalizeServerNotifications(items) {
+  return (Array.isArray(items) ? items : []).map((item, index) => ({
+    id: item?.id ?? item?.notificationId ?? `server-${index}`,
+    kind: item?.kind || NOTIFICATION_KIND.LOW_BALANCE,
+    title: item?.title || '',
+    body: item?.body || item?.message || '',
+    href: item?.href || null,
+    read: Boolean(item?.read ?? item?.readAt ?? false),
+    status: item?.status ?? null,
+    createdAt: item?.createdAt || item?.created_at || null,
+  }))
+}
+
 export function NotificationBell() {
   const { user, dataVersion, bumpDataVersion } = useAuth()
   const navigate = useNavigate()
+  // T9a notifications: API-first when wired (per-org read state server-side).
+  // Storage builders stay as fallback until verify; no mixed-source rows.
+  const useApi = isApiWired()
+  const apiNotifications = useResourceData({
+    loadFromApi: () => listNotificationsForRole(user?.role),
+    loadFromStorage: () => [],
+    fallbackEnabled: false,
+    deps: [user?.role],
+  })
+  const serverItems = useMemo(() => {
+    if (!useApi) return null
+    if (apiNotifications.error) return []
+    return normalizeServerNotifications(toRows(apiNotifications.data))
+  }, [useApi, apiNotifications.data, apiNotifications.error])
 
   const notifications = useMemo(() => {
+    if (serverItems) return serverItems
     return buildNotifications({
       organizations: getOrganizations(),
       wallets: getWallets(),
@@ -48,11 +86,17 @@ export function NotificationBell() {
       recipientRole: user?.role,
       reads: getNotificationReads(),
     })
-  }, [user?.organizationId, user?.role, dataVersion])
+  }, [serverItems, user?.organizationId, user?.role, dataVersion])
+
+  const notificationsError = useApi ? apiNotifications.error : null
 
   const unreadCount = notifications.filter((item) => !item.read).length
 
   const markRead = (ids) => {
+    const clean = (ids || []).filter(Boolean)
+    if (useApi && clean.length > 0) {
+      markNotificationsReadForRole(user?.role, { ids: clean }).catch(() => {})
+    }
     markNotificationsRead(user?.organizationId, ids)
     bumpDataVersion()
   }
@@ -109,6 +153,11 @@ export function NotificationBell() {
           Pending Internet Credits requests from downlines, and low-balance
           alerts.
         </p>
+        {notificationsError ? (
+          <p className="px-3 pb-2 text-[11px] text-danger">
+            {apiErrorMessage(notificationsError)}
+          </p>
+        ) : null}
         <DropdownMenuSeparator className="my-0" />
         {notifications.length === 0 ? (
           <div className="px-3 py-10 text-center text-sm text-muted-foreground">
